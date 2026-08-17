@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>看圖列算式 (2) 最後水池中有多少隻鴨？— 解題動畫</title>
+<!--
+  通用數學解題動畫 v5（Three.js）
+  題目來源：DOC/worksheet-1-birds-ducks.html 第 (2) 題（選擇題，答案 C：12 − 5 + 4 = 11）
+  v2：邊數邊寫——數完嗰組嘢即刻寫入答案格
+  v3（2026-08-16 使用者反饋）：真實移動動畫——游入＝由畫面外游埋嚟先至數；
+      離開＝數完一隻即刻一步一步跳住行出畫面。moveStep 純函數，撤銷自動完全還原
+-->
+<style>
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#f0f4f8;
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Heiti TC",sans-serif;
+    -webkit-user-select:none;user-select:none;}
+  #stage{position:fixed;inset:0;}
+  #art{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  #hud{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5;}
+  .wt{position:absolute;left:0;top:0;white-space:nowrap;line-height:1.25;color:#23303e;
+     will-change:transform;transform-origin:left top;}
+  .anchor-c{transform-origin:center center;text-align:center;}
+  .serif{font-family:"Times New Roman",Times,Georgia,"Songti TC",serif;}
+  .badge{position:absolute;left:0;top:0;width:1.7em;height:1.7em;line-height:1.7em;
+    border-radius:50%;color:#fff;font-weight:700;text-align:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.28);will-change:transform;}
+  #startHint{position:absolute;left:0;top:0;color:#0066cc;font-weight:800;
+    animation:bob 1.1s ease-in-out infinite;}
+  @keyframes bob{0%,100%{margin-top:0}50%{margin-top:.35em}}
+  #topbar{position:fixed;top:0;left:0;right:0;z-index:40;text-align:center;
+    background:rgba(255,255,255,.88);border-bottom:1px solid #d5dee8;
+    font-size:14px;color:#3a4a5a;padding:5px 8px;line-height:1.5;}
+  #topbar b{color:#0066cc;}
+  #replay{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:40;
+    font-size:17px;font-weight:700;color:#fff;background:#0066cc;border:none;
+    border-radius:26px;padding:10px 22px;cursor:pointer;box-shadow:0 4px 14px rgba(0,102,204,.4);}
+  #replay:hover{background:#0055aa;}
+  #muteBtn{position:fixed;left:14px;bottom:14px;z-index:40;font-size:19px;width:44px;height:44px;
+    border:none;border-radius:50%;cursor:pointer;background:#0066cc;color:#fff;
+    box-shadow:0 4px 14px rgba(0,102,204,.4);}
+  #muteBtn:hover{background:#0055aa;}
+  /* ===== 算草面板（三重保險：預設右欄分隔 + 可拖曳 + 可摺疊） ===== */
+  #panel{position:fixed;right:14px;top:64px;width:330px;z-index:50;
+    background:rgba(255,255,255,.97);border:1px solid #c9d6e2;border-radius:14px;
+    box-shadow:0 8px 26px rgba(30,60,90,.22);font-size:16px;color:#2a3947;}
+  #panel.mobile{left:8px;right:8px;top:auto;bottom:8px;width:auto;}
+  #phead{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:grab;
+    border-bottom:1px solid #e2eaf2;}
+  #panel.collapsed #phead{border-bottom:none;}
+  #drag{font-size:18px;color:#8ba0b5;cursor:grab;}
+  #ptitle{font-weight:800;font-size:17px;flex:1;}
+  #mini{font-size:14px;color:#0066cc;font-weight:700;min-width:2.2em;text-align:right;}
+  #fold{border:1px solid #b9c8d8;background:#eef4fa;color:#33608c;font-size:15px;
+    font-weight:800;border-radius:8px;width:30px;height:30px;cursor:pointer;line-height:1;}
+  #pbody{padding:9px 12px 12px;}
+  #panel.collapsed #pbody{display:none;}
+  #phases{display:flex;flex-wrap:wrap;gap:4px 6px;margin-bottom:8px;}
+  .ph{font-size:13px;background:#eef2f7;border-radius:9px;padding:3px 8px;color:#6d7f92;}
+  .ph.done{background:#dcefe0;color:#2f7a44;}
+  .ph.active{background:#0066cc;color:#fff;font-weight:700;animation:phpulse .9s ease-in-out 2;}
+  @keyframes phpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+  #narrbox{min-height:64px;background:#f2f7fd;border-radius:10px;padding:8px 10px;
+    font-size:17px;line-height:1.65;margin-bottom:8px;}
+  #narr::after{content:"▍";color:#0066cc;}
+  #calc{font-size:30px;font-weight:800;text-align:center;letter-spacing:2px;
+    padding:6px 0 2px;min-height:46px;}
+  #calc .tk{display:inline-block;margin:0 3px;color:#0066cc;opacity:0;}
+  #calc .tk.op{color:#5a6b7d;}
+  #calc .tk.ans{color:#e8541f;font-size:38px;}
+  #cheer{font-size:16px;text-align:center;color:#e8541f;font-weight:800;min-height:22px;opacity:0;}
+  #warn{display:none;position:fixed;left:0;right:0;top:0;z-index:99;background:#B3261E;
+    color:#fff;font:14px/1.5 system-ui,sans-serif;padding:10px 14px;text-align:center;}
+</style>
+</head>
+<body>
+<div id="warn">未能載入 three.js（需要網絡連線去攞 CDN）。請檢查網絡後重新載入。</div>
+<div id="stage">
+  <canvas id="art"></canvas>
+  <div id="hud"></div>
+</div>
+<div id="topbar"><b>Space</b> 播放/暫停　·　<b>S / Esc</b> 重置　·　<b>→</b> 下一小步　·　<b>←</b> 退回上一小步　·　🖱 滑鼠滾輪上下捲動</div>
+<button id="replay">🔄 重新播放解題過程</button>
+<button id="muteBtn" title="開/關老師旁白">🔊</button>
+<div id="panel">
+  <div id="phead">
+    <span id="drag">☰</span>
+    <span id="ptitle">📝 解題思維與算草區</span>
+    <span id="mini">　</span>
+    <button id="fold" title="摺疊/展開">−</button>
+  </div>
+  <div id="pbody">
+    <div id="phases"></div>
+    <div id="narrbox"><span id="narr"></span></div>
+    <div id="calc"></div>
+    <div id="cheer">🎉 恭喜！完全正確！</div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+        onerror="document.getElementById('warn').style.display='block'"></script>
+<script>
+'use strict';
+if (typeof THREE === 'undefined') { throw new Error('three.js not loaded'); }
+/* ============================================================
+   §0  CONFIG
+   ============================================================ */
+var CFG = {
+  world: { W: 980, H: 952 },
+  colors: {
+    bg:      0xf0f4f8,
+    pen:     '#0066cc',
+    water:   0x6E9CBB, water2: 0x8FB6CE,
+    land:    0x3E6B3F, land2:  0x4E7F4A,
+    olive:   0xAFC048, red: 0xB94436, blue: 0x4E8CB5, ink: 0x33302B,
+    region: ['#f4711f', '#0aa5c9', '#8d5bd6', '#f0a500'],
+    answer:  '#e8541f'
+  },
+  flash: { on: 0.13, off: 0.11, hi: 0.78, lo: 0.05, settle: 0.32 },
+  speed: {
+    phaseIntro: 1.6, region: 1.7, count: 0.58, countFast: 0.46,
+    calc: 1.15, slot: 0.85, slotAns: 1.9, intro: 2.3,
+    circle: 2.4, celebrate: 3.0, move: 1.3, fly: 1.25
+  },
+  pondL: { x: 42,  y: 285, w: 418, h: 252 },
+  pondR: { x: 522, y: 285, w: 418, h: 252 },
+  ducksL: [
+    { x: 70,  y: 60,  s: .50, f: 0, leave: 1 },
+    { x: 122, y: 38,  s: .50, f: 1, leave: 1 },
+    { x: 58,  y: 108, s: .50, f: 1, leave: 1 },
+    { x: 116, y: 96,  s: .50, f: 0, leave: 1 },
+    { x: 78,  y: 152, s: .50, f: 0, leave: 1 },
+    { x: 185, y: 66,  s: .52, f: 0 },
+    { x: 244, y: 50,  s: .52, f: 1 },
+    { x: 305, y: 88,  s: .52, f: 0 },
+    { x: 218, y: 128, s: .52, f: 1 },
+    { x: 168, y: 172, s: .52, f: 0 },
+    { x: 258, y: 162, s: .52, f: 1 },
+    { x: 322, y: 140, s: .52, f: 0 }
+  ],
+  ducksR: [
+    { x: 148, y: 52,  s: .50, f: 1, arrive: 1 },
+    { x: 208, y: 38,  s: .50, f: 0, arrive: 1 },
+    { x: 266, y: 56,  s: .50, f: 1, arrive: 1 },
+    { x: 176, y: 92,  s: .50, f: 0, arrive: 1 },
+    { x: 104, y: 122, s: .50, f: 0 },
+    { x: 168, y: 150, s: .50, f: 1 },
+    { x: 238, y: 128, s: .50, f: 0 },
+    { x: 306, y: 118, s: .50, f: 1 },
+    { x: 128, y: 198, s: .50, f: 1 },
+    { x: 254, y: 188, s: .50, f: 0 },
+    { x: 334, y: 172, s: .50, f: 1 }
+  ],
+  regions: {
+    pondL:   { x: 36,  y: 279, w: 430, h: 264, ci: 0, ro: 0 },
+    leaving: { x: 52,  y: 296, w: 160, h: 196, ci: 1, ro: 1 },
+    arrive:  { x: 636, y: 298, w: 200, h: 124, ci: 3, ro: 2 },
+    pondR:   { x: 516, y: 279, w: 430, h: 264, ci: 2, ro: 3 }
+  },
+  slots: [
+    { x: 266, y: 622, txt: '12' }, { x: 350, y: 622, txt: '−' },
+    { x: 424, y: 622, txt: '5' },  { x: 508, y: 622, txt: '+' },
+    { x: 582, y: 622, txt: '4' },  { x: 710, y: 622, txt: '11', ans: true }
+  ],
+  options: [
+    { L: 'A', x: 100, y: 712, txt: 'A.  7 − 5 + 4 = 6' },
+    { L: 'B', x: 500, y: 712, txt: 'B.  7 − 4 + 6 = 10' },
+    { L: 'C', x: 100, y: 766, txt: 'C.  12 − 5 + 4 = 11' },
+    { L: 'D', x: 500, y: 766, txt: 'D.  13 − 5 + 4 = 12' }
+  ],
+  answerLetter: 'C',
+  circle: { cx: 205, cy: 782, rx: 136, ry: 24 }
+};
+var NARR = {
+  intro: '第二條題：有鴨仔會游走、又有鴨仔會游入嚟㗎！記住喎——數完一樣嘢，即刻寫低個數！',
+  p1: '先睇左圖：水池同岸邊加埋，逐隻數——1、2、3……總共 12 隻鴨仔！即刻寫低「12」。',
+  p2: '岸邊呢 5 隻鴨仔上咗岸要離開喇！數完一隻、行走一隻——離開要「減」，即刻寫低「− 5」。12 − 5 = 7，水入面淨返 7 隻。',
+  p3: '再睇右圖：有 4 隻鴨仔由遠處游埋嚟——逐隻游入嚟、逐隻數！游入嚟要「加」，即刻寫低「+ 4」。7 + 4 = 11。',
+  p4: '最後數吓右圖水池——1、2、3……正正 11 隻！即刻寫低答案「11」——驗證成功！',
+  p5: '成條算式 12 − 5 + 4 = 11 已經逐格寫好喇——而家圈出正確嘅選項：就係 C！',
+  end: '🎉 答案係 C：12 − 5 + 4 = 11。原本 12 隻，走咗 5 隻，游入嚟 4 隻，最後 11 隻！'
+};
+var PHASES = ['1. 數鴨仔 → 寫 12', '2. 5 隻行咗 → 寫 − 5', '3. 4 隻游入 → 寫 + 4', '4. 驗證 → 寫 11', '5. 圈選項 C'];
+/* ============================================================
+   §1  Renderer / Scene / Camera
+   ============================================================ */
+var W = innerWidth, H = innerHeight, VIEWW = 980, OX = 0, K = 1, scrollY = 0;
+var renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('art'), antialias: true });
+renderer.setClearColor(CFG.colors.bg, 1);
+var scene = new THREE.Scene();
+var camera = new THREE.OrthographicCamera(0, CFG.world.W, 0, 100, 0.1, 3000);
+camera.position.set(0, 0, 1000);
+scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+var dl = new THREE.DirectionalLight(0xffffff, 0.75); dl.position.set(150, -260, 800); scene.add(dl);
+/* ============================================================
+   §2  形狀工具
+   ============================================================ */
+var RO = 1;
+function P(shape, color, parent, op) {
+  var geo = new THREE.ShapeGeometry(shape, 32);
+  var mat = new THREE.MeshBasicMaterial({
+    color: color, side: THREE.DoubleSide, transparent: true,
+    opacity: (op == null ? 1 : op), depthWrite: false
+  });
+  var m = new THREE.Mesh(geo, mat);
+  m.renderOrder = RO++; m.position.z = 0;
+  (parent || scene).add(m);
+  return m;
+}
+function V(a) { return new THREE.Vector2(a[0], a[1]); }
+function shp(f) { var s = new THREE.Shape(); f(s); return s; }
+function ell(cx, cy, rx, ry, rot) {
+  var s = new THREE.Shape();
+  s.absellipse(cx, cy, rx, ry, 0, Math.PI * 2, false, rot || 0); return s;
+}
+function cir(cx, cy, r) { return ell(cx, cy, r, r, 0); }
+function poly(p) {
+  var s = new THREE.Shape(); s.moveTo(p[0][0], p[0][1]);
+  for (var i = 1; i < p.length; i++) s.lineTo(p[i][0], p[i][1]);
+  s.closePath(); return s;
+}
+function ringS(cx, cy, r, t) {
+  var s = cir(cx, cy, r); var h = new THREE.Path();
+  h.absellipse(cx, cy, r - t, r - t, 0, Math.PI * 2, true, 0);
+  s.holes.push(h); return s;
+}
+function rrTo(o, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  o.moveTo(x + r, y);
+  o.lineTo(x + w - r, y);   o.quadraticCurveTo(x + w, y, x + w, y + r);
+  o.lineTo(x + w, y + h - r); o.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  o.lineTo(x + r, y + h);   o.quadraticCurveTo(x, y + h, x, y + h - r);
+  o.lineTo(x, y + r);       o.quadraticCurveTo(x, y, x + r, y);
+  return o;
+}
+function rr(x, y, w, h, r) { return rrTo(new THREE.Shape(), x, y, w, h, r); }
+function rrOut(x, y, w, h, r, t) {
+  var s = rr(x, y, w, h, r);
+  s.holes.push(rrTo(new THREE.Path(), x + t, y + t, w - 2 * t, h - 2 * t, Math.max(1, r - t)));
+  return s;
+}
+function cbz(p0, c1, c2, p3, n) {
+  return new THREE.CubicBezierCurve(V(p0), V(c1), V(c2), V(p3))
+    .getPoints(n || 30).map(function (p) { return [p.x, p.y]; });
+}
+function qbz(p0, c, p1, n) {
+  return new THREE.QuadraticBezierCurve(V(p0), V(c), V(p1))
+    .getPoints(n || 24).map(function (p) { return [p.x, p.y]; });
+}
+function strokeS(pts, w0, w1) {
+  if (w1 === undefined) w1 = w0;
+  var L = [], R = [], i, t, hw, a, b, dx, dy, len;
+  for (i = 0; i < pts.length; i++) {
+    t = (pts.length === 1) ? 0 : i / (pts.length - 1);
+    hw = (w0 + (w1 - w0) * t) / 2;
+    a = pts[Math.max(0, i - 1)]; b = pts[Math.min(pts.length - 1, i + 1)];
+    dx = b[0] - a[0]; dy = b[1] - a[1];
+    len = Math.sqrt(dx * dx + dy * dy) || 1; dx /= len; dy /= len;
+    L.push([pts[i][0] - dy * hw, pts[i][1] + dx * hw]);
+    R.push([pts[i][0] + dy * hw, pts[i][1] - dx * hw]);
+  }
+  return poly(L.concat(R.reverse()));
+}
+function arrowTo(g, x1, y1, x2, y2, th, hw, hl, color) {
+  var dx = x2 - x1, dy = y2 - y1, len = Math.sqrt(dx * dx + dy * dy) || 1;
+  var ux = dx / len, uy = dy / len, bx = x2 - ux * hl, by = y2 - uy * hl;
+  var nx = -uy, ny = ux;
+  P(poly([[x1 + nx * th / 2, y1 + ny * th / 2], [bx + nx * th / 2, by + ny * th / 2],
+          [bx - nx * th / 2, by - ny * th / 2], [x1 - nx * th / 2, y1 - ny * th / 2]]), color, g);
+  P(poly([[x2, y2], [bx + nx * hw, by + ny * hw], [bx - nx * hw, by - ny * hw]]), color, g);
+}
+function darkenCss(hex, f) {
+  var n = parseInt(hex.slice(1), 16);
+  var r = Math.round((n >> 16) * f), g = Math.round(((n >> 8) & 255) * f), b = Math.round((n & 255) * f);
+  return (r << 16) | (g << 8) | b;
+}
+function makeLine(ptsArr, color, op, z) {
+  var g = new THREE.BufferGeometry().setFromPoints(
+    ptsArr.map(function (a) { return new THREE.Vector3(a[0], a[1], z || 0); }));
+  var m = new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: (op == null ? 1 : op) });
+  var l = new THREE.Line(g, m);
+  l.userData.n = ptsArr.length; l.renderOrder = RO++;
+  scene.add(l); return l;
+}
+function setLine(line, p) {
+  line.geometry.setDrawRange(0, Math.max(0, Math.round(Math.min(1, Math.max(0, p)) * line.userData.n)));
+}
+function pathAt(pts, p) {
+  var n = pts.length - 1, f = Math.min(1, Math.max(0, p)) * n;
+  var i = Math.min(n - 1, Math.floor(f)), q = f - i;
+  return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * q,
+          pts[i][1] + (pts[i + 1][1] - pts[i][1]) * q];
+}
+function flashAlpha(t) {
+  if (t <= 0) return 0;
+  var cyc = CFG.flash.on + CFG.flash.off;
+  if (t >= 3 * cyc + 1e-4) return CFG.flash.settle;
+  return (t % cyc) < CFG.flash.on ? CFG.flash.hi : CFG.flash.lo;
+}
+function easeIO(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; }
+function backOut(p) { var s = 1.70158; p -= 1; return p * p * ((s + 1) * p + s) + 1; }
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+/* ============================================================
+   §3  具象物件：鴨仔
+   ============================================================ */
+var C_ = CFG.colors;
+function duck(g) {
+  var Y = 0xF6C93C, D = 0xE9B62C, O = 0xF2882F;
+  P(poly([[-30, -2], [-50, -12], [-45, 10], [-30, 12]]), Y, g);
+  P(shp(function (s) {
+    s.moveTo(-34, 2);
+    s.bezierCurveTo(-32, -14, -12, -20, 6, -18);
+    s.bezierCurveTo(24, -16, 34, -6, 33, 4);
+    s.bezierCurveTo(32, 16, 14, 22, -4, 21);
+    s.bezierCurveTo(-22, 20, -34, 14, -34, 2);
+  }), Y, g);
+  P(cir(23, -26, 15.5), Y, g);
+  P(shp(function (s) {
+    s.moveTo(35, -30);
+    s.bezierCurveTo(50, -30, 52, -22, 46, -19);
+    s.bezierCurveTo(40, -17, 35, -20, 34, -24);
+  }), O, g);
+  P(cir(27, -31, 3.4), 0x3A3630, g);
+  P(shp(function (s) {
+    s.moveTo(-16, -4);
+    s.bezierCurveTo(-6, -14, 14, -12, 18, 0);
+    s.bezierCurveTo(12, 12, -8, 13, -16, -4);
+  }), D, g);
+  P(strokeS(qbz([8, -2], [1, 9], [-8, 3]), 2.3), 0xD8A521, g);
+  P(strokeS(qbz([-8, 3], [-1, -4], [4, 2]), 2.1), 0xD8A521, g);
+}
+/* ============================================================
+   §4  場景佈置（鴨池：草地喺左）
+   ============================================================ */
+var actors = { ducksL: [], ducksR: [] };
+function buildDuckPond(cfg) {
+  var g = new THREE.Group(); g.position.set(cfg.x, cfg.y, 0); scene.add(g);
+  var w = cfg.w, h = cfg.h;
+  P(poly([[0, 4], [w, 0], [w, h - 6], [5, h]]), C_.water, g);
+  P(shp(function (s) {
+    s.moveTo(0, 4); s.lineTo(w * 0.54, 0.8);
+    s.bezierCurveTo(w * 0.42, h * 0.16, w * 0.30, h * 0.30, w * 0.13, h * 0.44);
+    s.bezierCurveTo(w * 0.08, h * 0.48, w * 0.04, h * 0.51, 0, h * 0.54);
+    s.closePath();
+  }), C_.land, g);
+  P(strokeS(qbz([w * 0.50, h * 0.06], [w * 0.30, h * 0.24], [w * 0.08, h * 0.48]), 3.5), C_.land2, g, 0.55);
+  return g;
+}
+function placeActor(fn, parent, wx, wy, s, flip, rot, store) {
+  var g = new THREE.Group();
+  g.position.set(wx, wy, 0);
+  g.scale.set(flip ? -s : s, s, 1);
+  if (rot) g.rotation.z = rot;
+  g.userData.bs = s; g.userData.fx = flip ? -1 : 1; g.userData.rot0 = rot || 0;
+  parent.add(g); fn(g);
+  if (store) store.push(g);
+  return g;
+}
+function bounce(g, p) {
+  var k = 1 + 0.15 * Math.sin(Math.min(1, p) * Math.PI) * (1 - p * 0.55);
+  g.scale.set(g.userData.fx * g.userData.bs * k, g.userData.bs * k, 1);
+}
+function setGroupOpacity(g, a) {
+  g.traverse(function (n) {
+    if (n.isMesh) { n.material.transparent = true; n.material.opacity = a; }
+  });
+}
+(function buildScene() {
+  var pL = buildDuckPond(CFG.pondL), pR = buildDuckPond(CFG.pondR);
+  CFG.ducksL.forEach(function (a) {
+    if (!a.leave) {
+      P(strokeS(qbz([a.x - 18, a.y + 12], [a.x, a.y + 18], [a.x + 18, a.y + 12]), 2.2), C_.water2, pL, 0.9);
+    }
+    placeActor(duck, pL, a.x, a.y, a.s, !!a.f, 0, actors.ducksL);
+  });
+  CFG.ducksR.forEach(function (a) {
+    P(strokeS(qbz([a.x - 18, a.y + 12], [a.x, a.y + 18], [a.x + 18, a.y + 12]), 2.2), C_.water2, pR, 0.9);
+    placeActor(duck, pR, a.x, a.y, a.s, !!a.f, 0, actors.ducksR);
+  });
+  arrowTo(pL, 228, 108, 158, 55, 6.5, 11, 15, C_.red);
+  arrowTo(pR, 336, 10, 274, 48, 6.5, 11, 15, C_.red);
+  arrowTo(scene, 466, 398, 516, 398, 13, 17, 21, C_.blue);
+  P(rrOut(232, 588, 68, 68, 8, 3.6), C_.olive);
+  P(ringS(350, 622, 22, 3.2), C_.olive);
+  P(rrOut(390, 588, 68, 68, 8, 3.6), C_.olive);
+  P(ringS(508, 622, 22, 3.2), C_.olive);
+  P(rrOut(548, 588, 68, 68, 8, 3.6), C_.olive);
+  P(rrOut(676, 588, 68, 68, 8, 3.6), C_.olive);
+})();
+/* ============================================================
+   §5  HUD
+   ============================================================ */
+var hud = document.getElementById('hud');
+var hudItems = [];
+function hudText(txt, x, y, size, opt) {
+  opt = opt || {};
+  var el = document.createElement('div');
+  el.className = 'wt' + (opt.anchor === 'c' ? ' anchor-c' : '') + (opt.serif ? ' serif' : '');
+  el.textContent = txt;
+  if (opt.bold) el.style.fontWeight = '800';
+  else if (opt.w6) el.style.fontWeight = '600';
+  if (opt.color) el.style.color = opt.color;
+  if (opt.op != null) el.style.opacity = opt.op;
+  el.style.whiteSpace = 'pre';
+  hud.appendChild(el);
+  var it = { el: el, x: x, y: y, size: size, min: opt.min || 14, anchor: opt.anchor === 'c' ? 'c' : 'l' };
+  hudItems.push(it);
+  return it;
+}
+(function buildHud() {
+  hudText('1', 84, 66, 24, { color: '#fff', bold: true, anchor: 'c', min: 16 });
+  hudText('看圖列算式。', 116, 44, 34, { bold: true, min: 22 });
+  hudText('Write down the equations according to the pictures below.', 116, 94, 21, { min: 14 });
+  hudText('(2) 最後水池中有多少隻鴨?', 60, 148, 25, { w6: true, min: 17 });
+  hudText('How many ducks are in the pond at the end?', 60, 184, 20, { min: 14 });
+  hudText('左圖', 100, 262, 20, { color: '#5b6b7c', w6: true, min: 15 });
+  hudText('右圖', 580, 262, 20, { color: '#5b6b7c', w6: true, min: 15 });
+  hudText('鴨仔', 330, 500, 19, { color: '#8a6d00', w6: true, min: 15 });
+  hudText('鴨仔', 810, 500, 19, { color: '#8a6d00', w6: true, min: 15 });
+  hudText('上咗岸・走咗嘅 5 隻', 96, 556, 20, { color: '#0a8aac', bold: true, min: 15 });
+  hudText('啱啱游入嚟嘅 4 隻', 760, 238, 20, { color: '#c07f00', bold: true, anchor: 'c', min: 15 });
+  hudText('之後', 491, 432, 20, { color: '#4e8cb5', w6: true, anchor: 'c', min: 15 });
+  hudText('=', 646, 598, 36, { serif: true, bold: true, anchor: 'c', min: 22 });
+  CFG.options.forEach(function (o) {
+    hudText(o.txt, o.x, o.y, 27, { serif: true, w6: true, min: 17 });
+  });
+})();
+var slotEls = CFG.slots.map(function (s) {
+  return { it: hudText(s.txt, s.x, s.y + 2, s.ans ? 42 : 42,
+    { bold: true, anchor: 'c', serif: true, color: s.ans ? CFG.colors.answer : CFG.colors.pen, min: 20 }), p: 0 };
+});
+var celEl = hudText('', 490, 902, 30, { bold: true, anchor: 'c', color: '#e8541f', min: 18 });
+celEl.el.style.opacity = 0;
+celEl.el.textContent = '🎉 太棒了！答案係 C：12 − 5 + 4 = 11 🎉';
+var startHint = hudText('▶ 按 Space 開始播放解題動畫', 490, 872, 23, { bold: true, anchor: 'c', min: 16 });
+startHint.el.id = 'startHint';
+var badges = [];
+function makeBadge(num, wx, wy, cssColor) {
+  var el = document.createElement('div');
+  el.className = 'badge';
+  el.textContent = num;
+  el.style.background = cssColor;
+  el.style.fontSize = '22px';
+  el.style.opacity = 0;
+  hud.appendChild(el);
+  var b = { el: el, x: wx, y: wy, p: 0 };
+  badges.push(b);
+  return b;
+}
+/* ============================================================
+   §6  區域高亮三部曲
+   ============================================================ */
+var regions = {};
+function buildRegion(name, def) {
+  var css = CFG.colors.region[def.ci];
+  var fill = P(rr(def.x, def.y, def.w, def.h, 16), parseInt(css.slice(1), 16), null, 0);
+  fill.renderOrder = 300 + def.ro * 4;
+  var shape = rr(def.x, def.y, def.w, def.h, 16);
+  var pts2 = shape.getPoints(8).map(function (v) { return [v.x, v.y]; });
+  pts2.push(pts2[0]);
+  var line = makeLine(pts2, darkenCss(css, 0.72), 1, 46);
+  line.renderOrder = 301 + def.ro * 4;
+  regions[name] = { def: def, css: css, fill: fill, line: line, pts: pts2 };
+}
+buildRegion('pondL', CFG.regions.pondL);
+buildRegion('leaving', CFG.regions.leaving);
+buildRegion('arrive', CFG.regions.arrive);
+buildRegion('pondR', CFG.regions.pondR);
+var circPts = (function () {
+  var c = CFG.circle, pts = [], N = 150;
+  for (var i = 0; i <= N; i++) {
+    var th = (i / N) * Math.PI * 2 * 1.03 - Math.PI * 0.5;
+    var wob = 1;
+    pts.push([c.cx + Math.cos(th) * c.rx * wob, c.cy + Math.sin(th) * c.ry * wob]);
+  }
+  return pts;
+})();
+var circleLine = makeLine(circPts, 0x0066cc, 1, 55);
+circleLine.renderOrder = 360;
+var ansGlow = P(ringS(710, 622, 44, 5), 0x2f9e57, null, 0);
+ansGlow.renderOrder = 310;
+/* ============================================================
+   §7  筆尖 + confetti
+   ============================================================ */
+var pen = new THREE.Group();
+var penBall = new THREE.Mesh(
+  new THREE.SphereGeometry(7.5, 22, 16),
+  new THREE.MeshPhongMaterial({ color: 0x0066cc, shininess: 80, specular: 0x99ccff })
+);
+penBall.renderOrder = 900;
+var penShadow = new THREE.Mesh(
+  new THREE.CircleGeometry(9, 20),
+  new THREE.MeshBasicMaterial({ color: 0x003377, transparent: true, opacity: 0.15, depthWrite: false })
+);
+penShadow.position.set(2, 12, -1); penShadow.renderOrder = 899;
+pen.add(penBall); pen.add(penShadow);
+pen.position.set(490, -40, 60);
+pen.visible = false;
+scene.add(pen);
+var confetti = [];
+(function () {
+  var cols = [0xf4711f, 0x0aa5c9, 0x8d5bd6, 0xf0a500, 0xe8467c, 0x33b26a, 0x0066cc];
+  for (var i = 0; i < 22; i++) {
+    var m = new THREE.Mesh(
+      new THREE.PlaneGeometry(9, 13),
+      new THREE.MeshBasicMaterial({ color: cols[i % cols.length], side: THREE.DoubleSide, transparent: true, depthWrite: false })
+    );
+    m.renderOrder = 950; m.visible = false;
+    scene.add(m);
+    confetti.push({
+      m: m,
+      x0: 490 + (Math.random() - 0.5) * 420,
+      y0: 830 - Math.random() * 90,
+      vx: (Math.random() - 0.5) * 320,
+      vy: -120 - Math.random() * 260,
+      r0: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 14
+    });
+  }
+})();
+function confettiUpdate(p) {
+  confetti.forEach(function (c) {
+    c.m.visible = p > 0;
+    var x = c.x0 + c.vx * p, y = c.y0 + c.vy * p + 420 * p * p;
+    c.m.position.set(x, y, 70);
+    c.m.rotation.z = c.r0 + c.vr * p;
+    c.m.material.opacity = 1 - clamp((p - 0.72) / 0.28, 0, 1);
+  });
+}
+/* ============================================================
+   §8  算草面板
+   ============================================================ */
+var panel = document.getElementById('panel'),
+    narrEl = document.getElementById('narr'),
+    calcEl = document.getElementById('calc'),
+    miniEl = document.getElementById('mini'),
+    cheerEl = document.getElementById('cheer'),
+    phasesEl = document.getElementById('phases'),
+    foldBtn = document.getElementById('fold');
+var NARRSTATE = { text: '', len: 0 };
+var CUR_PHASE = -1;
+var TOK = ['12', '−', '5', '+', '4', '=', '11'].map(function (t, i) {
+  var sp = document.createElement('span');
+  sp.className = 'tk' + ((t === '+' || t === '−') ? ' op' : '') + (i === 6 ? ' ans' : '');
+  sp.textContent = t;
+  calcEl.appendChild(sp);
+  return { txt: t, el: sp, p: 0 };
+});
+PHASES.forEach(function (name) {
+  var d = document.createElement('div');
+  d.className = 'ph'; d.textContent = name;
+  phasesEl.appendChild(d);
+});
+var phaseEls = Array.prototype.slice.call(phasesEl.children);
+foldBtn.addEventListener('click', function () {
+  panel.classList.toggle('collapsed');
+  foldBtn.textContent = panel.classList.contains('collapsed') ? '＋' : '−';
+  foldBtn.blur();
+});
+(function () {
+  var dragging = false, sx = 0, sy = 0, px = 0, py = 0;
+  var head = document.getElementById('phead');
+  head.addEventListener('pointerdown', function (e) {
+    if (e.target === foldBtn) return;
+    dragging = true;
+    var r = panel.getBoundingClientRect();
+    px = r.left; py = r.top; sx = e.clientX; sy = e.clientY;
+    head.setPointerCapture(e.pointerId);
+  });
+  head.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    panel.style.right = 'auto'; panel.style.bottom = 'auto'; panel.style.top = 'auto';
+    var x = clamp(px + e.clientX - sx, 0, W - 120), y = clamp(py + e.clientY - sy, 0, H - 46);
+    panel.style.left = x + 'px'; panel.style.top = y + 'px';
+  });
+  head.addEventListener('pointerup', function () { dragging = false; });
+})();
+function panelAnchor() {
+  var r = panel.getBoundingClientRect();
+  return { x: -OX + (r.left + r.width * 0.5) / K,
+           y: scrollY + (r.top + Math.min(r.height * 0.55, 150)) / K };
+}
+/* ============================================================
+   §9  時間軸引擎（純函數）
+   ============================================================ */
+var TL = [], TACC = 0;
+function step(dur, fn) { TL.push({ t0: TACC, dur: dur, fn: fn }); TACC += dur; }
+var TOTAL = 0;
+var PEN = [490, 200];
+function toPen(x, y) { var f = [PEN[0], PEN[1]]; PEN = [x, y]; return f; }
+function penAt(from, to, q) {
+  pen.position.set(from[0] + (to[0] - from[0]) * q, from[1] + (to[1] - from[1]) * q, 60);
+}
+var PENDING = []; var narrStep = function (text, phase, dur) { PENDING.forEach(function (b) { b.tFade = TACC + 0.15; }); PENDING.length = 0;
+  step(dur, function (p) {
+    if (p <= 0) return;
+    CUR_PHASE = phase;
+    NARRSTATE.text = text;
+    NARRSTATE.len = Math.floor(clamp((p - 0.08) / 0.85, 0, 1) * (text.length + 2));
+  });
+};
+var regionStep = function (reg, dur) {
+  var from = toPen(reg.pts[0][0], reg.pts[0][1]);
+  step(dur, function (p) {
+    if (p <= 0) { setLine(reg.line, 0); reg.fill.material.opacity = 0; return; }
+    var e = p * dur, drawDur = dur - 0.85;
+    var lp = Math.min(1, e / drawDur);
+    setLine(reg.line, lp);
+    var pt = pathAt(reg.pts, lp);
+    pen.position.set(pt[0], pt[1], 60);
+    reg.fill.material.opacity = flashAlpha(e - drawDur - 0.1);
+  });
+};
+var countStep = function (obj, wx, wy, badge, hover, dur) {
+  PENDING.push(badge); var target = [wx, wy - hover];
+  var from = toPen(target[0], target[1]);
+  step(dur, function (p) {
+    if (p <= 0) { badge.p = 0; if (obj) bounce(obj, 0); return; }
+    penAt(from, target, easeIO(Math.min(1, p / 0.6)));
+    if (p > 0.6) {
+      var b = (p - 0.6) / 0.4;
+      badge.p = b;
+      if (obj) bounce(obj, b);
+    }
+  });
+};
+var calcStep = function (idxArr, dur) {
+  var a0 = panelAnchor();
+  var from = toPen(a0.x, a0.y);
+  step(dur, function (p) {
+    if (p <= 0) { idxArr.forEach(function (i) { TOK[i].p = 0; }); return; }
+    var a = panelAnchor();
+    penAt(from, [a.x, a.y], easeIO(Math.min(1, p / 0.55)));
+    if (p > 0.55) { var b = (p - 0.55) / 0.45; idxArr.forEach(function (i) { TOK[i].p = b; }); }
+  });
+};
+var slotStep = function (si, dur) {
+  var s = CFG.slots[si], se = slotEls[si];
+  var from = toPen(s.x, s.y - 4);
+  step(dur, function (p) {
+    if (p <= 0) { se.p = 0; if (s.ans) ansGlow.material.opacity = 0; return; }
+    penAt(from, [s.x, s.y - 4], easeIO(Math.min(1, p / 0.42)));
+    if (p > 0.42) {
+      var b = (p - 0.42) / 0.58;
+      se.p = Math.min(1, b * 1.6);
+      pen.position.x += Math.sin(b * 34) * 2.5;
+      if (s.ans) ansGlow.material.opacity = flashAlpha(p * dur - 1.05);
+    }
+  });
+};
+/* v3 移動動畫（純函數，p<=0 完全還原 → 完美撤銷）
+   opt: { arc 弧高, wob 擺動, hop 彈跳, face 移動朝向(±1), scaleTo 末端縮放, fade 淡出起點 } */
+var moveStep = function (obj, fromXY, toXY, dur, opt) {
+  opt = opt || {};
+  var bs = obj.userData.bs, fx = obj.userData.fx, r0 = obj.userData.rot0 || 0;
+  step(dur, function (p) {
+    if (p <= 0) {
+      obj.position.set(fromXY[0], fromXY[1], 0);
+      obj.scale.set(fx * bs, bs, 1);
+      obj.rotation.z = r0;
+      setGroupOpacity(obj, 1);
+      return;
+    }
+    var q = easeIO(p);
+    var x = fromXY[0] + (toXY[0] - fromXY[0]) * q;
+    var y = fromXY[1] + (toXY[1] - fromXY[1]) * q - Math.sin(p * Math.PI) * (opt.arc || 0);
+    if (opt.hop) y -= Math.abs(Math.sin(p * Math.PI * 6)) * opt.hop;
+    obj.position.set(x, y, 0);
+    obj.rotation.z = r0 + Math.sin(p * Math.PI * 7) * (opt.wob != null ? opt.wob : 0.15);
+    var sc = opt.scaleTo ? bs * (1 + (opt.scaleTo - 1) * q) : bs;
+    obj.scale.set((opt.face || fx) * sc, sc, 1);
+    if (opt.fade) setGroupOpacity(obj, p > opt.fade ? Math.max(0, 1 - (p - opt.fade) / (1 - opt.fade)) : 1);
+    if (p >= 1) {
+      obj.position.set(toXY[0], toXY[1], 0);
+      obj.rotation.z = r0;
+      var fsc = opt.scaleTo ? bs * opt.scaleTo : bs;
+      obj.scale.set(fx * fsc, fsc, 1);
+      if (opt.fade) setGroupOpacity(obj, 0);
+    }
+  });
+};
+/* ---------- 步驟編排：邊數邊寫 + 真實移動 ---------- */
+/* ---------- 廣東話旁白語音（Level A：TTS 預生成 MP3）----------
+   7 段旁白 ↔ 時間軸：0=intro 1=P1 2=P2 3=P3 4=P4 5=P5 6=圈答案+慶祝
+   旁白步時長＝MP3 實際時長＋0.45s 緩衝（load 完 metadata 自動量度） */
+var AUDIO_DIR = 'ducks_audio/';
+var AUDIO_FILES = ['01.mp3', '02.mp3', '03.mp3', '04.mp3', '05.mp3', '06.mp3', '07.mp3'];
+var AUDIOS = AUDIO_FILES.map(function (f) {
+  var a = new Audio(AUDIO_DIR + f); a.preload = 'auto'; return a;
+});
+var AUDIO_STEPS = [];
+function audDur(i) {
+  var d = AUDIOS[i].duration;
+  return (isFinite(d) && d > 0) ? d + 0.45 : 3;   /* MP3 唔見咗→無聲 fallback */
+}
+var READY = false;
+function whenAudioReady(cb) {
+  var pend = AUDIOS.length, fired = false;
+  function done() { if (!fired && --pend <= 0) { fired = true; cb(); } }
+  AUDIOS.forEach(function (a) {
+    if (a.readyState >= 1) done();
+    else {
+      a.addEventListener('loadedmetadata', done, { once: true });
+      a.addEventListener('error', done, { once: true });
+    }
+  });
+  setTimeout(function () { if (!fired) { fired = true; cb(); } }, 3000);
+}
+function narrAudio(text, phase, ai) {
+  var T0 = TACC;
+  narrStep(text, phase, audDur(ai));
+  AUDIO_STEPS.push({ el: AUDIOS[ai], T0: T0, T1: TACC });
+}
+whenAudioReady(function () {
+(function build() {
+  var S = CFG.speed, rg = regions;
+  var pond = CFG.pondL, pond2 = CFG.pondR;
+  var D0 = audDur(0), T0 = TACC;
+  step(D0, function (p) {
+    if (p <= 0) { pen.visible = false; NARRSTATE.text = ''; NARRSTATE.len = 0; CUR_PHASE = -1; return; }
+    pen.visible = true;
+    var q = Math.min(1, (p * D0) / 0.92);              /* 筆飛入維持原絕對節奏 */
+    penAt([490, -40], [490, 200], easeIO(q));
+    if (p > 0.015) {
+      CUR_PHASE = 0; NARRSTATE.text = NARR.intro;
+      NARRSTATE.len = Math.floor(clamp((p - 0.015) / 0.9, 0, 1) * (NARR.intro.length + 2));
+    }
+  });
+  /* Phase 1 數左圖 12 隻 → 寫「12」 */
+  AUDIO_STEPS.push({ el: AUDIOS[0], T0: T0, T1: TACC });
+  narrAudio(NARR.p1, 0, 1);
+  regionStep(rg.pondL, S.region);
+  CFG.ducksL.forEach(function (a, i) {
+    var b = makeBadge(i + 1, pond.x + a.x, pond.y + a.y - 48, CFG.colors.region[0]);
+    countStep(actors.ducksL[i], pond.x + a.x, pond.y + a.y - 26, b, 30, S.count);
+  });
+  slotStep(0, S.slot + 0.15);
+  calcStep([0], S.calc);
+  /* Phase 2 岸邊 5 隻：數完一隻即刻跳住行出畫面 → 寫「−」「5」 */
+  narrAudio(NARR.p2, 1, 2);
+  regionStep(rg.leaving, S.region);
+  (function () {
+    var li = 0;
+    CFG.ducksL.forEach(function (a, i) {
+      if (!a.leave) return;
+      li++;
+      var obj = actors.ducksL[i];
+      var b = makeBadge(li, pond.x + a.x + 36, pond.y + a.y - 52, CFG.colors.region[1]);
+      countStep(obj, pond.x + a.x, pond.y + a.y - 26, b, 30, S.count);
+      moveStep(obj, [a.x, a.y], [a.x - 420, a.y + 40], S.fly,
+               { hop: 9, wob: 0.08, face: -1, scaleTo: 0.55, fade: 0.62 });   // 一步一步跳出左邊畫面
+    });
+  })();
+  slotStep(1, S.slot);
+  slotStep(2, S.slot + 0.15);
+  calcStep([1, 2], S.calc);
+  /* Phase 3 右圖 4 隻由遠處游入（逐隻游入嚟先數）→ 寫「+」「4」 */
+  narrAudio(NARR.p3, 2, 3);
+  regionStep(rg.arrive, S.region);
+  (function () {
+    var ai = 0;
+    CFG.ducksR.forEach(function (a, i) {
+      if (!a.arrive) return;
+      ai++;
+      var obj = actors.ducksR[i];
+      moveStep(obj, [a.x + 340 + ai * 30, a.y - 90 - ai * 18], [a.x, a.y], S.move,
+               { arc: 14, wob: 0.05, face: -1 });          // 畫面外右上 → 水面弧線游入嚟
+      var b = makeBadge(ai, pond2.x + a.x + 36, pond2.y + a.y - 52, CFG.colors.region[3]);
+      countStep(obj, pond2.x + a.x, pond2.y + a.y - 26, b, 30, S.count);
+    });
+  })();
+  slotStep(3, S.slot);
+  slotStep(4, S.slot + 0.15);
+  calcStep([3, 4], S.calc);
+  /* Phase 4 驗證右圖 11 隻 → 寫答案「11」 */
+  narrAudio(NARR.p4, 3, 4);
+  regionStep(rg.pondR, S.region);
+  CFG.ducksR.forEach(function (a, i) {
+    var b = makeBadge(i + 1, pond2.x + a.x, pond2.y + a.y - 46, CFG.colors.region[2]);
+    countStep(actors.ducksR[i], pond2.x + a.x, pond2.y + a.y - 24, b, 28, S.countFast);
+  });
+  slotStep(5, S.slotAns);
+  calcStep([5, 6], S.calc + 0.2);
+  /* Phase 5 圈選項 C → 慶祝 */
+  narrAudio(NARR.p5, 4, 5);
+  var cDur = 3.2, eDur = Math.max(2.5, audDur(6) - cDur), T6 = TACC;
+  (function () {
+    var from = toPen(circPts[0][0], circPts[0][1]);
+    step(cDur, function (p) {
+      if (p <= 0) { setLine(circleLine, 0); circleLine.material.opacity = 1; return; }
+      var lp = Math.min(1, p / 0.94);
+      setLine(circleLine, lp);
+      var pt = pathAt(circPts, lp);
+      pen.position.set(pt[0], pt[1], 60);
+      circleLine.material.opacity = p > 0.96 ? 0.85 : 1;
+    });
+  })();
+  (function () {
+    step(eDur, function (p) {
+      if (p <= 0) { celEl.el.style.opacity = 0; cheerEl.style.opacity = 0; confettiUpdate(0); return; }
+      celEl.el.style.opacity = Math.min(1, p * 2.5);
+      cheerEl.style.opacity = clamp((p - 0.1) * 2, 0, 1);
+      confettiUpdate(p);
+      NARRSTATE.text = NARR.end;
+      NARRSTATE.len = Math.floor(clamp(p / 0.6, 0, 1) * (NARR.end.length + 2));
+      pen.position.set(490 + Math.sin(p * 9) * 26, 862 + Math.cos(p * 7) * 10, 60);
+    });
+  })();
+  AUDIO_STEPS.push({ el: AUDIOS[6], T0: T6, T1: TACC });   /* 07.mp3 跨圈選＋慶祝兩步 */
+})();
+TOTAL = TACC;
+READY = true;
+});   /* end whenAudioReady */
+/* ============================================================
+   §10  播放引擎 + 控制
+   ============================================================ */
+var t = 0, playing = false, ffEnd = -1, ffKeep = true;
+
+/* 語音同步（宣告式）：由 t / playing / ffEnd 推算每段 MP3 應有狀態——
+   暫停=pause 保留進度；←退回/重置=歸零；快進=靜音跳過；resume 自動 seek 返正確位 */
+function syncAudio() {
+  for (var i = 0; i < AUDIO_STEPS.length; i++) {
+    var s = AUDIO_STEPS[i], a = s.el;
+    var want = READY && playing && ffEnd < 0 && t >= s.T0 && t < s.T1;
+    if (want) {
+      var off = t - s.T0, d = a.duration;
+      /* bug#3 guard：MP3 ended 後 0.45s 緩衝期內唔准 re-play 尾段（殘留怪聲）*/
+      if (a.paused && !(isFinite(d) && off >= d - 0.06)) {
+        try { a.currentTime = Math.max(0, off); a.play().catch(function () {}); } catch (err) {}
+      }
+    } else if (!a.paused) { a.pause(); }
+    if ((t < s.T0 - 0.01 || t >= s.T1) && a.currentTime > 0) { try { a.currentTime = 0; } catch (err) {} }
+  }
+}
+var lastUserScroll = -1e9, curStepIdx = -1;
+function stepIndexAt(tt) {
+  var i = TL.length - 1;
+  while (i > 0 && tt < TL[i].t0) i--;
+  return i;
+}
+function applyAll(tt) {
+  for (var i = 0; i < TL.length; i++) {
+    var s = TL[i], p = (tt - s.t0) / s.dur;
+    s.fn(p <= 0 ? 0 : (p >= 1 ? 1 : p));
+  }
+  var idx = stepIndexAt(tt);
+  if (idx !== curStepIdx) { curStepIdx = idx; lastUserScroll = -1e9; }
+}
+function maxScroll() { return Math.max(0, CFG.world.H - H / K + 30); }
+function updateScroll(dt) {
+  var vh = H / K;
+  if (performance.now() - lastUserScroll > 2200) {
+    var target = clamp(pen.position.y - vh * 0.45, 0, maxScroll());
+    scrollY += (target - scrollY) * Math.min(1, dt * 4.2);
+    if (Math.abs(target - scrollY) < 0.4) scrollY = target;
+  }
+  camera.left = -OX; camera.right = CFG.world.W + OX;
+  camera.top = scrollY; camera.bottom = scrollY + vh;
+  camera.updateProjectionMatrix();
+}
+function flushHud() {
+  for (var i = 0; i < hudItems.length; i++) {
+    var it = hudItems[i];
+    var sx = (it.x + OX) * K, sy = (it.y - scrollY) * K;
+    it.el.style.transform = 'translate(' + sx.toFixed(1) + 'px,' + sy.toFixed(1) + 'px)' +
+      (it.anchor === 'c' ? ' translate(-50%,-50%)' : '');
+  }
+  for (var j = 0; j < badges.length; j++) {
+    var b = badges[j];
+    if (b.p <= 0) { b.el.style.opacity = 0; continue; }
+    var bx = (b.x + OX) * K, by = (b.y - scrollY) * K;
+    var sc = 0.4 + 0.6 * backOut(Math.min(1, b.p));
+    var fadeP = 1 - clamp((t - (b.tFade || 1e9)) / 0.6, 0, 1); b.el.style.opacity = Math.min(1, b.p * 3) * fadeP;
+    b.el.style.transform = 'translate(' + bx.toFixed(1) + 'px,' + by.toFixed(1) + 'px)' +
+      ' translate(-50%,-50%) scale(' + sc.toFixed(3) + ')';
+  }
+  for (var k = 0; k < slotEls.length; k++) {
+    var se = slotEls[k];
+    se.it.el.style.opacity = se.p;
+    se.it.el.style.transform = se.it.el.style.transform.replace(/ scale\([0-9.]+\)$/, '') +
+      ' scale(' + (0.3 + 0.7 * Math.min(1, se.p)).toFixed(3) + ')';
+  }
+  startHint.el.style.opacity = (t < 0.05 && !playing) ? 1 : 0;
+}
+function flushPanel() {
+  narrEl.textContent = NARRSTATE.text.slice(0, NARRSTATE.len);
+  var mini = '';
+  for (var i = 0; i < TOK.length; i++) {
+    var tk = TOK[i];
+    tk.el.style.opacity = tk.p;
+    tk.el.style.transform = 'scale(' + (0.4 + 0.6 * Math.min(1, tk.p)).toFixed(3) + ')';
+    if (tk.p > 0.05) mini = tk.txt;
+  }
+  miniEl.textContent = mini || '　';
+  for (var j = 0; j < phaseEls.length; j++) {
+    var cls = 'ph' + (j < CUR_PHASE ? ' done' : j === CUR_PHASE ? ' active' : '');
+    if (phaseEls[j].className !== cls) {
+      phaseEls[j].className = cls;
+      if (cls.indexOf('active') >= 0) { void phaseEls[j].offsetWidth; }
+    }
+  }
+}
+var lastNow = performance.now();
+function frame(now) {
+  var dt = Math.min(0.05, (now - lastNow) / 1000); lastNow = now;
+  if (ffEnd >= 0) {
+    t = Math.min(ffEnd, t + dt * 10);
+    if (t >= ffEnd - 1e-6) { t = ffEnd; ffEnd = -1; playing = ffKeep; }
+  } else if (playing) {
+    t = Math.min(TOTAL, t + dt);
+    if (t >= TOTAL) playing = false;
+  }
+  applyAll(t);
+  syncAudio();
+  updateScroll(dt);
+  renderer.render(scene, camera);
+  flushHud();
+  flushPanel();
+  requestAnimationFrame(frame);
+}
+addEventListener('keydown', function (e) {
+  if (!READY) return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (!playing && t >= TOTAL) t = 0;
+    playing = !playing; ffEnd = -1; lastUserScroll = -1e9;
+  } else if (e.code === 'KeyS' || e.code === 'Escape') {
+    t = 0; playing = false; ffEnd = -1; scrollY = 0; lastUserScroll = -1e9;
+  } else if (e.code === 'ArrowRight') {
+    e.preventDefault();
+    if (t >= TOTAL) return;
+    var i = stepIndexAt(t), end = TL[i].t0 + TL[i].dur;
+    if (t >= end - 1e-6 && i < TL.length - 1) end = TL[i + 1].t0 + TL[i + 1].dur;
+    ffEnd = end; ffKeep = playing; playing = true; lastUserScroll = -1e9;
+  } else if (e.code === 'ArrowLeft') {
+    e.preventDefault();
+    var j = stepIndexAt(t), target = TL[j].t0;
+    if (t - TL[j].t0 < 0.04 && j > 0) target = TL[j - 1].t0;
+    t = target; playing = false; ffEnd = -1; lastUserScroll = -1e9;
+  }
+});
+document.getElementById('replay').addEventListener('click', function (e) {
+  if (!READY) return;
+  t = 0; playing = true; ffEnd = -1; scrollY = 0; lastUserScroll = -1e9;
+  e.currentTarget.blur();
+});
+var muteBtn = document.getElementById('muteBtn');
+muteBtn.addEventListener('click', function () {
+  var m = !AUDIOS[0].muted;
+  AUDIOS.forEach(function (a) { a.muted = m; });
+  muteBtn.textContent = m ? '🔇' : '🔊';
+  muteBtn.blur();
+});
+document.getElementById('stage').addEventListener('wheel', function (e) {
+  e.preventDefault();
+  scrollY = clamp(scrollY + e.deltaY / K, 0, maxScroll());
+  lastUserScroll = performance.now();
+}, { passive: false });
+(function () {
+  var ty = null;
+  var st = document.getElementById('stage');
+  st.addEventListener('touchstart', function (e) { ty = e.touches[0].clientY; }, { passive: true });
+  st.addEventListener('touchmove', function (e) {
+    var y = e.touches[0].clientY;
+    if (ty != null) {
+      scrollY = clamp(scrollY + (ty - y) / K, 0, maxScroll());
+      lastUserScroll = performance.now();
+    }
+    ty = y;
+  }, { passive: true });
+})();
+/* ============================================================
+   §11  自適應
+   ============================================================ */
+function resize() {
+  W = innerWidth; H = innerHeight;
+  VIEWW = Math.min(1860, Math.max(1020, (W / H) * 930));
+  OX = (VIEWW - CFG.world.W) / 2;
+  K = W / VIEWW;
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+  renderer.setSize(W, H, false);
+  panel.classList.toggle('mobile', W < 900);
+  for (var i = 0; i < hudItems.length; i++) {
+    var it = hudItems[i];
+    it.el.style.fontSize = Math.max(it.min, it.size * K).toFixed(1) + 'px';
+  }
+  for (var j = 0; j < badges.length; j++) {
+    badges[j].el.style.fontSize = Math.max(16, 22 * K).toFixed(1) + 'px';
+  }
+}
+addEventListener('resize', resize);
+
+/* ---------- iPad／觸控支援（iOS 音頻解鎖＋點按畫面＝播放／暫停）---------- */
+(function () {
+  function unlockAudio() {
+    AUDIOS.forEach(function (a) {
+      var m = a.muted; a.muted = true;
+      var pr = a.play();
+      var fin = function () { try { a.pause(); a.currentTime = 0; } catch (e) {} a.muted = m; };
+      if (pr && pr.then) pr.then(fin).catch(function () { a.muted = m; }); else fin();
+    });
+    removeEventListener('pointerdown', unlockAudio);
+    removeEventListener('touchstart', unlockAudio);
+    removeEventListener('keydown', unlockAudio);
+  }
+  addEventListener('pointerdown', unlockAudio);
+  addEventListener('touchstart', unlockAudio);
+  addEventListener('keydown', unlockAudio);
+  var tapMoved = false;
+  document.getElementById('stage').addEventListener('touchmove', function () { tapMoved = true; }, { passive: true });
+  document.getElementById('stage').addEventListener('click', function () {
+    if (tapMoved) { tapMoved = false; return; }
+    if (!READY) return;
+    if (!playing && t >= TOTAL) t = 0;
+    playing = !playing; ffEnd = -1; lastUserScroll = -1e9;
+  });
+})();
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
