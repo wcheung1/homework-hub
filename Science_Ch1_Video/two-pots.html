@@ -1,0 +1,411 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>兩盆嘢</title>
+<style>
+  :root{--sky-hi:#d6efff;--sky-lo:#a9dcf5;--ink:#2e4057;--left:#f27ba0;--right:#9b7fd4;--sun:#ffc93c;--off:#c9d1d8}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{font-family:"PingFang HK","PingFang TC","Hiragino Sans CJK TC","Microsoft JhengHei",sans-serif;
+    color:var(--ink);background:linear-gradient(180deg,var(--sky-hi) 0%,var(--sky-lo) 58%,#bfe08f 58%,#8ed26a 100%);
+    display:flex;flex-direction:column;user-select:none}
+  #stage{position:relative;flex:1 1 auto;min-height:0}
+  #stage canvas{display:block;width:100%;height:100%}
+  #day{position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:clamp(20px,4.6vw,30px);
+    font-weight:800;letter-spacing:.06em;color:#fff;text-shadow:0 2px 0 rgba(46,64,87,.35);opacity:0;transition:opacity .25s;pointer-events:none}
+  #day.on{opacity:1}
+  #panels{display:flex;gap:10px;padding:10px 12px 0;flex:0 0 auto}
+  .pot-panel{flex:1 1 0;border-radius:26px;padding:10px 8px 12px;background:#fff;border-bottom:6px solid rgba(0,0,0,.12)}
+  .pot-panel.l{border-bottom-color:var(--left)}.pot-panel.r{border-bottom-color:var(--right)}
+  .cap{text-align:center;font-size:clamp(15px,3.4vw,20px);font-weight:800;margin:0 0 8px;letter-spacing:.04em}
+  .pot-panel.l .cap{color:var(--left)}.pot-panel.r .cap{color:var(--right)}
+  .row{display:flex;gap:6px;justify-content:center}
+  .sw{width:clamp(56px,17vw,84px);aspect-ratio:1/1;border:none;border-radius:22px;background:var(--off);
+      display:grid;place-items:center;cursor:pointer;transition:background .18s,transform .12s;position:relative;padding:0}
+  .sw:active{transform:scale(.92)}
+  .sw svg{width:60%;height:60%}
+  .sw .glyph{stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  .sw .fillglyph{fill:#fff}
+  .sw .slash{stroke:#fff;stroke-width:3.2;stroke-linecap:round;opacity:1;transition:opacity .18s}
+  .sw[data-on="1"] .slash{opacity:0}
+  .sw[data-key="sun"][data-on="1"]{background:var(--sun)}
+  .sw[data-key="water"][data-on="1"]{background:#4fb8e8}
+  .sw[data-key="air"][data-on="1"]{background:#7cc7a8}
+  .sw:focus-visible{outline:4px solid var(--ink);outline-offset:3px}
+  #bar{flex:0 0 auto;padding:12px 12px calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px}
+  #go{flex:1 1 auto;border:none;border-radius:26px;padding:16px 10px;background:var(--ink);color:#fff;
+    font-size:clamp(19px,4.6vw,26px);font-weight:800;letter-spacing:.08em;cursor:pointer;
+    border-bottom:6px solid rgba(0,0,0,.28);font-family:inherit}
+  #go:active{transform:translateY(3px);border-bottom-width:3px}
+  #go[disabled]{opacity:.45}
+  #again{flex:0 0 auto;border:none;border-radius:26px;padding:16px 18px;background:#fff;color:var(--ink);
+    font-size:clamp(19px,4.6vw,26px);font-weight:800;cursor:pointer;border-bottom:6px solid rgba(0,0,0,.14);font-family:inherit}
+  #again:active{transform:translateY(3px);border-bottom-width:3px}
+  #doc{position:absolute;inset:auto 12px 12px;display:none;align-items:flex-end;gap:10px;pointer-events:none}
+  #doc.on{display:flex;animation:pop .32s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes pop{from{transform:translateY(16px) scale(.9);opacity:0}}
+  #doc svg{flex:0 0 auto;width:clamp(52px,14vw,78px);height:auto}
+  #say{background:#fff;border-radius:22px;padding:12px 16px;flex:1 1 auto;
+    font-size:clamp(16px,3.8vw,22px);font-weight:700;line-height:1.5;box-shadow:0 6px 0 rgba(46,64,87,.16)}
+  #say b{color:#e8562f}
+  #mute{position:absolute;top:10px;right:10px;width:44px;height:44px;border:none;border-radius:16px;
+    background:rgba(255,255,255,.75);display:grid;place-items:center;cursor:pointer;padding:0}
+  #mute svg{width:22px;height:22px;stroke:var(--ink);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  #mute[data-on="0"] svg{opacity:.35}
+  @media (prefers-reduced-motion:reduce){#doc.on{animation:none}}
+</style>
+
+<div id="stage">
+  <canvas id="c"></canvas>
+  <div id="day">第一日</div>
+  <button id="mute" data-on="1" aria-label="聲音">
+    <svg viewBox="0 0 24 24"><path d="M5 9h3l4-4v14l-4-4H5z"/><path d="M16 9c1.2 1.2 1.2 4.8 0 6"/><path d="M19 6c2.6 2.6 2.6 9.4 0 12"/></svg>
+  </button>
+  <div id="doc">
+    <svg viewBox="0 0 100 110" aria-hidden="true">
+      <ellipse cx="50" cy="70" rx="34" ry="34" fill="#f6a13c"/>
+      <path d="M14 30 L50 14 L86 30 L50 46 Z" fill="#2e4057"/>
+      <rect x="46" y="30" width="8" height="14" fill="#2e4057"/>
+      <circle cx="38" cy="66" r="12" fill="#fff" stroke="#2e4057" stroke-width="4"/>
+      <circle cx="64" cy="66" r="12" fill="#fff" stroke="#2e4057" stroke-width="4"/>
+      <line x1="50" y1="66" x2="52" y2="66" stroke="#2e4057" stroke-width="4"/>
+      <circle cx="38" cy="66" r="4" fill="#2e4057"/><circle cx="64" cy="66" r="4" fill="#2e4057"/>
+      <path d="M40 88 Q50 96 60 88" stroke="#2e4057" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div id="say"></div>
+  </div>
+</div>
+
+<div id="panels">
+  <div class="pot-panel l"><p class="cap">左邊嗰盆</p><div class="row" data-side="0"></div></div>
+  <div class="pot-panel r"><p class="cap">右邊嗰盆</p><div class="row" data-side="1"></div></div>
+</div>
+
+<div id="bar">
+  <button id="go">快轉一星期</button>
+  <button id="again">由頭嚟</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const KEYS=[
+ {k:'sun',label:'陽光',svg:'<circle class="fillglyph" cx="12" cy="12" r="4.6"/><g class="glyph"><line x1="12" y1="2" x2="12" y2="4.4"/><line x1="12" y1="19.6" x2="12" y2="22"/><line x1="2" y1="12" x2="4.4" y2="12"/><line x1="19.6" y1="12" x2="22" y2="12"/><line x1="5" y1="5" x2="6.7" y2="6.7"/><line x1="17.3" y1="17.3" x2="19" y2="19"/><line x1="19" y1="5" x2="17.3" y2="6.7"/><line x1="6.7" y1="17.3" x2="5" y2="19"/></g>'},
+ {k:'water',label:'水',svg:'<path class="fillglyph" d="M12 3c4 5.2 6 8.2 6 10.6A6 6 0 0 1 6 13.6C6 11.2 8 8.2 12 3z"/>'},
+ {k:'air',label:'空氣',svg:'<g class="glyph"><path d="M3 8h10a2.6 2.6 0 1 0-2.6-2.6"/><path d="M3 12.5h13.6a2.8 2.8 0 1 1-2.8 2.8"/><path d="M3 17h7"/></g>'}
+];
+const state=[{sun:true,water:true,air:true},{sun:true,water:true,air:true}];
+let running=false,muted=false;
+
+/* ===== 廣東話語音 ===== */
+let voice=null;
+function pickVoice(){
+  if(!window.speechSynthesis)return;
+  const vs=speechSynthesis.getVoices();
+  voice = vs.find(v=>/zh[-_]HK/i.test(v.lang))
+       || vs.find(v=>/yue/i.test(v.lang))
+       || vs.find(v=>/粵|粤|cantonese|sinji/i.test(v.name))
+       || vs.find(v=>/zh[-_]TW/i.test(v.lang))
+       || vs.find(v=>/^zh/i.test(v.lang)) || null;
+}
+if(window.speechSynthesis){ pickVoice(); speechSynthesis.onvoiceschanged=pickVoice; }
+function speak(txt,delay=0){
+  if(muted||!window.speechSynthesis)return;
+  setTimeout(()=>{
+    if(muted)return;
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(txt);
+    if(voice)u.voice=voice;
+    u.lang=voice?voice.lang:'zh-HK';
+    u.rate=.82;u.pitch=1.06;
+    speechSynthesis.speak(u);
+  },delay);
+}
+function stripTags(h){return h.replace(/<br\s*\/?>/g,'，').replace(/<[^>]+>/g,'');}
+
+const TIP={
+  sun0:['用黑箱冚住呢盆。<br>一星期後先至揭開。','用黑箱冚住呢盆。一星期後先至揭開。'],
+  water0:['呢盆唔淋水。<br>泥土會慢慢乾晒。','呢盆唔淋水。泥土會慢慢乾晒。'],
+  air0:['冚咗個透明罩。<br>空氣入唔到。<br>淋水嗰陣先揭起佢。','冚咗個透明罩，空氣入唔到。淋水嗰陣先揭起佢。']
+};
+
+document.querySelectorAll('.row').forEach(row=>{
+  const side=+row.dataset.side;
+  KEYS.forEach(def=>{
+    const b=document.createElement('button');
+    b.className='sw';b.dataset.key=def.k;b.dataset.on='1';b.setAttribute('aria-label',def.label);
+    b.innerHTML='<svg viewBox="0 0 24 24">'+def.svg+'<line class="slash" x1="4" y1="20" x2="20" y2="4"/></svg>';
+    b.onclick=()=>{
+      if(running)return;
+      state[side][def.k]=!state[side][def.k];
+      b.dataset.on=state[side][def.k]?'1':'0';
+      note(state[side][def.k]?523.25:349.23,.12);
+      if(!state[side][def.k]){const t=TIP[def.k+'0'];showDoc(t[0]);speak(t[1],150);}
+      else {hideDoc();if(window.speechSynthesis)speechSynthesis.cancel();}
+      applyGear();
+    };
+    row.appendChild(b);
+  });
+});
+
+let ac=null;
+function ctx(){if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();return ac;}
+function note(f,dur,delay=0,type='triangle'){
+  if(muted)return;
+  try{const a=ctx(),t=a.currentTime+delay,o=a.createOscillator(),g=a.createGain();
+    o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(.16,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+.05);}catch(e){}
+}
+const MOTIF=[261.63,293.66,329.63,392.00,523.25];
+function motif(){MOTIF.forEach((f,i)=>note(f,.3,i*.15));}
+function thud(){note(146.83,.35,0,'sine');}
+function drip(){note(880+Math.random()*260,.07,0,'sine');}
+function whoosh(){note(196,.5,0,'sawtooth');note(392,.4,.06);}
+const mute=document.getElementById('mute');
+mute.onclick=()=>{muted=!muted;mute.dataset.on=muted?'0':'1';
+  if(muted&&window.speechSynthesis)speechSynthesis.cancel(); else note(659.25,.14);};
+
+/* ===== 場景 ===== */
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(42,1,.1,100);
+camera.position.set(0,2.7,9.6);camera.lookAt(0,1.6,0);
+scene.add(new THREE.HemisphereLight(0xffffff,0x9ccf7a,.9));
+const key=new THREE.DirectionalLight(0xfff3d0,.85);key.position.set(-4,7,5);scene.add(key);
+const ground=new THREE.Mesh(new THREE.CylinderGeometry(9,9,.6,40),new THREE.MeshLambertMaterial({color:0x8ed26a}));
+ground.position.y=-.3;scene.add(ground);
+const SUNPOS=new THREE.Vector3(-4.9,5.2,-.6);
+const sun=new THREE.Mesh(new THREE.SphereGeometry(.62,20,16),new THREE.MeshBasicMaterial({color:0xffc93c}));
+sun.position.copy(SUNPOS);scene.add(sun);
+const UP=new THREE.Vector3(0,1,0);
+function makeRay(){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,1,8),
+    new THREE.MeshBasicMaterial({color:0xffe27a,transparent:true,opacity:.42}));
+  scene.add(m);return m;
+}
+function aimRay(ray,target){
+  const d=new THREE.Vector3().subVectors(target,SUNPOS),len=d.length();
+  ray.scale.set(1,len,1);
+  ray.position.copy(SUNPOS).addScaledVector(d,.5);
+  ray.quaternion.setFromUnitVectors(UP,d.clone().normalize());
+}
+
+function makePot(x,color){
+  const grp=new THREE.Group();grp.position.x=x;scene.add(grp);
+  const potMat=new THREE.MeshLambertMaterial({color});
+  const pot=new THREE.Mesh(new THREE.CylinderGeometry(.82,.6,1,24),potMat);pot.position.y=.5;grp.add(pot);
+  const rim=new THREE.Mesh(new THREE.CylinderGeometry(.88,.88,.16,24),potMat);rim.position.y=1;grp.add(rim);
+  const soilMat=new THREE.MeshLambertMaterial({color:0x8b5e3c});
+  const soil=new THREE.Mesh(new THREE.CylinderGeometry(.79,.79,.12,24),soilMat);soil.position.y=1.02;grp.add(soil);
+
+  const cracks=[];
+  for(let i=0;i<3;i++){
+    const cr=new THREE.Mesh(new THREE.BoxGeometry(.9,.02,.05),new THREE.MeshBasicMaterial({color:0x5b3a22}));
+    cr.position.set((i-1)*.22,1.09,(i-1)*.2);cr.rotation.y=i*1.1;cr.visible=false;grp.add(cr);cracks.push(cr);
+  }
+
+  const plant=new THREE.Group();plant.position.y=1.06;plant.scale.set(.14,.14,.14);grp.add(plant);
+  const stemMat=new THREE.MeshLambertMaterial({color:0x4f9e3a});
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(.055,.085,1.6,10),stemMat);stem.position.y=.8;plant.add(stem);
+  const leafMat=new THREE.MeshLambertMaterial({color:0x63bf46});
+  const leaves=[];
+  for(let i=0;i<6;i++){
+    const l=new THREE.Mesh(new THREE.SphereGeometry(.32,14,10),leafMat);
+    l.scale.set(1,.22,.62);
+    const side=i%2?1:-1;
+    l.position.set(side*.3,.42+i*.22,0);l.rotation.z=side*.5;
+    plant.add(l);leaves.push({m:l,side,base:side*.5});
+  }
+
+  const box=new THREE.Mesh(new THREE.BoxGeometry(2.1,3,2.1),new THREE.MeshLambertMaterial({color:0x3a3f47}));
+  box.position.y=6.4;grp.add(box);
+
+  /* 透明罩 */
+  const dome=new THREE.Group();dome.position.y=1.05;dome.visible=false;grp.add(dome);
+  const glass=new THREE.Mesh(
+    new THREE.SphereGeometry(1.12,26,18,0,Math.PI*2,0,Math.PI/2),
+    new THREE.MeshPhongMaterial({color:0xdff4ff,transparent:true,opacity:.34,shininess:100,
+      specular:0xffffff,side:THREE.DoubleSide,depthWrite:false}));
+  dome.add(glass);
+  const hoop=new THREE.Mesh(new THREE.TorusGeometry(1.12,.05,8,32),
+    new THREE.MeshLambertMaterial({color:0xbfe6f7}));
+  hoop.rotation.x=Math.PI/2;dome.add(hoop);
+  const knob=new THREE.Mesh(new THREE.SphereGeometry(.13,12,10),
+    new THREE.MeshLambertMaterial({color:0xbfe6f7}));
+  knob.position.y=1.12;dome.add(knob);
+
+  const can=new THREE.Group();can.visible=false;grp.add(can);
+  const canMat=new THREE.MeshLambertMaterial({color:0xf0c04a});
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(.3,.34,.46,16),canMat);can.add(body);
+  const spout=new THREE.Mesh(new THREE.CylinderGeometry(.06,.09,.62,10),canMat);
+  spout.position.set(-.36,.06,0);spout.rotation.z=1.15;can.add(spout);
+  const handle=new THREE.Mesh(new THREE.TorusGeometry(.17,.045,8,16),canMat);
+  handle.position.set(.28,.12,0);handle.rotation.y=Math.PI/2;can.add(handle);
+  can.position.set(.85,2.45,.15);
+
+  const drops=[];
+  for(let i=0;i<14;i++){
+    const d=new THREE.Mesh(new THREE.SphereGeometry(.062,8,6),new THREE.MeshLambertMaterial({color:0x4fb8e8}));
+    d.visible=false;grp.add(d);drops.push({m:d,t:-1,x:0,z:0});
+  }
+
+  return {grp,soilMat,cracks,plant,stemMat,leafMat,leaves,box,dome,can,drops,
+          cur:.14,target:.14,health:1,healthCur:1,pouring:0,boxDown:false,domeUp:false};
+}
+
+const pots=[makePot(-2.35,0xf27ba0),makePot(2.35,0x9b7fd4)];
+function met(s){return (s.sun?1:0)+(s.water?1:0)+(s.air?1:0);}
+const SCALE=[.16,.34,.62,1.0];
+
+function applyGear(){
+  pots.forEach((p,i)=>{
+    const s=state[i];
+    p.boxDown=!s.sun;
+    p.cracks.forEach(c=>c.visible=!s.water);
+    p.soilMat.color.setHex(s.water?0x8b5e3c:0xc4a077);
+    p.dome.visible=!s.air;
+  });
+}
+applyGear();
+
+let t=0;
+function frame(){
+  requestAnimationFrame(frame);
+  t+=.016;
+  pots.forEach((p,i)=>{
+    p.cur+=(p.target-p.cur)*.05;
+    p.healthCur+=(p.health-p.healthCur)*.05;
+    p.plant.scale.set(p.cur,p.cur,p.cur);
+    const h=p.healthCur;
+    const c=new THREE.Color().setHSL(.10+.19*h,.55+.18*h,.28+.16*h);
+    p.leafMat.color.copy(c);p.stemMat.color.copy(c).offsetHSL(0,0,-.06);
+    p.leaves.forEach((l,k)=>{l.m.rotation.z=l.base-l.side*(1-h)*1.0+Math.sin(t*1.4+k)*.03;});
+
+    p.box.position.y+=((p.boxDown?1.5:6.4)-p.box.position.y)*.14;
+    p.dome.position.y+=((p.domeUp?3.35:1.05)-p.dome.position.y)*.2;
+
+    const covered=p.box.position.y<3.2;
+    renderRay(p,covered);
+
+    if(p.pouring>0){
+      p.pouring-=.016;p.can.visible=true;
+      p.can.rotation.z=Math.min(1.05,p.can.rotation.z+.1);
+      if(Math.random()<.55){
+        const d=p.drops.find(q=>q.t<0);
+        if(d){d.t=0;d.x=.34+Math.random()*.12;d.z=.1+Math.random()*.14;drip();}
+      }
+    }else{
+      p.can.rotation.z=Math.max(0,p.can.rotation.z-.13);
+      if(p.can.rotation.z<=0)p.can.visible=false;
+    }
+    p.drops.forEach(d=>{
+      if(d.t<0){d.m.visible=false;return;}
+      d.t+=.016;
+      const y=2.4-9*d.t*d.t*.5-.6*d.t;
+      if(y<1.12){d.t=-1;d.m.visible=false;return;}
+      d.m.visible=true;d.m.position.set(d.x,y,d.z);
+    });
+  });
+  sun.position.y=SUNPOS.y+Math.sin(t*.7)*.12;
+  renderer.render(scene,camera);
+}
+function renderRay(p,covered){
+  if(!p.ray)p.ray=makeRay();
+  aimRay(p.ray,new THREE.Vector3(p.grp.position.x,covered?3.0:1.2+1.7*p.cur,0));
+  p.ray.material.opacity=covered?.18:.42;
+}
+
+function resize(){
+  const st=document.getElementById('stage'),w=st.clientWidth,h=st.clientHeight;
+  renderer.setSize(w,h,false);camera.aspect=w/h;
+  camera.position.z=w<560?11.8:9.6;camera.updateProjectionMatrix();
+}
+addEventListener('resize',resize);resize();frame();
+
+const doc=document.getElementById('doc'),say=document.getElementById('say');
+function showDoc(html){say.innerHTML=html;doc.classList.add('on');}
+function hideDoc(){doc.classList.remove('on');}
+const NAME={sun:'陽光',water:'水',air:'空氣'};
+function diffs(){return KEYS.map(d=>d.k).filter(k=>state[0][k]!==state[1][k]);}
+
+const dayEl=document.getElementById('day'),go=document.getElementById('go'),again=document.getElementById('again');
+const DAYS=['第一日','第二日','第三日','第四日','第五日','第六日','第七日'];
+const DAY_MS=880;
+let timers=[];
+function later(fn,ms){timers.push(setTimeout(fn,ms));}
+
+go.onclick=()=>{
+  if(running)return;
+  running=true;go.disabled=true;hideDoc();
+  if(window.speechSynthesis)speechSynthesis.cancel();
+  const start=pots.map(p=>p.cur),end=pots.map((p,i)=>SCALE[met(state[i])]);
+  pots.forEach((p,i)=>{p.health=met(state[i])/3;});
+  dayEl.classList.add('on');
+  let d=0;
+  const step=()=>{
+    dayEl.textContent=DAYS[d];
+    note(392+d*22,.14);
+    pots.forEach((p,i)=>{
+      p.target=start[i]+(end[i]-start[i])*((d+1)/7);
+      if(!state[i].water)return;
+      if(!state[i].air){
+        p.domeUp=true;
+        later(()=>{p.pouring=.34;},250);
+        later(()=>{p.domeUp=false;},660);
+      }else{
+        later(()=>{p.pouring=.34;},120);
+      }
+    });
+    d++;
+    if(d<7)later(step,DAY_MS);
+    else later(reveal,DAY_MS+220);
+  };
+  step();
+};
+
+function reveal(){
+  dayEl.classList.remove('on');
+  const any=pots.some(p=>p.boxDown);
+  pots.forEach(p=>{p.boxDown=false;});
+  if(any)whoosh();
+  later(verdict,any?950:280);
+}
+
+function verdict(){
+  const dd=diffs();
+  let html,spoken;
+  if(dd.length===0){
+    thud();
+    html='兩盆一模一樣喎。<br>咁樣冇嘢好比。<br>試下淨係郁其中一盆。';
+    spoken='兩盆一模一樣喎，咁樣冇嘢好比。試下淨係郁其中一盆。';
+    speak(spoken,300);
+  }else if(dd.length===1){
+    const k=dd[0],weak=state[0][k]?'右邊':'左邊';
+    motif();
+    html='你淨係郁咗<b>'+NAME[k]+'</b>。<br>'+weak+'嗰盆生得矮啲。<br>所以你知道，係'+NAME[k]+'搞出嚟。';
+    spoken='你淨係郁咗'+NAME[k]+'。'+weak+'嗰盆生得矮啲。所以你知道，係'+NAME[k]+'搞出嚟。';
+    speak(spoken,900);
+  }else{
+    thud();
+    const n=dd.map(k=>NAME[k]).join('同');
+    html='你一次過郁咗<b>'+n+'</b>。<br>兩盆都變咗樣。<br>我唔知係邊樣搞出嚟喎。';
+    spoken='你一次過郁咗'+n+'。兩盆都變咗樣。我唔知係邊樣搞出嚟喎。';
+    speak(spoken,300);
+  }
+  showDoc(html);
+  running=false;go.disabled=false;
+}
+
+again.onclick=()=>{
+  if(running)return;
+  timers.forEach(clearTimeout);timers=[];
+  hideDoc();
+  if(window.speechSynthesis)speechSynthesis.cancel();
+  state.forEach(s=>{s.sun=s.water=s.air=true;});
+  document.querySelectorAll('.sw').forEach(b=>b.dataset.on='1');
+  pots.forEach(p=>{p.target=.14;p.cur=.14;p.health=1;p.healthCur=1;p.pouring=0;p.domeUp=false;});
+  applyGear();
+  note(523.25,.16);note(659.25,.16,.12);
+};
+</script>
