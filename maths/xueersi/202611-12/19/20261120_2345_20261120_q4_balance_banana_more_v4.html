@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>拓展練習 4 天平（等量代換）：問號處要添上幾多根香蕉？— 解題動畫</title>
+<!--
+  等量代換・天平動畫 v7.6／Q4 v2（拓展練習 4・S4R 修正輪）：抵銷——2蕉+1蘋 = 2蘋+1梨 → 兩邊各攞走 1 蘋 → 2 蕉 = 1蘋+1梨；天平②左 1蕉+1蘋+1梨 = 3蕉、右已有 2 蕉+? → ? = 1（右邊第二根蕉先前被天平遮住，使用者糾正 20261120）；防窒四招＋四鐵律；v6 引擎修正（applyAll reset＋CUR_PHASE）
+  題目來源：DOC/20261120/20261120_01.jpg（拓展練習 1）
+  內容依據：output/20261120_0745_vision_20261120_balance_questions.md Q1 節
+  天平骨架（makeBalance / setTilt / regionStep / countStep / calcStep）服務 Q1–Q5
+  2 貓 = 8 橙、2 橙 = 1 南瓜 → 1 貓 = 2 南瓜
+-->
+<style>
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#f0f4f8;
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Heiti TC",sans-serif;
+    -webkit-user-select:none;user-select:none;}
+  #stage{position:fixed;inset:0;}
+  #art{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  #hud{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5;}
+  .wt{position:absolute;left:0;top:0;white-space:nowrap;line-height:1.25;color:#23303e;
+     will-change:transform;transform-origin:left top;}
+  .anchor-c{transform-origin:center center;text-align:center;}
+  .serif{font-family:"Times New Roman",Times,Georgia,"Songti TC",serif;}
+  .badge{position:absolute;left:0;top:0;width:1.7em;height:1.7em;line-height:1.7em;
+    border-radius:50%;color:#fff;font-weight:700;text-align:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.28);will-change:transform;}
+  #startHint{position:absolute;left:0;top:0;color:#0066cc;font-weight:800;
+    animation:bob 1.1s ease-in-out infinite;}
+  @keyframes bob{0%,100%{translate:0 0}50%{translate:0 .35em}}
+  #topbar{position:fixed;top:0;left:0;right:0;z-index:40;text-align:center;
+    background:rgba(255,255,255,.88);border-bottom:1px solid #d5dee8;
+    font-size:14px;color:#3a4a5a;padding:5px 8px;line-height:1.5;}
+  #topbar b{color:#0066cc;}
+  #replay{position:fixed;right:14px;bottom:80px;z-index:40;
+    font-size:17px;font-weight:700;color:#fff;background:#0066cc;border:none;
+    border-radius:26px;padding:10px 22px;cursor:pointer;box-shadow:0 4px 14px rgba(0,102,204,.4);}
+  #replay:hover{background:#0055aa;}
+  #ctrl{position:fixed;right:14px;bottom:14px;z-index:40;
+    display:flex;gap:12px;}
+  #ctrl button{font-size:24px;width:54px;height:54px;border-radius:50%;border:none;
+    background:#0066cc;color:#fff;cursor:pointer;box-shadow:0 3px 12px rgba(0,102,204,.4);}
+  #ctrl button:active{background:#0055aa;}
+  #muteBtn{position:fixed;left:14px;bottom:14px;z-index:40;font-size:22px;width:48px;
+    height:48px;border-radius:50%;border:1px solid #c9d6e2;background:#eef2f7;
+    color:#2a3947;cursor:pointer;box-shadow:0 2px 8px rgba(30,60,90,.25);}
+  #panel{position:fixed;right:14px;top:64px;width:330px;z-index:50;
+    background:rgba(255,255,255,.97);border:1px solid #c9d6e2;border-radius:14px;
+    box-shadow:0 8px 26px rgba(30,60,90,.22);font-size:16px;color:#2a3947;}
+  #panel.mobile{left:8px;right:8px;top:auto;bottom:8px;width:auto;}
+  #phead{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:grab;
+    border-bottom:1px solid #e2eaf2;}
+  #panel.collapsed #phead{border-bottom:none;}
+  #drag{font-size:18px;color:#8ba0b5;cursor:grab;}
+  #ptitle{font-weight:800;font-size:17px;flex:1;}
+  #mini{font-size:14px;color:#0066cc;font-weight:700;min-width:2.2em;text-align:right;}
+  #fold{border:1px solid #b9c8d8;background:#eef4fa;color:#33608c;font-size:15px;
+    font-weight:800;border-radius:8px;width:30px;height:30px;cursor:pointer;line-height:1;}
+  #pbody{padding:9px 12px 12px;}
+  #panel.collapsed #pbody{display:none;}
+  #phases{display:flex;flex-wrap:wrap;gap:4px 6px;margin-bottom:8px;}
+  .ph{font-size:13px;background:#eef2f7;border-radius:9px;padding:3px 8px;color:#6d7f92;}
+  .ph.done{background:#dcefe0;color:#2f7a44;}
+  .ph.active{background:#0066cc;color:#fff;font-weight:700;animation:phpulse .9s ease-in-out 2;}
+  @keyframes phpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+  #narrbox{min-height:64px;background:#f2f7fd;border-radius:10px;padding:8px 10px;
+    font-size:17px;line-height:1.65;margin-bottom:8px;}
+  #narr::after{content:"▍";color:#0066cc;}
+  #calc{padding:2px 0 0;min-height:30px;}
+  #calc .crow{font-size:24px;font-weight:800;text-align:center;letter-spacing:1px;
+    line-height:1.4;min-height:34px;}
+  #calc .tk{display:inline-block;margin:0 3px;color:#0066cc;opacity:0;}
+  #calc .tk.op{color:#5a6b7d;}
+  #calc .tk.ans{color:#e8541f;}
+  #cheer{font-size:16px;text-align:center;color:#e8541f;font-weight:800;min-height:22px;opacity:0;}
+  #warn{display:none;position:fixed;left:0;right:0;top:0;z-index:99;background:#B3261E;
+    color:#fff;font:14px/1.5 system-ui,sans-serif;padding:10px 14px;text-align:center;}
+</style>
+</head>
+<body>
+<div id="warn">未能載入 three.js（需要網絡連線去攞 CDN）。請檢查網絡後重新載入。</div>
+<div id="stage">
+  <canvas id="art"></canvas>
+  <div id="hud"></div>
+</div>
+<div id="topbar"><b>Space</b> 播放/暫停　·　<b>S / Esc</b> 重置　·　<b>→</b> 下一小步　·　<b>←</b> 退回上一小步　·　🖱 滑鼠滾輪上下捲動　·　🔊 左下角可靜音（有廣東話旁白）</div>
+<button id="replay">🔄 重新播放解題過程</button>
+<div id="ctrl"><button id="btnPrev" title="退回上一小步">⏮</button><button id="btnPlay" title="播放／暫停">▶</button><button id="btnNext" title="下一小步">⏭</button></div>
+<button id="muteBtn" title="靜音／開聲">🔊</button>
+<div id="panel">
+  <div id="phead">
+    <span id="drag">☰</span>
+    <span id="ptitle">📝 解題思維與算草區</span>
+    <span id="mini">　</span>
+    <button id="fold" title="摺疊/展開">−</button>
+  </div>
+  <div id="pbody">
+    <div id="phases"></div>
+    <div id="narrbox"><span id="narr"></span></div>
+    <div id="calc"></div>
+    <div id="cheer">🎉 恭喜！完全正確！</div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+        onerror="document.getElementById('warn').style.display='block'"></script>
+<script>
+'use strict';
+/* v2：任何錯誤即時上畫面（#warn＋startHint）——唔准靜默僵屍（Q2 regions.conv 教訓） */
+window.onerror = function (msg, ln) {
+  var m = '⚠️ ' + String(msg).slice(0, 80) + ' @L' + ln;
+  try { var w = document.getElementById('warn'); if (w) { w.style.display = 'block'; w.textContent = m; } } catch (e0) {}
+  try { if (typeof startHint !== 'undefined' && startHint.el) { startHint.el.textContent = m; startHint.el.style.opacity = 1; } } catch (e1) {}
+};
+if (typeof THREE === 'undefined') { throw new Error('three.js not loaded'); }
+/* ============================================================
+   §A  廣東話旁白（v7.2：外置 MP3 資料夾＋軟同步＋browser TTS fallback）
+   MP3 段 decode 失敗／3 秒 metadata 未 ready → 該段 fallback speechSynthesis
+   （zh-HK 聲優先；時長基準 AUDIO_DUR 用 mutagen 實測預填，聲畫唔會散）
+   ============================================================ */
+var AUDIO_SRC = [
+  '20261120_audio/q4v2/p01.mp3',
+  '20261120_audio/q4v2/p02.mp3',
+  '20261120_audio/q4v2/p03.mp3',
+  '20261120_audio/q4v2/p04.mp3',
+  '20261120_audio/q4v2/p05.mp3',
+  '20261120_audio/q4v2/p06.mp3',
+  '20261120_audio/q4v2/p07.mp3',
+  '20261120_audio/q4v2/p08.mp3'
+];
+var AUDIO_DUR = [13.44, 9.17, 11.23, 15.29, 15.58, 6.55, 4.03, 11.23];
+var AD = [];
+var AUDIOS = [], mp3Bad = [], audioMeta = [], useTTS = [];
+var ASTEPS = [], READY = false, curSeg = -1, muted = false, ttsVoice = null;
+var audioUnlocked = false, audioBlocked = false, forceFallbackDur = false;
+/* v7.1 iOS 手勢解鎖：Safari 要 play()/speak() 由用戶手勢直接觸發；rAF 內叫會被擋
+   （舊碼 .catch 靜默吞 NotAllowedError → 全程靜音：MP3 冇聲、fallback TTS 又死） */
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  audioBlocked = false;
+  for (var ui = 0; ui < AUDIOS.length; ui++) {
+    if (!AUDIOS[ui]) continue;
+    (function (el) {
+      try {
+        var pr = el.play();
+        if (pr && pr.then) pr.then(function () { el.pause(); el.currentTime = 0; }).catch(function () {});
+      } catch (e) {}
+    })(AUDIOS[ui]);
+  }
+  if ('speechSynthesis' in window) {
+    try {
+      var wu = new SpeechSynthesisUtterance(' ');
+      wu.volume = 0; wu.lang = 'zh-HK';
+      if (ttsVoice) wu.voice = ttsVoice;
+      speechSynthesis.speak(wu);
+    } catch (e) {}
+  }
+}
+document.addEventListener('pointerdown', unlockAudio, true);
+document.addEventListener('touchend', unlockAudio, true);
+function kickAudioInGesture() {
+  if (!READY || muted || !playing || ffEnd >= 0) return;
+  var seg = -1, i;
+  for (i = 0; i < ASTEPS.length; i++) {
+    if (t >= ASTEPS[i].t0 && t < ASTEPS[i].t1) { seg = i; break; }
+  }
+  if (seg < 0) return;
+  var st = ASTEPS[seg], off = t - st.t0;
+  if (useTTS[st.a]) { if (curSeg !== seg) { curSeg = seg; speakSeg(st.a); } return; }
+  var A = AUDIOS[st.a];
+  if (!A || off >= A.duration - 0.06) return;
+  /* v7.3：唔准向後扯音頻（口窒窒真兇）；只有動畫超前先向前跳 */
+  if (A.currentTime < off - 0.35) { try { A.currentTime = off; } catch (e) {} }
+  var pr = null; try { pr = A.play(); } catch (e3) { audioBlocked = true; }
+  if (pr && pr.catch) pr.catch(function () { audioBlocked = true; });
+  curSeg = seg;
+}
+(function initAudio() {
+  for (var i = 0; i < AUDIO_SRC.length; i++) {
+    mp3Bad.push(false); audioMeta.push(false); useTTS.push(false);
+    try {
+      var a = new Audio(AUDIO_SRC[i]);
+      a.preload = 'auto';
+      (function (idx) {
+        a.addEventListener('error', function () { mp3Bad[idx] = true; });
+        a.addEventListener('loadedmetadata', function () {
+          audioMeta[idx] = true;
+          /* v7.3：settle 之後 metadata 先到 → 翻用 MP3（唔影響正在 TTS 嘅段） */
+          if (READY && !mp3Bad[idx] && AUDIOS[idx] && AUDIOS[idx].duration > 0.3 &&
+              !(curSeg >= 0 && ASTEPS[curSeg] && ASTEPS[curSeg].a === idx)) useTTS[idx] = false;
+        });
+      })(i);
+      AUDIOS.push(a);
+    } catch (e) { AUDIOS.push(null); mp3Bad[i] = true; }
+  }
+})();
+function calcAD() {
+  return AUDIO_SRC.map(function (_, i) {
+    var d = (!forceFallbackDur && !useTTS[i] && AUDIOS[i] && AUDIOS[i].duration > 0.3) ? AUDIOS[i].duration : AUDIO_DUR[i];
+    if (!isFinite(d)) d = AUDIO_DUR[i];
+    return Math.max(1.0, d);
+  });
+}
+function pickTTSVoice() {
+  if (!('speechSynthesis' in window)) return null;
+  var vs = speechSynthesis.getVoices(), i;
+  for (i = 0; i < vs.length; i++) if (/^zh[-_]HK/i.test(vs[i].lang)) return vs[i];
+  for (i = 0; i < vs.length; i++) if (/^zh/i.test(vs[i].lang)) return vs[i];
+  return vs.length ? vs[0] : null;
+}
+if ('speechSynthesis' in window) {
+  ttsVoice = pickTTSVoice();
+  speechSynthesis.onvoiceschanged = function () { ttsVoice = pickTTSVoice(); };
+}
+function speakSeg(i) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(NARR_TTS[i]);
+  u.lang = 'zh-HK';
+  if (ttsVoice) u.voice = ttsVoice;
+  speechSynthesis.speak(u);
+}
+function stopAllAudio() {
+  for (var i = 0; i < AUDIOS.length; i++) if (AUDIOS[i]) AUDIOS[i].pause();
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  curSeg = -1;
+}
+function syncAudio() {
+  if (!READY) return;
+  if (muted || ffEnd >= 0 || !playing) {
+    if (curSeg >= 0) {
+      var cA = ASTEPS[curSeg].a;
+      if (AUDIOS[cA] && !AUDIOS[cA].paused) AUDIOS[cA].pause();
+      if ('speechSynthesis' in window && useTTS[cA]) speechSynthesis.pause();
+    }
+    return;
+  }
+  var seg = -1, i;
+  for (i = 0; i < ASTEPS.length; i++) {
+    if (t >= ASTEPS[i].t0 && t < ASTEPS[i].t1) { seg = i; break; }
+  }
+  if (seg < 0) {
+    if (curSeg >= 0) {
+      var pA = ASTEPS[curSeg].a;
+      if (AUDIOS[pA]) { AUDIOS[pA].pause(); AUDIOS[pA].currentTime = 0; }
+      if ('speechSynthesis' in window) speechSynthesis.cancel();
+      curSeg = -1;
+    }
+    return;
+  }
+  var st = ASTEPS[seg], off = t - st.t0;
+  if (curSeg !== seg) {
+    var prevA = (curSeg >= 0) ? ASTEPS[curSeg].a : -1;
+    if (prevA >= 0 && AUDIOS[prevA]) {
+      AUDIOS[prevA].pause();
+      AUDIOS[prevA].currentTime = 0;
+    }
+    /* v7.6 防窒：淨係 TTS 段先叫 speechSynthesis.cancel（Windows Chrome 每段叫會頓一頓） */
+    if ('speechSynthesis' in window && (useTTS[st.a] || (prevA >= 0 && useTTS[prevA]))) speechSynthesis.cancel();
+    curSeg = seg;
+    if (useTTS[st.a]) speakSeg(st.a);
+  }
+  if (useTTS[st.a]) return; /* speechSynthesis 冇 seek，任佢讀（聲軟同步） */
+  var A = AUDIOS[st.a];
+  if (!A) return;
+  /* ended guard：MP3 播完後步尾 0.45s 緩衝唔准 re-play（v7 bug 教訓） */
+  if (off >= A.duration - 0.06) { if (!A.paused) A.pause(); return; }
+  /* v7.3：唔准向後扯音頻（口窒窒真兇）；只有動畫超前先向前跳 */
+  if (A.currentTime < off - 0.35) { try { A.currentTime = off; } catch (e) {} }
+  if (A.paused) {
+    var pr2 = null; try { pr2 = A.play(); } catch (e2) { audioBlocked = true; }
+    if (pr2 && pr2.catch) pr2.catch(function () { audioBlocked = true; });
+  }
+}
+function audioSettle(cb) {
+  var t0 = performance.now();
+  (function poll() {
+    var all = true, i;
+    for (i = 0; i < AUDIOS.length; i++) if (!audioMeta[i] && !mp3Bad[i]) all = false;
+    if (all || performance.now() - t0 > 1200) {
+      for (i = 0; i < AUDIOS.length; i++)
+        useTTS[i] = mp3Bad[i] || !audioMeta[i] || !(AUDIOS[i] && AUDIOS[i].duration > 0.3);
+      try { buildTimeline(); }
+      catch (errBuild) {
+        if (window.console && console.error) console.error('buildTimeline', errBuild);
+        try {
+          forceFallbackDur = true; buildTimeline(); /* 實測 duration 出問題（Infinity/NaN）→ 用 AUDIO_DUR 再試 */
+          if (startHint && startHint.el) startHint.el.textContent = '⚠️ 音頻時長出問題，已用後備時長';
+        } catch (errBuild2) {
+          if (startHint && startHint.el) startHint.el.textContent = '⚠️ ' + String((errBuild2 && errBuild2.message) || errBuild2).slice(0, 70);
+          if (window.console && console.error) console.error('buildTimeline2', errBuild2);
+        }
+      }
+      READY = true;
+      if (cb) cb();
+    } else setTimeout(poll, 120);
+  })();
+}
+/* ============================================================
+   §0  CONFIG（Q4：抵銷——2蕉+1蘋 = 2蘋+1梨 → 2蕉 = 1蘋+1梨；天平②左 1蕉+1蘋+1梨、右 2蕉+? → ? = 1）
+   ============================================================ */
+var CFG = {
+  world: { W: 980, H: 1020 },
+  colors: {
+    bg: 0xf0f4f8, pen: '#0066cc',
+    banana: 0xF7D148, apple: 0xE14B4B, pear: 0xB7C24A, leaf: 0x3E8E4F,
+    pillar: 0x9A7B4F, base: 0x8B653C, beam: 0xB08A5A,
+    panRim: 0xF2C14E, panBowl: 0xD9A441, string: 0x55606b,
+    halos: ['#f4711f', '#0aa5c9', '#8d5bd6', '#2f9e57'],
+    answer: '#e8541f'
+  },
+  flash: { on: 0.13, off: 0.11, hi: 0.78, lo: 0.05, settle: 0.32 },
+  speed: { region: 1.9, count: 0.66, move: 1.15, morph: 1.3 },
+  bal1: { x: 300, y: 400, arm: 120, pillarH: 140, SL: 86, rim: 80 },
+  bal2: { x: 700, y: 400, arm: 120, pillarH: 140, SL: 86, rim: 80 },
+  halos: {
+    bal1:  { x: 150, y: 356, w: 300, h: 280, ci: 0 },
+    bal2:  { x: 530, y: 356, w: 340, h: 280, ci: 1 }
+  },
+  rows: [
+    ['2', '蕉', '+', '1', '蘋', '=', '2', '蘋', '+', '1', '梨'],
+    ['2', '蕉', '=', '1', '蘋', '+', '1', '梨'],
+    ['1', '蘋', '+', '1', '梨', '=', '2', '蕉'],
+    ['?', '＋', '1', '蕉']
+  ]
+};
+var NARR = {
+  intro: '一齊嚟睇吓呢條香蕉天平題：第二個天平嘅問號位，要加幾多根香蕉先至平衡呢？秘密武器係——兩邊同時攞走一樣嘅嘢，天平照樣平衡！',
+  p1: '第一步，睇天平一：左邊兩根香蕉加一個蘋果，右邊兩個蘋果加一個梨。天平平住！',
+  p2: '第二步，兩邊各有一個蘋果，同時攞走佢哋——打個交叉，蘋果飛走！剩低兩根香蕉等於一個蘋果加一個梨。',
+  p3: '第三步，睇天平二左邊：一根香蕉、一個蘋果加一個梨。啱啱話過，一個蘋果加一個梨等於兩根香蕉，所以左邊即係一根香蕉加兩根香蕉，成三根香蕉！',
+  p4: '第四步，睇吓天平二右邊：數清楚，已經有兩根香蕉喺度！左邊有三根，右邊有兩根，相差幾多？一根！所以要再添上一根香蕉！',
+  p5: '一根香蕉由遠處飛入嚟！天平慢慢回平，完美平衡！',
+  p6: '喺問號位寫上答案：一根香蕉！',
+  end: '🎉 答案係 1！用抵銷方法搵出一個蘋果加一個梨等於兩根香蕉，右邊已經有兩根，所以問號位只要添上一根香蕉！'
+};
+var NARR_TTS = [NARR.intro, NARR.p1, NARR.p2, NARR.p3, NARR.p4, NARR.p5, NARR.p6, NARR.end];
+var PHASES = ['1. 睇天平①', '2. 抵銷蘋果', '3. 天平②代換', '4. 數差距', '5. 香蕉飛入', '6. 寫答案'];
+/* ============================================================
+   §1  Renderer / Scene / Camera
+   ============================================================ */
+var W = innerWidth, H = innerHeight, VIEWW = 980, OX = 0, K = 1, scrollY = 0;
+var renderer = null;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('art'), antialias: true });
+  renderer.setClearColor(CFG.colors.bg, 1);
+} catch (eRenderer) {
+  /* v2：WebGL 開唔到（Safari 動畫分頁開太多會撞 context 上限）→ 大字橫幅 */
+  var w0 = document.getElementById('warn');
+  if (w0) { w0.style.display = 'block'; w0.textContent = '⚠️ WebGL 開唔到（可能 Safari 開咗太多動畫分頁）。請閂埋其他分頁再重新載入。'; }
+  if (window.console && console.error) console.error('renderer', eRenderer);
+}
+var scene = new THREE.Scene();
+var camera = new THREE.OrthographicCamera(0, CFG.world.W, 0, 100, 0.1, 3000);
+camera.position.set(0, 0, 1000);
+scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+var dl = new THREE.DirectionalLight(0xffffff, 0.75); dl.position.set(150, -260, 800); scene.add(dl);
+/* ============================================================
+   §2  形狀工具（照 ws1 模板）
+   ============================================================ */
+var RO = 1;
+function P(shape, color, parent, op) {
+  var geo = new THREE.ShapeGeometry(shape, 32);
+  var mat = new THREE.MeshBasicMaterial({
+    color: color, side: THREE.DoubleSide, transparent: true,
+    opacity: (op == null ? 1 : op), depthWrite: false
+  });
+  var m = new THREE.Mesh(geo, mat);
+  m.renderOrder = RO++; m.position.z = 0;
+  (parent || scene).add(m);
+  return m;
+}
+function V(a) { return new THREE.Vector2(a[0], a[1]); }
+function shp(f) { var s = new THREE.Shape(); f(s); return s; }
+function ell(cx, cy, rx, ry, rot) {
+  var s = new THREE.Shape();
+  s.absellipse(cx, cy, rx, ry, 0, Math.PI * 2, false, rot || 0); return s;
+}
+function cir(cx, cy, r) { return ell(cx, cy, r, r, 0); }
+function poly(p) {
+  var s = new THREE.Shape(); s.moveTo(p[0][0], p[0][1]);
+  for (var i = 1; i < p.length; i++) s.lineTo(p[i][0], p[i][1]);
+  s.closePath(); return s;
+}
+function ringS(cx, cy, r, t) {
+  var s = cir(cx, cy, r); var h = new THREE.Path();
+  h.absellipse(cx, cy, r - t, r - t, 0, Math.PI * 2, true, 0);
+  s.holes.push(h); return s;
+}
+function rrTo(o, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  o.moveTo(x + r, y);
+  o.lineTo(x + w - r, y);   o.quadraticCurveTo(x + w, y, x + w, y + r);
+  o.lineTo(x + w, y + h - r); o.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  o.lineTo(x + r, y + h);   o.quadraticCurveTo(x, y + h, x, y + h - r);
+  o.lineTo(x, y + r);       o.quadraticCurveTo(x, y, x + r, y);
+  return o;
+}
+function rr(x, y, w, h, r) { return rrTo(new THREE.Shape(), x, y, w, h, r); }
+function qbz(p0, c, p1, n) {
+  return new THREE.QuadraticBezierCurve(V(p0), V(c), V(p1))
+    .getPoints(n || 24).map(function (p) { return [p.x, p.y]; });
+}
+function cbz(p0, c1, c2, p3, n) {
+  return new THREE.CubicBezierCurve(V(p0), V(c1), V(c2), V(p3))
+    .getPoints(n || 30).map(function (p) { return [p.x, p.y]; });
+}
+function strokeS(pts, w0, w1) {
+  if (w1 === undefined) w1 = w0;
+  var L = [], R = [], i, t, hw, a, b, dx, dy, len;
+  for (i = 0; i < pts.length; i++) {
+    t = (pts.length === 1) ? 0 : i / (pts.length - 1);
+    hw = (w0 + (w1 - w0) * t) / 2;
+    a = pts[Math.max(0, i - 1)]; b = pts[Math.min(pts.length - 1, i + 1)];
+    dx = b[0] - a[0]; dy = b[1] - a[1];
+    len = Math.sqrt(dx * dx + dy * dy) || 1; dx /= len; dy /= len;
+    L.push([pts[i][0] - dy * hw, pts[i][1] + dx * hw]);
+    R.push([pts[i][0] + dy * hw, pts[i][1] - dx * hw]);
+  }
+  return poly(L.concat(R.reverse()));
+}
+function darkenCss(hex, f) {
+  var n = parseInt(hex.slice(1), 16);
+  var r = Math.round((n >> 16) * f), g = Math.round(((n >> 8) & 255) * f), b = Math.round((n & 255) * f);
+  return (r << 16) | (g << 8) | b;
+}
+function makeLine(ptsArr, color, op, z) {
+  var g = new THREE.BufferGeometry().setFromPoints(
+    ptsArr.map(function (a) { return new THREE.Vector3(a[0], a[1], z || 0); }));
+  var m = new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: (op == null ? 1 : op) });
+  var l = new THREE.Line(g, m);
+  l.userData.n = ptsArr.length; l.renderOrder = RO++;
+  scene.add(l); return l;
+}
+function setLine(line, p) {
+  line.geometry.setDrawRange(0, Math.max(0, Math.round(Math.min(1, Math.max(0, p)) * line.userData.n)));
+}
+function pathAt(pts, p) {
+  var n = pts.length - 1, f = Math.min(1, Math.max(0, p)) * n;
+  var i = Math.min(n - 1, Math.floor(f)), q = f - i;
+  return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * q,
+          pts[i][1] + (pts[i + 1][1] - pts[i][1]) * q];
+}
+function flashAlpha(t) {
+  if (t <= 0) return 0;
+  var cyc = CFG.flash.on + CFG.flash.off;
+  if (t >= 3 * cyc + 1e-4) return CFG.flash.settle;
+  return (t % cyc) < CFG.flash.on ? CFG.flash.hi : CFG.flash.lo;
+}
+function easeIO(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; }
+function backOut(p) { var s = 1.70158; p -= 1; return p * p * ((s + 1) * p + s) + 1; }
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+/* ============================================================
+   §3  天平骨架（Q1–Q5 共用）＋ 具象物件：香蕉 / 蘋果 / 梨
+   makeBalance 回 { g, beam, panL, panR, setTilt }
+   setTilt(θ)：θ>0 = 右邊沉（y-down 世界，rotation.z=θ 右端向下）
+   ============================================================ */
+var C_ = CFG.colors;
+function makeBalance(cfg) {
+  var g = new THREE.Group(); g.position.set(cfg.x, cfg.y, 0); scene.add(g);
+  /* 柱 + 底座（靜態） */
+  P(rr(-64, cfg.pillarH - 4, 128, 24, 12), C_.base, g);
+  P(rr(-9, 0, 18, cfg.pillarH, 7), C_.pillar, g);
+  P(poly([[-20, 0], [20, 0], [0, -32]]), C_.base, g);
+  P(cir(0, -30, 5), C_.string, g);
+  /* 橫樑（pivot 原點） */
+  var beam = new THREE.Group(); g.add(beam);
+  P(rr(-cfg.arm - 34, -7, 2 * (cfg.arm + 34), 14, 7), C_.beam, beam);
+  P(cir(0, 0, 6.5), C_.base, beam);
+  /* 吊碟：碟組永遠保持水平，只上下移動 */
+  function makePan(side) {
+    var pan = new THREE.Group(); g.add(pan);
+    pan.position.set(side * cfg.arm, cfg.SL, 0);
+    /* 吊索：由樑端 (0,-SL) 落到碟邊 */
+    P(strokeS([[0, -cfg.SL], [-cfg.rim + 8, -6]], 3), C_.string, pan);
+    P(strokeS([[0, -cfg.SL], [cfg.rim - 8, -6]], 3), C_.string, pan);
+    P(shp(function (s) {
+      s.moveTo(-cfg.rim, -4);
+      s.quadraticCurveTo(0, cfg.rim * 0.34, cfg.rim, -4);
+      s.quadraticCurveTo(0, -14, -cfg.rim, -4);
+    }), C_.panBowl, pan);
+    P(ell(0, -4, cfg.rim, 9), C_.panRim, pan);
+    return pan;
+  }
+  var panL = makePan(-1), panR = makePan(1);
+  function setTilt(theta) {
+    beam.rotation.z = theta;
+    var sn = Math.sin(theta), cs = Math.cos(theta);
+    panL.position.set(-cfg.arm * cs, cfg.SL - cfg.arm * sn, 0);
+    panR.position.set(cfg.arm * cs, cfg.SL + cfg.arm * sn, 0);
+  }
+  return { g: g, beam: beam, panL: panL, panR: panR, cfg: cfg, setTilt: setTilt };
+}
+function placeIn(pan, fn, x, y, s, store) {
+  var grp = new THREE.Group();
+  grp.position.set(x, y, 0); grp.scale.setScalar(s);
+  grp.userData.bs = s; grp.userData.fx = 1; grp.userData.rot0 = 0;
+  pan.add(grp); fn(grp);
+  if (store) store.push(grp);
+  return grp;
+}
+function placeScene(fn, x, y, s, store) {
+  var grp = new THREE.Group();
+  grp.position.set(x, y, 0); grp.scale.setScalar(s);
+  grp.userData.bs = s; grp.userData.fx = 1; grp.userData.rot0 = 0;
+  scene.add(grp); fn(grp);
+  if (store) store.push(grp);
+  return grp;
+}
+function bounce(g, p) {
+  var k = 1 + 0.15 * Math.sin(Math.min(1, p) * Math.PI) * (1 - p * 0.55);
+  g.scale.set(g.userData.fx * g.userData.bs * k, g.userData.bs * k, 1);
+}
+function setGroupOpacity(g, a) {
+  g.traverse(function (n) {
+    if (n.isMesh) { n.material.transparent = true; n.material.opacity = a; }
+  });
+}
+/* ---- 香蕉：黃彎月＋深色兩端＋稜線 ---- */
+function banana(g) {
+  P(shp(function (s) {
+    s.moveTo(-24, 4);
+    s.quadraticCurveTo(-4, 24, 22, 0);
+    s.quadraticCurveTo(25, -4, 22, -6);
+    s.quadraticCurveTo(0, 14, -20, -2);
+    s.quadraticCurveTo(-25, 0, -24, 4);
+  }), C_.banana, g);
+  P(cir(-23, 2, 3), 0x7A5A1E, g);
+  P(cir(21, -3, 2.6), 0x7A5A1E, g);
+  P(strokeS(qbz([-16, 7], [0, 15], [15, 3]), 2), 0xD9A82E, g);
+}
+/* ---- 蘋果：紅圓＋高光＋梗＋葉 ---- */
+function apple(g) {
+  P(ell(0, 0, 21, 20), C_.apple, g);
+  P(ell(-7, -6, 6, 4.5), 0xF6A9A0, g);
+  P(rr(-1.6, -28, 3.2, 9, 1.5), 0x7A4B1E, g);
+  P(poly([[2, -26], [15, -33], [12, -22]]), C_.leaf, g);
+}
+/* ---- 梨：黃綠梨形＋梗＋葉 ---- */
+function pear(g) {
+  P(shp(function (s) {
+    s.moveTo(0, -34);
+    s.bezierCurveTo(13, -34, 21, -20, 24, -4);
+    s.bezierCurveTo(27, 14, 16, 30, 0, 30);
+    s.bezierCurveTo(-16, 30, -27, 14, -24, -4);
+    s.bezierCurveTo(-21, -20, -13, -34, 0, -34);
+  }), C_.pear, g);
+  P(rr(-2, -42, 4, 10, 2), 0x6B8E3A, g);
+  P(poly([[2, -40], [16, -47], [13, -36]]), C_.leaf, g);
+  P(cir(-8, -4, 4.5), 0xE3EBA0, g);
+}
+
+/* ============================================================
+   §4  場景佈置（兩個天平＋碟上生果）
+   ============================================================ */
+/* addCross：抵銷用交叉（掛喺蘋果 group 入面；兩條 45° 紅棒，初始 opacity 0） */
+function addCross(grp) {
+  var cg = new THREE.Group();
+  grp.add(cg);
+  var m1 = P(rr(-13, -2.6, 26, 5.2, 2.2), 0xB3261E, cg); m1.rotation.z = 0.785;
+  var m2 = P(rr(-13, -2.6, 26, 5.2, 2.2), 0xB3261E, cg); m2.rotation.z = -0.785;
+  setGroupOpacity(cg, 0);
+  return cg;
+}
+var actors = { ban12: [], ap1: [], ap23: [], pe1: [], ban2L: [], ap2L: [], pe2L: [], ban2R: [], ghL: [], ghR: [] };
+var cgL = null, cgR = null;
+var bal1 = makeBalance(CFG.bal1), bal2 = makeBalance(CFG.bal2);
+(function buildScene() {
+  /* 天平①：左碟 2 蕉＋1 蘋；右碟 2 蘋＋1 梨 */
+  placeIn(bal1.panL, banana, -44, -14, 0.6, actors.ban12);
+  placeIn(bal1.panL, banana, -6, -24, 0.6, actors.ban12);
+  placeIn(bal1.panL, apple, 36, -12, 0.58, actors.ap1);
+  placeIn(bal1.panR, apple, -38, -12, 0.58, actors.ap23);
+  placeIn(bal1.panR, apple, 2, -12, 0.58, actors.ap23);
+  placeIn(bal1.panR, pear, 40, -18, 0.7, actors.pe1);
+  /* 天平②：左碟 1 蕉＋1 蘋＋1 梨；右碟 2 蕉（第二根先前被天平遮住）＋「?」（? 係 HUD） */
+  placeIn(bal2.panL, banana, -46, -14, 0.6, actors.ban2L);
+  placeIn(bal2.panL, apple, 0, -12, 0.58, actors.ap2L);
+  placeIn(bal2.panL, pear, 44, -16, 0.7, actors.pe2L);
+  placeIn(bal2.panR, banana, -44, -16, 0.62, actors.ban2R);
+  placeIn(bal2.panR, banana, -6, -24, 0.62, actors.ban2R);
+  /* 抵銷交叉：掛喺將被抵銷嘅兩個蘋果 group 入面 */
+  cgL = addCross(actors.ap1[0]);
+  cgR = addCross(actors.ap23[0]);
+  /* 四鐵律②預藏替身：左碟 2 根香蕉（蘋果／梨原位）、右碟 1 根飛入蕉（scale 0.001＋opacity 0） */
+  placeIn(bal2.panL, banana, 0, -12, 0.58, actors.ghL);
+  placeIn(bal2.panL, banana, 44, -16, 0.6, actors.ghL);
+  placeIn(bal2.panR, banana, 36, -16, 0.62, actors.ghR);
+  actors.ghL.concat(actors.ghR).forEach(function (o) { o.scale.setScalar(0.001); setGroupOpacity(o, 0); });
+})();/* ============================================================
+   §5  HUD
+   ============================================================ */
+var hud = document.getElementById('hud');
+var hudItems = [];
+function hudText(txt, x, y, size, opt) {
+  opt = opt || {};
+  var el = document.createElement('div');
+  el.className = 'wt' + (opt.anchor === 'c' ? ' anchor-c' : '') + (opt.serif ? ' serif' : '');
+  el.textContent = txt;
+  if (opt.bold) el.style.fontWeight = '800';
+  else if (opt.w6) el.style.fontWeight = '600';
+  if (opt.color) el.style.color = opt.color;
+  if (opt.op != null) el.style.opacity = opt.op;
+  el.style.whiteSpace = 'pre';
+  hud.appendChild(el);
+  var it = { el: el, x: x, y: y, size: size, min: opt.min || 14, anchor: opt.anchor === 'c' ? 'c' : 'l' };
+  hudItems.push(it);
+  return it;
+}
+(function buildHud() {
+  P(cir(84, 66, 24), 0x8d5bd6);
+  hudText('4', 84, 66, 24, { color: '#fff', bold: true, anchor: 'c', min: 16 });
+  hudText('仔細觀察下面的圖，在「?」處再添上幾根香蕉，才能使第二個天平平衡？', 116, 44, 29, { bold: true, min: 18 });
+  hudText('How many more bananas are needed at the "?" to make the second balance scale balanced?', 116, 92, 19, { min: 13 });
+  hudText('天平①', 300, 350, 20, { color: '#5b6b7c', w6: true, anchor: 'c', min: 15 });
+  hudText('天平②', 700, 350, 20, { color: '#5b6b7c', w6: true, anchor: 'c', min: 15 });
+  hudText('在「?」處再添上（', 150, 962, 31, { serif: true, bold: true, min: 19 });
+  hudText('）根香蕉。', 462, 962, 31, { serif: true, bold: true, min: 19 });
+})();
+var qEl = hudText('+ ?', 868, 440, 26, { color: '#8d5bd6', bold: true, anchor: 'c', min: 17 });var slotEls = [{
+  it: hudText('1', 868, 440, 32, { serif: true, bold: true, anchor: 'c', color: CFG.colors.answer, min: 21 }), p: 0
+}, {
+  it: hudText('1', 434, 964, 40, { serif: true, bold: true, anchor: 'c', color: CFG.colors.answer, min: 24 }), p: 0
+}];
+var celEl = hudText('', 490, 906, 30, { bold: true, anchor: 'c', color: '#e8541f', min: 18 });
+celEl.el.style.opacity = 0;
+celEl.el.textContent = '🎉 太棒了！問號位要添上 1 根香蕉 🎉';
+var startHint = hudText('⌛ 語音準備中…', 490, 132, 23, { bold: true, anchor: 'c', min: 16 });
+startHint.el.id = 'startHint';
+var badges = [];
+function makeBadge(num, wx, wy, cssColor) {
+  var el = document.createElement('div');
+  el.className = 'badge';
+  el.textContent = num;
+  el.style.background = cssColor;
+  el.style.fontSize = '22px';
+  el.style.opacity = 0;
+  hud.appendChild(el);
+  var b = { el: el, x: wx, y: wy, p: 0 };
+  badges.push(b);
+  return b;
+}
+
+/* ============================================================
+   §6  高亮區（halo 三部曲）＋ 筆尖 + confetti
+   ============================================================ */
+var regions = {};
+function buildRegion(name, def) {
+  var css = CFG.colors.halos[def.ci];
+  var fill = P(rr(def.x, def.y, def.w, def.h, 16), parseInt(css.slice(1), 16), null, 0);
+  fill.renderOrder = 300 + def.ci * 4;
+  var shape = rr(def.x, def.y, def.w, def.h, 16);
+  var pts2 = shape.getPoints(8).map(function (v) { return [v.x, v.y]; });
+  pts2.push(pts2[0]);
+  var line = makeLine(pts2, darkenCss(css, 0.72), 1, 46);
+  line.renderOrder = 301 + def.ci * 4;
+  regions[name] = { def: def, css: css, fill: fill, line: line, pts: pts2 };
+}
+buildRegion('bal1', CFG.halos.bal1);
+buildRegion('bal2', CFG.halos.bal2);
+var ansGlow = P(ringS(434, 964, 42, 5), 0x2f9e57, null, 0);
+ansGlow.renderOrder = 310;
+/* 拆半掃描線（掛喺兩個碟入面） */
+var divL = P(rr(-3, -52, 6, 62, 3), 0xB94436, bal1.panL, 0);
+var divR = P(rr(-3, -52, 6, 62, 3), 0xB94436, bal1.panR, 0);
+divL.renderOrder = 320; divR.renderOrder = 320;
+var pen = new THREE.Group();
+var penBall = new THREE.Mesh(
+  new THREE.SphereGeometry(7.5, 22, 16),
+  new THREE.MeshPhongMaterial({ color: 0x0066cc, shininess: 80, specular: 0x99ccff })
+);
+penBall.renderOrder = 900;
+var penShadow = new THREE.Mesh(
+  new THREE.CircleGeometry(9, 20),
+  new THREE.MeshBasicMaterial({ color: 0x003377, transparent: true, opacity: 0.15, depthWrite: false })
+);
+penShadow.position.set(2, 12, -1); penShadow.renderOrder = 899;
+pen.add(penBall); pen.add(penShadow);
+pen.position.set(490, -40, 60);
+pen.visible = false;
+scene.add(pen);
+var confetti = [];
+(function () {
+  var cols = [0xf4711f, 0x0aa5c9, 0x8d5bd6, 0xf0a500, 0xe8467c, 0x33b26a, 0x0066cc];
+  for (var i = 0; i < 22; i++) {
+    var m = new THREE.Mesh(
+      new THREE.PlaneGeometry(9, 13),
+      new THREE.MeshBasicMaterial({ color: cols[i % cols.length], side: THREE.DoubleSide, transparent: true, depthWrite: false })
+    );
+    m.renderOrder = 950; m.visible = false;
+    scene.add(m);
+    confetti.push({
+      m: m,
+      x0: 490 + (Math.random() - 0.5) * 420,
+      y0: 830 - Math.random() * 90,
+      vx: (Math.random() - 0.5) * 320,
+      vy: -120 - Math.random() * 260,
+      r0: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 14
+    });
+  }
+})();
+function confettiUpdate(p) {
+  confetti.forEach(function (c) {
+    c.m.visible = p > 0;
+    var x = c.x0 + c.vx * p, y = c.y0 + c.vy * p + 420 * p * p;
+    c.m.position.set(x, y, 70);
+    c.m.rotation.z = c.r0 + c.vr * p;
+    c.m.material.opacity = 1 - clamp((p - 0.72) / 0.28, 0, 1);
+  });
+}
+
+/* ============================================================
+   §7  算草面板（多行算草：ROWS × .crow）
+   ============================================================ */
+var panel = document.getElementById('panel'),
+    narrEl = document.getElementById('narr'),
+    calcEl = document.getElementById('calc'),
+    miniEl = document.getElementById('mini'),
+    cheerEl = document.getElementById('cheer'),
+    phasesEl = document.getElementById('phases'),
+    foldBtn = document.getElementById('fold');
+var NARRSTATE = { text: '', len: 0 };
+var CUR_PHASE = -1, lastActive = -1;
+var TOK = [];
+var rowEls = CFG.rows.map(function (row, ri) {
+  var div = document.createElement('div'); div.className = 'crow';
+  calcEl.appendChild(div);
+  return row.map(function (t, ti) {
+    var isAns = (ri === CFG.rows.length - 1 && ti === row.length - 2);
+    var sp = document.createElement('span');
+    sp.className = 'tk' + (t === '=' ? ' op' : '') + (isAns ? ' ans' : '');
+    sp.textContent = t;
+    div.appendChild(sp);
+    var o = { txt: t, el: sp, p: 0, ri: ri };
+    TOK.push(o);
+    return o;
+  });
+});
+PHASES.forEach(function (name) {
+  var d = document.createElement('div');
+  d.className = 'ph'; d.textContent = name;
+  phasesEl.appendChild(d);
+});
+var phaseEls = Array.prototype.slice.call(phasesEl.children);
+foldBtn.addEventListener('click', function () {
+  panel.classList.toggle('collapsed');
+  foldBtn.textContent = panel.classList.contains('collapsed') ? '＋' : '−';
+  foldBtn.blur();
+});
+(function () {
+  var dragging = false, sx = 0, sy = 0, px = 0, py = 0;
+  var head = document.getElementById('phead');
+  head.addEventListener('pointerdown', function (e) {
+    if (e.target === foldBtn) return;
+    dragging = true;
+    var r = panel.getBoundingClientRect();
+    px = r.left; py = r.top; sx = e.clientX; sy = e.clientY;
+    head.setPointerCapture(e.pointerId);
+  });
+  head.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    panel.style.right = 'auto'; panel.style.bottom = 'auto'; panel.style.top = 'auto';
+    var x = clamp(px + e.clientX - sx, 0, W - 120), y = clamp(py + e.clientY - sy, 0, H - 46);
+    panel.style.left = x + 'px'; panel.style.top = y + 'px';
+  });
+  head.addEventListener('pointerup', function () { dragging = false; });
+})();
+function panelAnchor() {
+  var r = panel.getBoundingClientRect();
+  return { x: -OX + (r.left + r.width * 0.5) / K,
+           y: scrollY + (r.top + Math.min(r.height * 0.55, 150)) / K };
+}
+
+/* ============================================================
+   §8  時間軸引擎（純函數；p<=0 完全還原 → ←退回/重置完美撤銷）
+   ============================================================ */
+var TL = [], TACC = 0;
+function step(dur, fn) { TL.push({ t0: TACC, dur: dur, fn: fn }); TACC += dur; }
+var TOTAL = 0;
+var PEN = [490, 200];
+function toPen(x, y) { var f = [PEN[0], PEN[1]]; PEN = [x, y]; return f; }
+function penAt(from, to, q) {
+  pen.position.set(from[0] + (to[0] - from[0]) * q, from[1] + (to[1] - from[1]) * q, 60);
+}
+var PENDING = [];
+var narrStep = function (text, phase, dur, ai) {
+  PENDING.forEach(function (b) { b.tFade = TACC + 0.15; }); PENDING.length = 0;
+  if (ai != null) {
+    if (ASTEPS.length && ASTEPS[ASTEPS.length - 1].t1 == null) ASTEPS[ASTEPS.length - 1].t1 = TACC;
+    ASTEPS.push({ a: ai, t0: TACC, t1: TACC + AD[ai] + 0.45 });
+  }
+  step(dur, function (p) {
+    if (p <= 0) { if (CUR_PHASE > phase - 1) CUR_PHASE = phase - 1; return; }
+    CUR_PHASE = phase;
+    NARRSTATE.text = text;
+    NARRSTATE.len = Math.floor(clamp((p - 0.08) / 0.85, 0, 1) * (text.length + 2));
+  });
+};
+var regionStep = function (reg, dur) {
+  var from = toPen(reg.pts[0][0], reg.pts[0][1]);
+  step(dur, function (p) {
+    if (p <= 0) { setLine(reg.line, 0); reg.fill.material.opacity = 0; return; }
+    var e = p * dur, drawDur = dur - 0.85;
+    var lp = Math.min(1, e / drawDur);
+    setLine(reg.line, lp);
+    var pt = pathAt(reg.pts, lp);
+    pen.position.set(pt[0], pt[1], 60);
+    reg.fill.material.opacity = flashAlpha(e - drawDur - 0.1);
+  });
+};
+var countStep = function (obj, wx, wy, badge, hover, dur) {
+  PENDING.push(badge); var target = [wx, wy - hover];
+  var from = toPen(target[0], target[1]);
+  step(dur, function (p) {
+    if (p <= 0) { badge.p = 0; if (obj) bounce(obj, 0); return; }
+    penAt(from, target, easeIO(Math.min(1, p / 0.6)));
+    if (p > 0.6) {
+      var b = (p - 0.6) / 0.4;
+      badge.p = b;
+      if (obj) bounce(obj, b);
+    }
+  });
+};
+/* groupCount（S3R）：組齊 bounce＋badge 直接俾總數（等量代換唔係數數練習） */
+function groupCount(objs, cx, cy, cssColor, label, dur) {
+  var bg = makeBadge(label, cx, cy, cssColor);
+  PENDING.push(bg);
+  step(dur || 1.3, function (p) {
+    if (p <= 0) { objs.forEach(function (o) { if (o.scale.x > 0.02) bounce(o, 0); }); bg.p = 0; return; }
+    objs.forEach(function (o) { bounce(o, clamp(p * 2, 0, 1)); });
+    if (p > 0.4) bg.p = (p - 0.4) / 0.6;
+    pen.position.set(cx, cy + 34, 60);
+  });
+}
+var calcStep = function (ri, idxArr, dur) {
+  var a0 = panelAnchor();
+  var from = toPen(a0.x, a0.y);
+  var toks = idxArr.map(function (i) { return rowEls[ri][i]; });
+  step(dur, function (p) {
+    if (p <= 0) { toks.forEach(function (tk) { tk.p = 0; }); return; }
+    var a = panelAnchor();
+    penAt(from, [a.x, a.y], easeIO(Math.min(1, p / 0.55)));
+    if (p > 0.55) { var b = (p - 0.55) / 0.45; toks.forEach(function (tk) { tk.p = b; }); }
+  });
+};
+var slotStep = function (si, dur) {
+  var se = slotEls[si], it = se.it;
+  var from = toPen(it.x, it.y - 4);
+  step(dur, function (p) {
+    if (p <= 0) { se.p = 0; ansGlow.material.opacity = 0; return; }
+    penAt(from, [it.x, it.y - 4], easeIO(Math.min(1, p / 0.42)));
+    if (p > 0.42) {
+      var b = (p - 0.42) / 0.58;
+      se.p = Math.min(1, b * 1.6);
+      pen.position.x += Math.sin(b * 34) * 2.5;
+      ansGlow.material.opacity = flashAlpha(p * dur - 0.9);
+    }
+  });
+};
+/* popStep：縮放彈現（backOut），可配淡入 */
+var popStep = function (obj, dur, target, opt) {
+  opt = opt || {};
+  var bs0 = obj.userData.bs;
+  step(dur, function (p) {
+    if (p <= 0) {
+      obj.scale.setScalar(0.001);
+      if (opt.fade) setGroupOpacity(obj, 0);
+      return;
+    }
+    var q = Math.min(1, p / 0.72);
+    obj.scale.setScalar(Math.max(0.001, target * backOut(q)));
+    if (opt.fade) setGroupOpacity(obj, clamp(p * 3, 0, 1));
+    if (p >= 1) obj.scale.setScalar(target);
+  });
+};
+/* fadeFlyStep：物件帶弧線飛走＋漸細漸淡（局部坐標 delta） */
+var fadeFlyStep = function (obj, dx, dy, dur, opt) {
+  opt = opt || {};
+  var bs = obj.userData.bs;
+  var fromXY = [obj.position.x, obj.position.y];
+  var toXY = [fromXY[0] + dx, fromXY[1] + dy];
+  step(dur, function (p) {
+    if (p <= 0) {
+      obj.position.set(fromXY[0], fromXY[1], 0);
+      obj.scale.set(bs, bs, 1);
+      setGroupOpacity(obj, 1);
+      return;
+    }
+    var q = easeIO(p);
+    var x = fromXY[0] + (toXY[0] - fromXY[0]) * q;
+    var y = fromXY[1] + (toXY[1] - fromXY[1]) * q - Math.sin(p * Math.PI) * (opt.arc || 0);
+    obj.position.set(x, y, 0);
+    var sc = bs * (1 - 0.5 * q);
+    obj.scale.set(sc, sc, 1);
+    setGroupOpacity(obj, p > 0.45 ? Math.max(0, 1 - (p - 0.45) / 0.5) : 1);
+    if (p >= 1) setGroupOpacity(obj, 0);
+  });
+};
+/* v3 pairPulse：一組兩個橙閃示（脈衝）——話俾小朋友知而家換緊邊兩粒 */
+var pairPulse = function (o1, o2, dur, px) {
+  var b1 = o1.userData.bs, b2 = o2.userData.bs;
+  step(dur, function (p) {
+    if (p <= 0) { o1.scale.set(b1, b1, 1); o2.scale.set(b2, b2, 1); return; }
+    var k = 1 + 0.09 * Math.abs(Math.sin(p * Math.PI * 2));
+    o1.scale.set(b1 * k, b1 * k, 1);
+    o2.scale.set(b2 * k, b2 * k, 1);
+    if (px) pen.position.set(px[0], px[1], 60);
+  });
+};
+/* v3 pairVanish：一組兩個橙縮細＋變淡，p=0.8 起完全消失（鐵律：消失咗先准替身出現） */
+var pairVanish = function (o1, o2, dur, px) {
+  var b1 = o1.userData.bs, b2 = o2.userData.bs;
+  step(dur, function (p) {
+    if (p <= 0) {
+      o1.scale.set(b1, b1, 1); setGroupOpacity(o1, 1);
+      o2.scale.set(b2, b2, 1); setGroupOpacity(o2, 1);
+      return;
+    }
+    var q = easeIO(Math.min(1, p / 0.8));
+    o1.scale.setScalar(Math.max(0.001, b1 * (1 - q))); setGroupOpacity(o1, 1 - q);
+    o2.scale.setScalar(Math.max(0.001, b2 * (1 - q))); setGroupOpacity(o2, 1 - q);
+    if (px) pen.position.set(px[0], px[1], 60);
+  });
+};
+/* v3 pauseStep：節奏停一停（等上一個動作完全完成先好落下一步） */
+var pauseStep = function (dur) {
+  step(dur, function (p) { if (p <= 0) return; });
+};
+
+/* divStep：拆半掃描線由左至右掃過兩個碟 */
+var divStep = function (dur) {
+  step(dur, function (p) {
+    if (p <= 0) {
+      divL.material.opacity = 0; divR.material.opacity = 0;
+      divL.position.x = -80; divR.position.x = -80;
+      return;
+    }
+    var x = -80 + 160 * p;
+    divL.position.x = x; divR.position.x = x;
+    var op = (p >= 1) ? 0 : 0.8;
+    divL.material.opacity = op; divR.material.opacity = op;
+  });
+};
+
+/* ============================================================
+   §9  步驟編排：Q1 解題時間軸（數 → 拆半 → 代換 → 寫答案）
+   ============================================================ */
+var S = CFG.speed;
+var b1 = CFG.bal1, b2 = CFG.bal2;
+var b1L = { x: b1.x - b1.arm, y: b1.y + b1.SL }, b1R = { x: b1.x + b1.arm, y: b1.y + b1.SL };
+var b2L = { x: b2.x - b2.arm, y: b2.y + b2.SL }, b2R = { x: b2.x + b2.arm, y: b2.y + b2.SL };
+/* padStep：A1 聲畫對齊——Phase 內容行完，筆尖輕輕盤旋等該段旁白播完（Phase 總長 = AD + 0.45） */
+var padStep = function (ai, fixed, cx, cy) {
+  step(Math.max(0.5, AD[ai] + 0.45 - fixed), function (p) {
+    if (p <= 0 || cx == null) return;
+    pen.position.set(cx + Math.sin(p * 7) * 16, cy + Math.cos(p * 5) * 9, 60);
+  });
+};
+var crossStep = function (cg, dur) {
+  step(dur, function (p) {
+    if (p <= 0) { setGroupOpacity(cg, 0); cg.scale.setScalar(1); return; }
+    setGroupOpacity(cg, clamp(p * 2.5, 0, 1));
+    cg.scale.setScalar(0.5 + 0.5 * Math.min(1, p * 2));
+  });
+};
+/* flyPair：抵銷＝兩個蘋果同時打交叉後一齊淡出飛走 */
+var flyPair = function (o1, o2, dx, dy, dur) {
+  var bs1 = o1.userData.bs, bs2 = o2.userData.bs;
+  var f1 = [o1.position.x, o1.position.y], f2 = [o2.position.x, o2.position.y];
+  step(dur, function (p) {
+    if (p <= 0) {
+      o1.position.set(f1[0], f1[1], 0); o1.scale.set(bs1, bs1, 1); setGroupOpacity(o1, 1);
+      o2.position.set(f2[0], f2[1], 0); o2.scale.set(bs2, bs2, 1); setGroupOpacity(o2, 1);
+      return;
+    }
+    var q = easeIO(p);
+    o1.position.set(f1[0] + dx * q, f1[1] + dy * q - Math.sin(p * Math.PI) * 40, 0);
+    o2.position.set(f2[0] + dx * q, f2[1] + dy * q - Math.sin(p * Math.PI) * 40, 0);
+    o1.scale.setScalar(Math.max(0.001, bs1 * (1 - 0.5 * q)));
+    o2.scale.setScalar(Math.max(0.001, bs2 * (1 - 0.5 * q)));
+    var op = p > 0.45 ? Math.max(0, 1 - (p - 0.45) / 0.5) : 1;
+    setGroupOpacity(o1, op); setGroupOpacity(o2, op);
+    if (p >= 1) { setGroupOpacity(o1, 0); setGroupOpacity(o2, 0); }
+  });
+};
+/* flyInStep：香蕉由右上遠處弧線飛入右碟（由細變大） */
+var flyInStep = function (obj, dur) {
+  var bs = obj.userData.bs, fx = obj.position.x, fy = obj.position.y;
+  var x0 = fx + 340, y0 = fy - 380;
+  step(dur, function (p) {
+    if (p <= 0) { obj.position.set(x0, y0, 0); obj.scale.setScalar(0.001); setGroupOpacity(obj, 0); return; }
+    var q = easeIO(Math.min(1, p / 0.85));
+    obj.position.set(x0 + (fx - x0) * q, y0 + (fy - y0) * q - Math.sin(q * Math.PI) * 50, 0);
+    obj.scale.setScalar(Math.max(0.001, bs * q));
+    setGroupOpacity(obj, clamp(p * 3, 0, 1));
+    if (p >= 1) { obj.position.set(fx, fy, 0); obj.scale.setScalar(bs); setGroupOpacity(obj, 1); }
+  });
+};
+function buildTimeline() {
+  TL = []; TACC = 0; PEN = [490, 200]; ASTEPS.length = 0; AD = calcAD();
+  /* intro：筆飛入＋旁白 */
+  ASTEPS.push({ a: 0, t0: 0, t1: AD[0] + 0.45 });
+  step(AD[0] + 0.45, function (p) {
+    if (p <= 0) { pen.visible = false; NARRSTATE.text = ''; NARRSTATE.len = 0; CUR_PHASE = -1; return; }
+    pen.visible = true;
+    var q = Math.min(1, (p * (AD[0] + 0.45)) / 2.76);
+    penAt([490, -40], [490, 200], easeIO(q));
+    if (p > 0.015) {
+      NARRSTATE.text = NARR.intro;
+      NARRSTATE.len = Math.floor(clamp((p - 0.015) / 0.9, 0, 1) * (NARR.intro.length + 2));
+    }
+  });
+  /* Phase 1 睇天平①：左 2蕉+1蘋 vs 右 2蘋+1梨 */
+  narrStep(NARR.p1, 0, 1.4, 1);
+  regionStep(regions.bal1, S.region);
+  groupCount(actors.ban12, b1L.x - 22, b1L.y - 54, CFG.colors.halos[0], '2', 1.2);
+  groupCount(actors.ap1, b1L.x + 38, b1L.y - 46, CFG.colors.halos[1], '1', 1.0);
+  groupCount(actors.ap23, b1R.x - 18, b1R.y - 46, CFG.colors.halos[1], '2', 1.2);
+  groupCount(actors.pe1, b1R.x + 42, b1R.y - 54, CFG.colors.halos[3], '1', 1.0);
+  calcStep(0, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 2.6);
+  padStep(1, 10.3, b1.x, b1.y - 40);
+  /* Phase 2 抵銷：兩個蘋果打交叉→同時淡出飛走→剩 2蕉 vs 1蘋1梨 */
+  narrStep(NARR.p2, 1, 1.4, 2);
+  crossStep(cgL, 0.55);
+  crossStep(cgR, 0.55);
+  pauseStep(0.3);
+  flyPair(actors.ap1[0], actors.ap23[0], 90, -380, 0.9);
+  pairPulse(actors.ap23[1], actors.pe1[0], 0.8, [b1R.x + 20, b1R.y - 52]);
+  calcStep(1, [0, 1, 2, 3, 4, 5], 2.6);
+  padStep(2, 7.1, b1R.x, b1R.y - 60);
+  /* Phase 3 四鐵律②③天平②左邊逐組代換：1蘋1梨 閃示→完全消失→2 根香蕉原位彈現 */
+  narrStep(NARR.p3, 2, 1.4, 3);
+  regionStep(regions.bal2, S.region);
+  pairPulse(actors.ap2L[0], actors.pe2L[0], 0.6, [b2L.x, b2L.y - 52]);
+  pairVanish(actors.ap2L[0], actors.pe2L[0], 1.0, [b2L.x, b2L.y - 52]);
+  pauseStep(0.35);
+  popStep(actors.ghL[0], 0.55, 0.58, { fade: true });
+  popStep(actors.ghL[1], 0.55, 0.6, { fade: true });
+  step(0.6, function (p) {
+    if (p <= 0) { bal2.setTilt(0); return; }
+    bal2.setTilt(Math.sin(p * Math.PI) * 0.045 * (1 - p));
+  });
+  groupCount([actors.ban2L[0], actors.ghL[0], actors.ghL[1]], b2L.x, b2L.y - 58, CFG.colors.halos[0], '3', 1.3);
+  calcStep(2, [0, 1, 2, 3, 4, 5, 6], 2.6);
+  padStep(3, 10.85, b2L.x, b2L.y - 72);
+  /* Phase 4 右邊數蕉：2 根（第二根先前被天平遮住）→ 左 3 右 2 差 1 */
+  narrStep(NARR.p4, 3, 1.4, 4);
+  groupCount(actors.ban2R, b2R.x - 22, b2R.y - 58, CFG.colors.halos[3], '2', 1.3);
+  step(0.8, function (p) { if (p <= 0) return; pen.position.set(868, 400, 60); });
+  calcStep(3, [0, 1, 2, 3], 2.4);
+  padStep(4, 5.9, 868, 470);
+  /* Phase 5 一根香蕉由遠處飛入＋天平回平 */
+  narrStep(NARR.p5, 4, 1.4, 5);
+  flyInStep(actors.ghR[0], 1.1);
+  step(1.2, function (p) {
+    if (p <= 0) { bal2.setTilt(0.05); return; }
+    bal2.setTilt(0.05 * (1 - easeIO(p)));
+  });
+  groupCount([actors.ban2R[0], actors.ban2R[1], actors.ghR[0]], b2R.x, b2R.y - 62, CFG.colors.halos[3], '3', 1.2);
+  padStep(5, 4.9, b2R.x, b2R.y - 74);
+  /* Phase 6 寫答案：問號淡出→「1」寫上＋底帶寫 1 */
+  narrStep(NARR.p6, 5, 1.4, 6);
+  step(0.5, function (p) {
+    if (p <= 0) { qEl.el.style.opacity = 1; return; }
+    qEl.el.style.opacity = Math.max(0, 1 - p * 2);
+    pen.position.set(868, 442, 60);
+  });
+  slotStep(0, 1.4);
+  slotStep(1, 1.4);
+  padStep(6, 4.7, 434, 920);
+  /* Phase 7 慶祝 */
+  ASTEPS.push({ a: 7, t0: TACC, t1: TACC + AD[7] + 0.45 });
+  step(AD[7] + 0.45, function (p) {
+    if (p <= 0) { celEl.el.style.opacity = 0; cheerEl.style.opacity = 0; confettiUpdate(0); return; }
+    celEl.el.style.opacity = Math.min(1, p * 2.5);
+    cheerEl.style.opacity = clamp((p - 0.1) * 2, 0, 1);
+    confettiUpdate(p);
+    NARRSTATE.text = NARR.end;
+    NARRSTATE.len = Math.floor(clamp(p / 0.6, 0, 1) * (NARR.end.length + 2));
+    pen.position.set(490 + Math.sin(p * 9) * 26, 862 + Math.cos(p * 7) * 10, 60);
+  });
+  TOTAL = TACC;
+}
+audioSettle(function () {
+  startHint.el.textContent = '▶ 撳一下開始播放（廣東話旁白）';
+});
+
+/* ============================================================
+   §10  播放引擎 + 控制（v7：聲畫同步）
+   ============================================================ */
+var t = 0, playing = false, ffEnd = -1, ffKeep = true;
+var lastUserScroll = -1e9, curStepIdx = -1;
+function stepIndexAt(tt) {
+  var i = TL.length - 1;
+  while (i > 0 && tt < TL[i].t0) i--;
+  return i;
+}
+/* v7.6 防窒（Claude 外審）：正常播放只行「上格→而家」嘅步；倒退／大跳步先全行（←退回/重播照用全行，撤銷保證唔變） */
+var lastApplyIdx = -1, lastApplyTT = -1;
+function applyAll(tt) {
+  var idx = stepIndexAt(tt);
+  var full = (lastApplyIdx < 0 || tt < lastApplyTT || idx - lastApplyIdx > 1);
+  var from = full ? 0 : lastApplyIdx, to = idx;
+  var i, s, p;
+  /* v6（Claude 一行修正）：全行先由後向前 reset 將來步驟，再順序行 0..idx——跳轉＝播放畫面 */
+  if (full) { for (i = TL.length - 1; i > idx; i--) TL[i].fn(0); }
+  for (i = from; i <= to; i++) {
+    s = TL[i]; p = (tt - s.t0) / s.dur;
+    s.fn(p <= 0 ? 0 : (p >= 1 ? 1 : p));
+  }
+  lastApplyIdx = idx; lastApplyTT = tt;
+  if (idx !== curStepIdx) { curStepIdx = idx; lastUserScroll = -1e9; }
+}
+function maxScroll() { return Math.max(0, CFG.world.H - H / K + 30); }
+function updateScroll(dt) {
+  var vh = H / K;
+  if (performance.now() - lastUserScroll > 2200) {
+    /* S5R2 scroll deadzone（使用者 20261120 指示）：只有筆尖真係指去「而家睇唔到嘅下方」
+       （筆尖離可視底邊唔夠 120）先至 scroll down；平時上下輕微郁動，畫面企定免頭暈。
+       唔會自動向上滚；⏮／重播／S 鍵會將 scrollY 歸零。 */
+    var edge = 120;
+    var target = scrollY;
+    if (pen.visible && pen.position.y > scrollY + vh - edge)
+      target = clamp(pen.position.y - vh + edge, 0, maxScroll());
+    scrollY += (target - scrollY) * Math.min(1, dt * 4.2);
+    if (Math.abs(target - scrollY) < 0.4) scrollY = target;
+  }
+  camera.left = -OX; camera.right = CFG.world.W + OX;
+  camera.top = scrollY; camera.bottom = scrollY + vh;
+  camera.updateProjectionMatrix();
+}
+var lastHintStr = '';
+function flushHud() {
+  syncPlayIcon();
+  var i, j, k, it, b, se, tf, op;
+  /* v7.6 防窒（Claude 外審）：DOM 差異寫入——變咗先寫，唔准每格硬寫 */
+  for (i = 0; i < hudItems.length; i++) {
+    it = hudItems[i];
+    tf = 'translate(' + ((it.x + OX) * K).toFixed(1) + 'px,' + ((it.y - scrollY) * K).toFixed(1) + 'px)' +
+      (it.anchor === 'c' ? ' translate(-50%,-50%)' : '');
+    if (it.tf !== tf) { it.tf = tf; it.el.style.transform = tf; }
+  }
+  for (j = 0; j < badges.length; j++) {
+    b = badges[j];
+    op = (b.p <= 0) ? 0 : Math.min(1, b.p * 3) * (1 - clamp((t - (b.tFade || 1e9)) / 0.6, 0, 1));
+    if (b.lo !== op) { b.lo = op; b.el.style.opacity = op; }
+    if (b.p <= 0) continue;
+    tf = 'translate(' + ((b.x + OX) * K).toFixed(1) + 'px,' + ((b.y - scrollY) * K).toFixed(1) + 'px)' +
+      ' translate(-50%,-50%) scale(' + (0.4 + 0.6 * backOut(Math.min(1, b.p))).toFixed(3) + ')';
+    if (b.tf !== tf) { b.tf = tf; b.el.style.transform = tf; }
+  }
+  for (k = 0; k < slotEls.length; k++) {
+    se = slotEls[k];
+    if (se.lo !== se.p) { se.lo = se.p; se.it.el.style.opacity = se.p; }
+    tf = 'translate(' + ((se.it.x + OX) * K).toFixed(1) + 'px,' + ((se.it.y - scrollY) * K).toFixed(1) + 'px)' +
+      (se.it.anchor === 'c' ? ' translate(-50%,-50%)' : '') +
+      ' scale(' + (0.3 + 0.7 * Math.min(1, se.p)).toFixed(3) + ')';
+    if (se.tf !== tf) { se.tf = tf; se.it.el.style.transform = tf; }
+  }
+  var hint = audioBlocked ? '🔊 撳一下畫面開聲'
+    : (READY && t < 0.05 && !playing) ? '▶ 撳一下開始播放（廣東話旁白）' : '';
+  if (hint && hint !== lastHintStr) { lastHintStr = hint; startHint.el.textContent = hint; }
+  op = ((t < 0.05 && !playing) || audioBlocked) ? 1 : 0;
+  if (startHint.lo !== op) { startHint.lo = op; startHint.el.style.opacity = op; }
+}
+var lastNarrStr = '', lastMiniStr = '';
+function flushPanel() {
+  var s = NARRSTATE.text.slice(0, NARRSTATE.len);
+  if (s !== lastNarrStr) { lastNarrStr = s; narrEl.textContent = s; }
+  var mini = '', i, tk, op, tf;
+  for (i = 0; i < TOK.length; i++) {
+    tk = TOK[i];
+    if (tk.lo !== tk.p) { tk.lo = tk.p; tk.el.style.opacity = tk.p; }
+    tf = 'scale(' + (0.4 + 0.6 * Math.min(1, tk.p)).toFixed(3) + ')';
+    if (tk.tf !== tf) { tk.tf = tf; tk.el.style.transform = tf; }
+    if (tk.p > 0.05) mini = tk.txt;
+  }
+  if (mini !== lastMiniStr) { lastMiniStr = mini; miniEl.textContent = mini || '　'; }
+  for (var j = 0; j < phaseEls.length; j++) {
+    var cls = 'ph' + (j < CUR_PHASE ? ' done' : j === CUR_PHASE ? ' active' : '');
+    if (phaseEls[j].className !== cls) {
+      phaseEls[j].className = cls;
+      if (cls.indexOf('active') >= 0) { void phaseEls[j].offsetWidth; }
+    }
+  }
+}
+var btnPlayEl = document.getElementById('btnPlay');
+var lastPlayIcon = '';
+/* v3：播放掣圖示同步——播放中即刻變 ⏸（使用者指示：暫停掣唔可以仲係 play 制） */
+function syncPlayIcon() {
+  var ic = playing ? '⏸' : '▶';
+  if (ic !== lastPlayIcon) { lastPlayIcon = ic; btnPlayEl.textContent = ic;
+    btnPlayEl.title = playing ? '暫停' : '播放'; }
+}
+var lastNow = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  try { /* v7.3：任何錯誤唔准殺死動畫迴圈 */
+  var dt = Math.min(0.25, (now - lastNow) / 1000); lastNow = now;
+  if (ffEnd >= 0) {
+    t = Math.min(ffEnd, t + dt * 10);
+    if (t >= ffEnd - 1e-6) { t = ffEnd; ffEnd = -1; playing = ffKeep; }
+  } else if (playing) {
+    /* v7.6 防窒（Claude 外審）：聲仲緊衝（readyState<3）→ 畫面企定等聲，唔准冇聲獨行 */
+    var segAud = (READY && ffEnd < 0 && curSeg >= 0 && ASTEPS[curSeg] && AUDIOS[ASTEPS[curSeg].a]) ? AUDIOS[ASTEPS[curSeg].a] : null;
+    var stalled = segAud && !segAud.paused && segAud.readyState < 3;
+    if (!stalled) t = Math.min(TOTAL, t + dt);
+    /* v7.3：聲音做主，動畫追聲（使用者指示）：聲超前動畫 >0.3s → 每 frame 最多 +50% 加速追 */
+    if (segAud && !segAud.paused && !stalled) {
+      var lagAud = segAud.currentTime - (t - ASTEPS[curSeg].t0);
+      if (lagAud > 0.3) t = Math.min(TOTAL, t + Math.min(lagAud - 0.3, dt * 0.5));
+    }
+    if (t >= TOTAL) playing = false;
+  }
+  applyAll(t);
+  if (READY) syncAudio();
+  updateScroll(dt);
+  renderer.render(scene, camera);
+  flushHud();
+  flushPanel();
+  } catch (errFrame) { if (window.console && console.error) console.error('frame', errFrame); }
+}
+addEventListener('keydown', function (e) {
+  if (!READY) return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (!playing && t >= TOTAL) t = 0;
+    playing = !playing; ffEnd = -1; lastUserScroll = -1e9; unlockAudio(); kickAudioInGesture();
+  } else if (e.code === 'KeyS' || e.code === 'Escape') {
+    t = 0; playing = false; ffEnd = -1; scrollY = 0; lastUserScroll = -1e9;
+  } else if (e.code === 'ArrowRight') {
+    e.preventDefault();
+    if (t >= TOTAL) return;
+    var i = stepIndexAt(t), end = TL[i].t0 + TL[i].dur;
+    if (t >= end - 1e-6 && i < TL.length - 1) end = TL[i + 1].t0 + TL[i + 1].dur;
+    ffEnd = end; ffKeep = playing; playing = true; lastUserScroll = -1e9;
+  } else if (e.code === 'ArrowLeft') {
+    e.preventDefault();
+    var j = stepIndexAt(t), target = TL[j].t0;
+    if (t - TL[j].t0 < 0.04 && j > 0) target = TL[j - 1].t0;
+    t = target; playing = false; ffEnd = -1; lastUserScroll = -1e9;
+  }
+});
+document.getElementById('replay').addEventListener('click', function (e) {
+  if (!READY) return;
+  t = 0; playing = true; ffEnd = -1; scrollY = 0; lastUserScroll = -1e9; unlockAudio(); kickAudioInGesture();
+  e.currentTarget.blur();
+});
+/* 螢幕掣 ⏮ ▶ ⏭（A4：iPad 冇 keyboard）＋🔊 靜音掣（課室投影） */
+document.getElementById('btnPlay').addEventListener('click', function (e) {
+  if (!READY) return;
+  if (!TL.length) { try { startHint.el.textContent = '⚠️ 動畫初始化失敗，請重新載入呢個檔案'; startHint.el.style.opacity = 1; } catch (eg) {} return; }
+  if (!playing && t >= TOTAL) t = 0;
+  playing = !playing; ffEnd = -1; lastUserScroll = -1e9; unlockAudio(); kickAudioInGesture();
+  e.currentTarget.blur();
+});
+document.getElementById('btnPrev').addEventListener('click', function (e) {
+  if (!READY) return;
+  var j = stepIndexAt(t), target = TL[j].t0;
+  if (t - TL[j].t0 < 0.04 && j > 0) target = TL[j - 1].t0;
+  t = target; playing = false; ffEnd = -1; lastUserScroll = -1e9;
+  e.currentTarget.blur();
+});
+document.getElementById('btnNext').addEventListener('click', function (e) {
+  if (!READY) return;
+  if (t >= TOTAL) return;
+  var i = stepIndexAt(t), end = TL[i].t0 + TL[i].dur;
+  if (t >= end - 1e-6 && i < TL.length - 1) end = TL[i + 1].t0 + TL[i + 1].dur;
+  ffEnd = end; ffKeep = playing; playing = true; lastUserScroll = -1e9;
+  e.currentTarget.blur();
+});
+var muteBtn = document.getElementById('muteBtn');
+muteBtn.addEventListener('click', function (e) {
+  muted = !muted;
+  muteBtn.textContent = muted ? '🔇' : '🔊';
+  if (muted) stopAllAudio();
+  e.currentTarget.blur();
+});
+document.getElementById('stage').addEventListener('wheel', function (e) {
+  e.preventDefault();
+  scrollY = clamp(scrollY + e.deltaY / K, 0, maxScroll());
+  lastUserScroll = performance.now();
+}, { passive: false });
+(function () {
+  var ty = null, tapMoved = false;
+  var st = document.getElementById('stage');
+  st.addEventListener('touchstart', function (e) { ty = e.touches[0].clientY; }, { passive: true });
+  st.addEventListener('touchmove', function (e) {
+    var y = e.touches[0].clientY;
+    if (ty != null) {
+      scrollY = clamp(scrollY + (ty - y) / K, 0, maxScroll());
+      lastUserScroll = performance.now();
+    }
+    ty = y;
+  }, { passive: true });
+  st.addEventListener('touchmove', function () { tapMoved = true; }, { passive: true });
+  /* iPad／觸控：點按畫面＝播放／暫停 */
+  st.addEventListener('click', function () {
+    if (tapMoved) { tapMoved = false; return; }
+    if (!READY) return;
+    if (!TL.length) { try { startHint.el.textContent = '⚠️ 動畫初始化失敗，請重新載入呢個檔案'; startHint.el.style.opacity = 1; } catch (eg2) {} return; }
+    if (!playing && t >= TOTAL) t = 0;
+    playing = !playing; ffEnd = -1; lastUserScroll = -1e9; unlockAudio(); kickAudioInGesture();
+  });
+})();
+/* ============================================================
+   §11  自適應
+   ============================================================ */
+function resize() {
+  W = innerWidth; H = innerHeight;
+  VIEWW = Math.min(1860, Math.max(1020, (W / H) * 930));
+  OX = (VIEWW - CFG.world.W) / 2;
+  K = W / VIEWW;
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+  renderer.setSize(W, H, false);
+  panel.classList.toggle('mobile', W < 900);
+  for (var i = 0; i < hudItems.length; i++) {
+    var it = hudItems[i];
+    it.el.style.fontSize = Math.max(it.min, it.size * K).toFixed(1) + 'px';
+  }
+  for (var j = 0; j < badges.length; j++) {
+    badges[j].el.style.fontSize = Math.max(16, 22 * K).toFixed(1) + 'px';
+  }
+}
+addEventListener('resize', resize);
+window.onerror = function (msg, ln) {
+  var m = '⚠️ ' + String(msg).slice(0, 80) + ' @L' + ln;
+  try { var w = document.getElementById('warn'); if (w) { w.style.display = 'block'; w.textContent = m; } } catch (e0) {}
+  try { if (typeof startHint !== 'undefined' && startHint.el) { startHint.el.textContent = m; startHint.el.style.opacity = 1; } } catch (e1) {}
+};
+if (renderer) renderer.domElement.addEventListener('webglcontextlost', function () {
+  try { startHint.el.textContent = '⚠️ WebGL context lost，請重新整理'; startHint.el.style.opacity = 1; } catch (e5) {}
+}, false);
+if (renderer) { resize(); requestAnimationFrame(frame); }
+else if (window.console && console.error) console.error('v2：renderer 初始化失敗，動畫迴圈冇啟動（見紅色橫幅）');
+
+
+</script>
+
+</html>
