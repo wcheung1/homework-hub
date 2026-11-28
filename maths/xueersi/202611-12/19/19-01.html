@@ -1,0 +1,2645 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>拓展練習 1：小貓與南瓜天平代換｜視覺化教學與實戰算草</title>
+<style>
+  :root {
+    --bg: #f4f7fb;
+    --card: #ffffff;
+    --ink: #1e293b;
+    --muted: #64748b;
+    --border: #dbe4f0;
+    --cat: #0aa5c9;
+    --cat-bg: #e0f7fc;
+    --apple: #e8467c;
+    --apple-bg: #fde7f0;
+    --pump: #f4711f;
+    --pump-bg: #fff0e5;
+    --grp1: #8d5bd6;
+    --grp2: #33b26a;
+    --gold: #f0a500;
+    --pen: #1e3a8a;
+    --paper: #fffdf3;
+    --paper-grid: #efe6cf;
+    --hl-bg: #fef08a;
+    --hl-line: #eab308;
+    --radius: 16px;
+    --shadow: 0 6px 20px rgba(30, 58, 138, 0.08);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "PingFang TC", "Hiragino Sans CNS", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    line-height: 1.45;
+    min-height: 100dvh;
+  }
+
+  .app {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 10px 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 100dvh;
+  }
+
+  /* Top Phase Bar */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 8px 12px;
+    box-shadow: var(--shadow);
+  }
+
+  .phase-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .phase-pill {
+    border: 2px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .phase-pill:hover { border-color: var(--cat); color: var(--ink); }
+  .phase-pill.done { background: #ecfdf5; border-color: #6ee7b7; color: #047857; }
+  .phase-pill.active {
+    background: var(--pen);
+    border-color: var(--pen);
+    color: #ffffff;
+    box-shadow: 0 3px 10px rgba(30, 58, 138, 0.28);
+  }
+
+  .top-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .chip-btn {
+    border: 1.5px solid var(--border);
+    background: #f8fafc;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .chip-btn:hover { background: #eef2ff; border-color: #93c5fd; }
+  .chip-btn.active { background: #dbeafe; border-color: #3b82f6; color: #1e40af; }
+
+  .kbd-hint {
+    font-size: 12px;
+    color: var(--muted);
+    background: #f1f5f9;
+    padding: 4px 8px;
+    border-radius: 8px;
+  }
+  @media (hover: none), (max-width: 820px) {
+    .kbd-hint { display: none; }
+  }
+
+  /* Question Card */
+  .question-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .q-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+
+  .q-badge-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .q-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 8px;
+  }
+
+  .q-grade {
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 8px;
+  }
+
+  .q-zh {
+    font-size: clamp(20px, 2.5vw, 24px);
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.75;
+    margin: 2px 0 4px;
+  }
+
+  .q-seg {
+    padding: 2px 4px;
+    border-radius: 6px;
+    transition: background-color 0.25s ease, box-shadow 0.25s ease;
+    border-bottom: 3px solid transparent;
+  }
+
+  .q-seg.active {
+    background: var(--hl-bg);
+    border-bottom-color: var(--hl-line);
+    box-shadow: 0 2px 8px rgba(234, 179, 8, 0.25);
+  }
+
+  .kw-wrap {
+    position: relative;
+    display: inline-block;
+  }
+
+  .kw-tag {
+    position: absolute;
+    top: -17px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.7);
+    opacity: 0;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 6px;
+    pointer-events: none;
+    transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    white-space: nowrap;
+  }
+
+  .kw-tag.show {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  .kw-tag.cat-tag { background: var(--cat-bg); color: var(--cat); border: 1.5px solid var(--cat); }
+  .kw-tag.pump-tag { background: var(--pump-bg); color: var(--pump); border: 1.5px solid var(--pump); }
+
+  .q-en {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .answer-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1.5px dashed #e2e8f0;
+    font-size: clamp(17px, 2vw, 20px);
+    font-weight: 800;
+    color: #1e293b;
+  }
+
+  .answer-slot {
+    display: inline-flex;
+    align-items: flex-end;
+    justify-content: center;
+    width: 64px;
+    height: 36px;
+    border-bottom: 3px solid #334155;
+    position: relative;
+    vertical-align: bottom;
+    margin: 0 2px;
+  }
+
+  .answer-slot svg {
+    width: 56px;
+    height: 38px;
+    overflow: visible;
+  }
+
+  /* Main Dual-Track Stage */
+  .stage-grid {
+    display: grid;
+    grid-template-columns: 1.18fr 0.92fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  @media (max-width: 860px) {
+    .stage-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .track-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .track-card.scratch-card {
+    background: var(--paper);
+    border-color: #e6d8b5;
+  }
+
+  .track-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    font-weight: 800;
+    color: #334155;
+  }
+
+  .scratch-card .track-head {
+    background: #faf3de;
+    border-bottom-color: #e8dbb8;
+    color: #713f12;
+  }
+
+  .track-sub {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .svg-wrap {
+    flex: 1;
+    width: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+  }
+
+  .svg-wrap svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    user-select: none;
+  }
+
+  /* Inline Interactive Quiz Bar (ZERO modal / ZERO blur!) */
+  .inline-quiz {
+    display: none;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 2.5px solid #f59e0b;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.18);
+    animation: slideIn 0.25s ease;
+  }
+  .inline-quiz.show { display: block; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .quiz-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .quiz-q {
+    font-size: 18px;
+    font-weight: 800;
+    color: #78350f;
+  }
+
+  .quiz-opts {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .quiz-opt-btn {
+    border: 2.5px solid #d97706;
+    background: #ffffff;
+    color: #78350f;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 8px 22px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    min-width: 92px;
+  }
+  .quiz-opt-btn:hover { background: #fef9c3; transform: translateY(-1px); }
+  .quiz-opt-btn.correct { background: #10b981; border-color: #059669; color: #fff; }
+  .quiz-opt-btn.wrong { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
+
+  .quiz-skip {
+    border: 1.5px solid #d97706;
+    background: transparent;
+    color: #92400e;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .quiz-skip:hover { background: rgba(217, 119, 6, 0.12); }
+
+  .quiz-fb {
+    margin-top: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    min-height: 22px;
+  }
+  .quiz-fb.ok { color: #047857; }
+  .quiz-fb.err { color: #b91c1c; }
+
+  /* Celebration + Extra Actions Bar (Inline) */
+  .celebrate-bar {
+    display: none;
+    background: linear-gradient(135deg, #ecfdf5 0%, #e0f2fe 100%);
+    border: 2px solid #10b981;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    box-shadow: var(--shadow);
+  }
+  .celebrate-bar.show { display: flex; flex-direction: column; gap: 10px; }
+
+  .celebrate-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .motto-box {
+    font-size: 18px;
+    font-weight: 800;
+    color: #065f46;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .action-btns {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .cta-btn {
+    border: none;
+    font-size: 16px;
+    font-weight: 800;
+    padding: 10px 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .cta-btn:hover { transform: translateY(-1px); }
+  .cta-practice {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  }
+  .cta-genius {
+    background: linear-gradient(135deg, #9333ea, #7e22ce);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.28);
+  }
+
+  /* Expandable Inline Panels: Practice & Genius Shortcut */
+  .extra-panel {
+    display: none;
+    background: var(--card);
+    border: 2px solid #cbd5e1;
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+    animation: slideIn 0.25s ease;
+  }
+  .extra-panel.show { display: block; }
+  .extra-panel.practice-panel { border-color: #3b82f6; }
+  .extra-panel.genius-panel { border-color: #9333ea; background: #faf5ff; }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .panel-title {
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--ink);
+  }
+
+  .close-btn {
+    border: 1.5px solid #cbd5e1;
+    background: #fff;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .practice-q-text {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    background: #eff6ff;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border-left: 5px solid #2563eb;
+    margin-bottom: 12px;
+  }
+
+  .practice-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .hint-box {
+    display: none;
+    background: var(--paper);
+    border: 1.5px dashed #d97706;
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-top: 10px;
+  }
+  .hint-box.show { display: block; }
+
+  .verify-box {
+    display: none;
+    background: #f0fdf4;
+    border: 2px solid #22c55e;
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 10px;
+  }
+  .verify-box.show { display: block; }
+
+  /* Genius Visual Controls */
+  .genius-stage {
+    background: #ffffff;
+    border: 1.5px solid #e9d5ff;
+    border-radius: 14px;
+    padding: 8px;
+    margin-bottom: 10px;
+  }
+  .genius-stage svg {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    display: block;
+  }
+  .genius-caption {
+    font-size: 17px;
+    font-weight: 700;
+    color: #581c87;
+    background: #f3e8ff;
+    padding: 10px 14px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+
+  /* Bottom Fixed-Feel Control Dock */
+  .bottom-dock {
+    margin-top: auto;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .subtitle-box {
+    font-size: clamp(17px, 2vw, 19px);
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.55;
+    min-height: 54px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .q-quote {
+    display: inline-block;
+    background: #fef9c3;
+    border: 1.5px solid #facc15;
+    color: #854d0e;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-weight: 800;
+  }
+
+  .reason-txt {
+    color: #1e293b;
+  }
+
+  .dock-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .formula-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-height: 40px;
+  }
+
+  .f-pill {
+    font-size: 20px;
+    font-weight: 900;
+    padding: 4px 12px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    border: 2px solid #cbd5e1;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+  }
+  .f-pill.cat { background: var(--cat-bg); border-color: var(--cat); color: #0369a1; }
+  .f-pill.apple { background: var(--apple-bg); border-color: var(--apple); color: #be123c; }
+  .f-pill.pump { background: var(--pump-bg); border-color: var(--pump); color: #c2410c; }
+  .f-pill.ans { background: #dcfce7; border-color: #16a34a; color: #166534; }
+
+  .transport {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ctrl-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    background: #f8fafc;
+    color: #1e293b;
+    font-size: 20px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+  }
+  .ctrl-btn:hover:not(:disabled) { background: #e2e8f0; transform: scale(1.05); }
+  .ctrl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ctrl-btn.primary {
+    width: 56px;
+    height: 56px;
+    background: var(--pen);
+    border-color: var(--pen);
+    color: #ffffff;
+    font-size: 22px;
+    box-shadow: 0 4px 14px rgba(30, 58, 138, 0.3);
+  }
+  .ctrl-btn.primary:hover { background: #1d4ed8; }
+
+  .step-counter {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--muted);
+    min-width: 54px;
+    text-align: center;
+  }
+
+  /* Confetti Canvas (pointer-events: none, non-blocking) */
+  #confettiCanvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+  }
+</style>
+</head>
+<body>
+<canvas id="confettiCanvas"></canvas>
+
+<div class="app">
+  <!-- Top Phase Navigation -->
+  <header class="top-bar">
+    <div class="phase-pills" id="phasePills"></div>
+    <div class="top-actions">
+      <button class="chip-btn active" id="speedBtn" title="切換語速">🐢 0.75x 適中</button>
+      <button class="chip-btn" id="muteBtn" title="開關語音與音效">🔊 有聲</button>
+      <span class="kbd-hint">空白鍵 播放/暫停｜← → 轉步</span>
+    </div>
+  </header>
+
+  <!-- Question Card -->
+  <section class="question-card">
+    <div class="q-meta">
+      <div class="q-badge-group">
+        <span class="q-badge">📐 拓展練習 1</span>
+        <span class="q-grade">小一至小二・天平代換</span>
+      </div>
+      <span class="track-sub" id="stepTitleTag">準備睇題</span>
+    </div>
+
+    <div class="q-zh" id="questionZh">
+      <span class="q-seg" id="qSeg0">根據下圖中的兩個天平，</span><span class="q-seg" id="qSeg1">1 隻<span class="kw-wrap"><span class="kw-tag cat-tag" id="tagCat">△</span>小貓</span>的重量等於多少個<span class="kw-wrap"><span class="kw-tag pump-tag" id="tagPump">◇</span>南瓜</span>的重量？</span>
+    </div>
+    <div class="q-en">Refer to the two balances in the picture below, how many pumpkin(s) does 1 cat weigh the same as?</div>
+
+    <div class="answer-row">
+      <span>答：1 隻小貓的重量等於</span>
+      <span class="answer-slot" aria-label="作答橫線">
+        <svg viewBox="0 0 56 38">
+          <path id="ansDigitPath" d="M 15 13 C 15 5, 39 4, 39 13 C 39 20, 22 26, 15 33 L 42 33"
+                fill="none" stroke="#1e3a8a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"
+                stroke-dasharray="110" stroke-dashoffset="110" />
+          <circle id="ansPenDot" cx="15" cy="13" r="5" fill="#1e3a8a" stroke="#ffffff" stroke-width="2" opacity="0" />
+        </svg>
+      </span>
+      <span>個南瓜的重量。</span>
+    </div>
+  </section>
+
+  <!-- Dual-Track Stage -->
+  <main class="stage-grid">
+    <!-- Track A: Concrete Visual Stage -->
+    <section class="track-card">
+      <div class="track-head">
+        <span>🎬 具象理解舞台（天平實物動畫）</span>
+        <span class="track-sub">藍＝小貓｜紅＝蘋果｜橙＝南瓜</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="stageSvg" viewBox="0 0 600 330" role="img" aria-label="兩個天平動畫舞台"></svg>
+      </div>
+    </section>
+
+    <!-- Track B: Exam Pencil Scratchpad -->
+    <section class="track-card scratch-card">
+      <div class="track-head">
+        <span>✏️ 實戰鉛筆算草紙（最短筆劃・絕不混淆）</span>
+        <span class="track-sub">唔寫中文｜唔用代數｜唔畫公仔</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="scratchSvg" viewBox="0 0 460 330" role="img" aria-label="實戰鉛筆算草紙"></svg>
+      </div>
+    </section>
+  </main>
+
+  <!-- Inline Interactive Pause (Zero Modal / Zero Blur!) -->
+  <section class="inline-quiz" id="inlineQuiz" aria-live="polite">
+    <div class="quiz-top">
+      <div class="quiz-q" id="quizQuestion"></div>
+      <button class="quiz-skip" id="quizSkipBtn">跳過 ⏭</button>
+    </div>
+    <div class="quiz-opts" id="quizOpts"></div>
+    <div class="quiz-fb" id="quizFb"></div>
+  </section>
+
+  <!-- Celebration Bar (Final Step) -->
+  <section class="celebrate-bar" id="celebrateBar">
+    <div class="celebrate-row">
+      <div class="motto-box">🏆 考場口訣：先拆半，再分組，逐組換就唔會錯！</div>
+      <div class="action-btns">
+        <button class="cta-btn cta-practice" id="openPracticeBtn">🎯 挑戰類似題</button>
+        <button class="cta-btn cta-genius" id="openGeniusBtn">✨ 高手秒殺思維</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Practice Panel (Inline Expandable) -->
+  <section class="extra-panel practice-panel" id="practicePanel">
+    <div class="panel-header">
+      <div class="panel-title">🎯 考場實戰：挑戰類似題（先睇字畫草稿，再估答案！）</div>
+      <div style="display:flex;gap:8px;">
+        <button class="close-btn" id="nextPracticeBtn">🔄 換另一題</button>
+        <button class="close-btn" id="closePracticeBtn">收起 ✕</button>
+      </div>
+    </div>
+    <div class="practice-q-text" id="practiceQText"></div>
+    <div class="practice-controls">
+      <div class="quiz-opts" id="practiceOpts"></div>
+      <button class="chip-btn" id="toggleHintBtn">✏️ 睇草稿提示</button>
+    </div>
+    <div class="quiz-fb" id="practiceFb"></div>
+    <div class="hint-box" id="practiceHintBox"></div>
+    <div class="verify-box" id="practiceVerifyBox"></div>
+  </section>
+
+  <!-- Genius Visual Shortcut Panel (Inline Expandable, Purely Visual SVG Animation) -->
+  <section class="extra-panel genius-panel" id="geniusPanel">
+    <div class="panel-header">
+      <div class="panel-title">✨ 高手秒殺思維：望住「直行」直接成組變南瓜！</div>
+      <div style="display:flex;gap:8px;">
+        <button class="cta-btn cta-genius" style="padding:6px 14px;font-size:14px;" id="playGeniusBtn">▶ 播放高手動畫</button>
+        <button class="close-btn" id="closeGeniusBtn">收起 ✕</button>
+      </div>
+    </div>
+    <div class="genius-caption" id="geniusCaption">點「播放高手動畫」，睇下高手點樣唔使數 8 個，一眼睇穿 4 直行直接變 4 個南瓜！</div>
+    <div class="genius-stage">
+      <svg id="geniusSvg" viewBox="0 0 600 265" role="img" aria-label="高手視覺化圖解"></svg>
+    </div>
+  </section>
+
+  <!-- Bottom Control Dock -->
+  <footer class="bottom-dock">
+    <div class="subtitle-box" id="subtitleBox"></div>
+    <div class="dock-bottom-row">
+      <div class="formula-strip" id="formulaStrip"></div>
+      <div class="transport">
+        <button class="ctrl-btn" id="prevBtn" title="上一步">⏮</button>
+        <button class="ctrl-btn primary" id="playBtn" title="播放 / 暫停">▶</button>
+        <button class="ctrl-btn" id="nextBtn" title="下一步">⏭</button>
+        <button class="ctrl-btn" id="replayBtn" title="重播今步">🔄</button>
+        <span class="step-counter" id="stepCounter">1 / 9</span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* =========================================================
+   1. 集中 CONFIG（題目數據、色板、異讀映射、步驟、互動題庫）
+   ========================================================= */
+const CONFIG = {
+  defaultRate: 0.75,
+  fastRate: 1.0,
+  colors: {
+    cat: '#0aa5c9',
+    apple: '#e8467c',
+    pump: '#f4711f',
+    grp1: '#8d5bd6',
+    grp2: '#33b26a',
+    gold: '#f0a500',
+    pen: '#1e3a8a',
+    beam: '#64748b',
+    beamLight: '#cbd5e1',
+    pan: '#f8fafc'
+  },
+  // 廣東話異讀字與聲調精準校準表（按詞組最長優先替換）
+  HETERO_MAP: {
+    '一排': '一徘',
+    '兩排': '兩徘',
+    '上下兩排': '上下兩徘',
+    '每一直行': '每一直航',
+    '四直行': '四直航',
+    '4 直行': '4 直航',
+    '直行': '直航',
+    '每行': '每航',
+    '兩行': '兩航',
+    '四行': '四航',
+    '畫草稿': '劃草稿',
+    '畫條': '劃條',
+    '畫線': '劃線',
+    '畫虛線': '劃虛線',
+    '畫框': '劃框',
+    '畫個框': '劃個框',
+    '畫個小箭咀': '劃個小箭咀',
+    '畫箭咀': '劃箭咀',
+    '畫底線': '劃底線',
+    '畫 2 個': '劃 2 個',
+    '畫 1 個': '劃 1 個',
+    '畫出': '劃出',
+    '畫上': '劃上',
+    '唔畫': '唔劃',
+    '數一數': '嫂一嫂',
+    '數吓': '嫂吓',
+    '點數': '點嫂',
+    '唔使數': '唔使嫂',
+    '重唔重': '仲唔仲'
+  },
+  phases: [
+    { id: 0, label: '1. 讀題記圖', startStep: 0, endStep: 3 },
+    { id: 1, label: '2. 拆半找 1 貓', startStep: 4, endStep: 4 },
+    { id: 2, label: '3. 分組換南瓜', startStep: 5, endStep: 7 },
+    { id: 3, label: '4. 作答與驗算', startStep: 8, endStep: 8 }
+  ],
+  steps: [
+    {
+      id: 0,
+      phase: 0,
+      title: '開場睇題',
+      hlSeg: -1,
+      duration: 2400,
+      quote: '',
+      reason: '先睇清楚原題同兩個平衡天平，準備好鉛筆，我哋順住題目一路讀、一路畫草稿！',
+      formulas: []
+    },
+    {
+      id: 1,
+      phase: 0,
+      title: '讀第 1 句・記天平一',
+      hlSeg: 0,
+      duration: 5400,
+      quote: '題目寫住：「根據下圖中的兩個天平，」',
+      reason: '先睇左邊天平：2 隻小貓同 8 個蘋果一樣重。草稿紙即刻記低 2 隻貓，蘋果多過 5 個就直接寫 8 打包記住！',
+      formulas: [{ cls: 'cat', text: '2 隻小貓 ＝ 8 個蘋果' }]
+    },
+    {
+      id: 2,
+      phase: 0,
+      title: '繼續睇・記天平二',
+      hlSeg: 0,
+      duration: 4600,
+      quote: '',
+      reason: '再睇右邊天平：2 個蘋果同 1 個南瓜一樣重。草稿紙右邊先分開記低 2 個蘋果等於 1 個南瓜！',
+      formulas: [
+        { cls: 'cat', text: '2 貓 ＝ 8 果' },
+        { cls: 'pump', text: '2 果 ＝ 1 瓜' }
+      ]
+    },
+    {
+      id: 3,
+      phase: 0,
+      title: '讀第 2 句・鎖定目標',
+      hlSeg: 1,
+      duration: 4200,
+      quote: '題目問：「1 隻小貓的重量等於多少個南瓜的重量？」',
+      reason: '題目只要 1 隻小貓，但左邊天平有 2 隻！我哋先由 2 隻小貓拆半，搵出 1 隻小貓有幾重。',
+      formulas: [
+        { cls: 'cat', text: '目標：1 隻小貓 ＝ ？個南瓜' }
+      ]
+    },
+    {
+      id: 4,
+      phase: 1,
+      title: '兩邊平分拆一半',
+      hlSeg: 1,
+      duration: 5400,
+      quote: '',
+      reason: '左邊 2 隻貓平分剩 1 隻；右邊 8 個蘋果拆成 4 加 4，平分剩 4 個！草稿紙即刻記低：1 隻貓等於 4 個蘋果。',
+      formulas: [
+        { cls: 'apple', text: '4 + 4 = 8' },
+        { cls: 'cat', text: '1 貓 ＝ 4 果' }
+      ],
+      quiz: {
+        q: '🤔 停一停，估一估：2 隻小貓 ＝ 8 個蘋果，兩邊平分拆一半，1 隻小貓等於幾個蘋果？',
+        options: ['3 個', '4 個', '6 個'],
+        answerIdx: 1,
+        wrongMsgs: [
+          '差少少呀！3 加 3 係 6，未夠 8 個蘋果，再試吓將 8 平分兩份！',
+          '',
+          '太多喇！6 加 6 係 12，超過咗 8 個，試吓搵兩個一樣嘅數加埋等於 8！'
+        ],
+        okMsg: '🎉 答啱喇！4 加 4 等於 8，所以拆半後 1 隻小貓等於 4 個蘋果！'
+      }
+    },
+    {
+      id: 5,
+      phase: 2,
+      title: '拼合規則・每 2 個圈一組',
+      hlSeg: 1,
+      duration: 4800,
+      quote: '',
+      reason: '而家連埋右邊天平：每 2 個蘋果換 1 個南瓜！將呢 4 個蘋果每 2 個圈一組，2 加 2 等於 4，啱啱分到 2 組。',
+      formulas: [
+        { cls: 'cat', text: '1 貓 ＝ 4 果' },
+        { cls: 'apple', text: '2 + 2 = 4（2 組）' }
+      ],
+      quiz: {
+        q: '🤔 停一停，估一估：4 個蘋果，每 2 個換 1 個南瓜，一共可以換到幾個南瓜？',
+        options: ['1 個', '2 個', '4 個'],
+        answerIdx: 1,
+        wrongMsgs: [
+          '1 個南瓜只係用咗 2 個蘋果，仲淨 2 個未換喎，再試吓！',
+          '',
+          '要每 2 個蘋果先換到 1 個南瓜，唔係 1 換 1，試吓每 2 個圈一組！'
+        ],
+        okMsg: '🎉 好醒呀！4 個蘋果分到 2 組，每組換 1 個南瓜，一共換到 2 個！'
+      }
+    },
+    {
+      id: 6,
+      phase: 2,
+      title: '第 1 組先換（慢速示範）',
+      hlSeg: 1,
+      duration: 4600,
+      quote: '',
+      reason: '第 1 組 2 個蘋果先飛走，原位換入 1 個南瓜！草稿紙劃走第 1 組，記低換出第 1 個南瓜。',
+      formulas: [
+        { cls: 'pump', text: '第 1 組 → 1 個南瓜' }
+      ]
+    },
+    {
+      id: 7,
+      phase: 2,
+      title: '第 2 組快換・合起計數',
+      hlSeg: 1,
+      duration: 4000,
+      quote: '',
+      reason: '第 2 組快手照做，飛走 2 個蘋果換入第 2 個南瓜！1 加 1 等於 2，1 隻小貓就等於 2 個南瓜！',
+      formulas: [
+        { cls: 'pump', text: '1 + 1 = 2' },
+        { cls: 'ans', text: '1 隻小貓 ＝ 2 個南瓜' }
+      ]
+    },
+    {
+      id: 8,
+      phase: 3,
+      title: '親手填答案＋倒推驗算',
+      hlSeg: 1,
+      duration: 5600,
+      quote: '',
+      reason: '倒轉頭驗算：2 個南瓜係 4 個蘋果，2 隻貓就係 4 加 4 等於 8 個蘋果，啱晒！喺橫線寫上 2。口訣：先拆半，再分組，逐組換！',
+      formulas: [
+        { cls: 'ans', text: '驗算：2+2=4，4+4=8 ✓' },
+        { cls: 'ans', text: '答案：2' }
+      ]
+    }
+  ],
+  practiceBank: [
+    {
+      text: '天平一：2 隻小狗 ＝ 12 個蘋果。天平二：2 個蘋果 ＝ 1 個西瓜。請問 1 隻小狗的重量等於多少個西瓜？',
+      options: ['2 個', '3 個', '6 個'],
+      answerIdx: 1,
+      catName: '小狗', fruitName: '蘋果', bigName: '西瓜',
+      cats: 2, fruits: 12, perBig: 2, halfFruits: 6, ans: 3,
+      hintFormula: '6 + 6 = 12 → 1 隻小狗 = 6 個蘋果；每 2 個圈一組：2 + 2 + 2 = 6（3 組）→ 3 個西瓜！'
+    },
+    {
+      text: '天平一：2 隻小兔 ＝ 12 個梨。天平二：3 個梨 ＝ 1 個蜜瓜。請問 1 隻小兔的重量等於多少個蜜瓜？',
+      options: ['2 個', '3 個', '4 個'],
+      answerIdx: 0,
+      catName: '小兔', fruitName: '梨', bigName: '蜜瓜',
+      cats: 2, fruits: 12, perBig: 3, halfFruits: 6, ans: 2,
+      hintFormula: '6 + 6 = 12 → 1 隻小兔 = 6 個梨；每 3 個圈一組：3 + 3 = 6（2 組）→ 2 個蜜瓜！'
+    },
+    {
+      text: '天平一：2 隻小熊 ＝ 16 個桃。天平二：2 個桃 ＝ 1 個西瓜。請問 1 隻小熊的重量等於多少個西瓜？',
+      options: ['2 個', '4 個', '8 個'],
+      answerIdx: 1,
+      catName: '小熊', fruitName: '桃', bigName: '西瓜',
+      cats: 2, fruits: 16, perBig: 2, halfFruits: 8, ans: 4,
+      hintFormula: '8 + 8 = 16 → 1 隻小熊 = 8 個桃；每 2 個圈一組：2 + 2 + 2 + 2 = 8（4 組）→ 4 個西瓜！'
+    }
+  ]
+};
+
+/* =========================================================
+   2. Web Audio 輕音效 + 廣東話 TTS（zh-HK + HETERO_MAP）
+   ========================================================= */
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playSFX(type) {
+  if (state.muted) return;
+  try {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === 'pop') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(760, now + 0.08);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now); osc.stop(now + 0.11);
+    } else if (type === 'whoosh') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(360, now);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.16);
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+      osc.start(now); osc.stop(now + 0.18);
+    } else if (type === 'ding') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(660, now);
+      osc.frequency.setValueAtTime(880, now + 0.09);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      osc.start(now); osc.stop(now + 0.3);
+    } else if (type === 'wrong') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(240, now);
+      osc.frequency.linearRampToValueAtTime(190, now + 0.18);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.21);
+    } else if (type === 'celebrate') {
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((f, idx) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'triangle';
+        o.connect(g); g.connect(ctx.destination);
+        const t = now + idx * 0.09;
+        o.frequency.setValueAtTime(f, t);
+        g.gain.setValueAtTime(0.09, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+        o.start(t); o.stop(t + 0.36);
+      });
+    }
+  } catch (e) {}
+}
+
+let hkVoice = null;
+function loadVoices() {
+  if (!('speechSynthesis' in window)) return;
+  const voices = window.speechSynthesis.getVoices();
+  hkVoice =
+    voices.find(v => /zh[-_]HK/i.test(v.lang) && /Sinji|Tracy|Danny|Google|Apple/i.test(v.name)) ||
+    voices.find(v => /zh[-_]HK/i.test(v.lang)) ||
+    voices.find(v => /yue/i.test(v.lang)) ||
+    voices.find(v => /zh/i.test(v.lang)) ||
+    null;
+}
+if ('speechSynthesis' in window) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function cleanForTTS(raw) {
+  if (!raw) return '';
+  let s = raw
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+    .replace(/[「」『』\[\]\|△□◇☆✓]/g, ' ')
+    .replace(/＝|=/g, '等於')
+    .replace(/\+/g, '加')
+    .replace(/−|-/g, '減')
+    .replace(/×/g, '乘')
+    .replace(/÷/g, '除');
+  const keys = Object.keys(CONFIG.HETERO_MAP).sort((a, b) => b.length - a.length);
+  for (const k of keys) {
+    s = s.split(k).join(CONFIG.HETERO_MAP[k]);
+  }
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+let ttsToken = 0;
+let ttsSafetyTimer = null;
+
+function stopSpeech() {
+  ttsToken++;
+  if (ttsSafetyTimer) { clearTimeout(ttsSafetyTimer); ttsSafetyTimer = null; }
+  if ('speechSynthesis' in window) {
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
+}
+
+function speakText(text, onDone) {
+  stopSpeech();
+  const myToken = ttsToken;
+  const cleaned = cleanForTTS(text);
+  const finish = () => {
+    if (myToken !== ttsToken) return;
+    if (ttsSafetyTimer) { clearTimeout(ttsSafetyTimer); ttsSafetyTimer = null; }
+    if (onDone) onDone();
+  };
+
+  if (state.muted || !('speechSynthesis' in window) || !cleaned) {
+    const waitMs = Math.max(900, Math.min(3500, cleaned.length * (state.rate < 0.9 ? 115 : 85)));
+    ttsSafetyTimer = setTimeout(finish, waitMs);
+    return;
+  }
+
+  try {
+    const u = new SpeechSynthesisUtterance(cleaned);
+    u.lang = 'zh-HK';
+    if (hkVoice) u.voice = hkVoice;
+    u.rate = state.rate;
+    u.pitch = 1.04;
+    u.onend = finish;
+    u.onerror = finish;
+    window.speechSynthesis.speak(u);
+    // 安全超時防止瀏覽器 onend 唔觸發
+    const estMs = Math.max(3500, cleaned.length * (state.rate < 0.9 ? 360 : 260) + 2500);
+    ttsSafetyTimer = setTimeout(finish, estMs);
+  } catch (e) {
+    ttsSafetyTimer = setTimeout(finish, 1800);
+  }
+}
+
+/* =========================================================
+   3. 數學補間與純函數輔助工具
+   ========================================================= */
+const clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
+const seg = (p, a, b) => clamp((p - a) / (b - a));
+const easeOut = t => 1 - Math.pow(1 - clamp(t), 3);
+const easeInOut = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const lerp = (a, b, t) => a + (b - a) * clamp(t);
+
+// 區域高亮三部曲：t ∈ [0, 1]，0..0.72 閃 3 次，0.72..1 定住淡色
+function flash3(t) {
+  const c = clamp(t);
+  if (c <= 0) return { fillOp: 0, strokeOp: 0, badge: 0 };
+  if (c < 0.72) {
+    const wave = Math.max(0, Math.sin((c / 0.72) * Math.PI * 6));
+    return { fillOp: 0.08 + 0.24 * wave, strokeOp: 0.35 + 0.65 * wave, badge: 0 };
+  }
+  const bt = easeOut((c - 0.72) / 0.28);
+  return { fillOp: 0.14, strokeOp: 0.85, badge: bt };
+}
+
+function setStrokeProg(el, len, prog) {
+  if (!el) return;
+  const c = clamp(prog);
+  el.style.strokeDasharray = `${len}`;
+  el.style.strokeDashoffset = `${len * (1 - c)}`;
+  el.style.opacity = c > 0.001 ? 1 : 0;
+}
+
+function setElOpacity(el, op) {
+  if (!el) return;
+  el.setAttribute('opacity', clamp(op).toFixed(3));
+}
+
+/* =========================================================
+   4. SVG 繪製：具象舞台（Track A）＋ 鉛筆算草紙（Track B）
+   ========================================================= */
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs = {}, parent = null) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  if (parent) parent.appendChild(el);
+  return el;
+}
+
+// 繪製可愛條紋小貓（幾何向量，清晰易認）
+function drawCatGraphic(parent, id, x, y, scale = 1) {
+  const g = svgEl('g', { id, transform: `translate(${x},${y}) scale(${scale})` }, parent);
+  // 尾巴
+  svgEl('path', { d: 'M 14 26 C 24 24, 26 12, 21 8', fill: 'none', stroke: '#0aa5c9', 'stroke-width': 4, 'stroke-linecap': 'round' }, g);
+  // 身體
+  svgEl('ellipse', { cx: 0, cy: 19, rx: 16, ry: 17, fill: '#bae6fd', stroke: '#0284c7', 'stroke-width': 2.2 }, g);
+  // 小腳爪
+  svgEl('ellipse', { cx: -7, cy: 33, rx: 5.5, ry: 4, fill: '#e0f2fe', stroke: '#0284c7', 'stroke-width': 1.8 }, g);
+  svgEl('ellipse', { cx: 7, cy: 33, rx: 5.5, ry: 4, fill: '#e0f2fe', stroke: '#0284c7', 'stroke-width': 1.8 }, g);
+  // 雙耳（尖三角呼應草稿 △）
+  svgEl('polygon', { points: '-15,-6 -13,-24 -2,-13', fill: '#7dd3fc', stroke: '#0284c7', 'stroke-width': 2.2, 'stroke-linejoin': 'round' }, g);
+  svgEl('polygon', { points: '15,-6 13,-24 2,-13', fill: '#7dd3fc', stroke: '#0284c7', 'stroke-width': 2.2, 'stroke-linejoin': 'round' }, g);
+  svgEl('polygon', { points: '-12,-9 -11,-18 -5,-12', fill: '#fda4af' }, g);
+  svgEl('polygon', { points: '12,-9 11,-18 5,-12', fill: '#fda4af' }, g);
+  // 頭
+  svgEl('ellipse', { cx: 0, cy: -3, rx: 17, ry: 14, fill: '#e0f7fc', stroke: '#0284c7', 'stroke-width': 2.2 }, g);
+  // 額頭條紋
+  svgEl('path', { d: 'M -4 -16 L -4 -11 M 0 -17 L 0 -10 M 4 -16 L 4 -11', stroke: '#0284c7', 'stroke-width': 2, 'stroke-linecap': 'round' }, g);
+  // 眼睛與鼻嘴
+  svgEl('circle', { cx: -6, cy: -4, r: 2.6, fill: '#0f172a' }, g);
+  svgEl('circle', { cx: 6, cy: -4, r: 2.6, fill: '#0f172a' }, g);
+  svgEl('circle', { cx: -5.2, cy: -4.8, r: 0.9, fill: '#fff' }, g);
+  svgEl('circle', { cx: 6.8, cy: -4.8, r: 0.9, fill: '#fff' }, g);
+  svgEl('polygon', { points: '-2.5,0 2.5,0 0,2.6', fill: '#fb7185' }, g);
+  svgEl('path', { d: 'M -4 4 Q 0 7 4 4', fill: 'none', stroke: '#0f172a', 'stroke-width': 1.6, 'stroke-linecap': 'round' }, g);
+  // 鬍鬚
+  svgEl('path', { d: 'M -13 0 L -21 -2 M -13 3 L -21 4 M 13 0 L 21 -2 M 13 3 L 21 4', stroke: '#0284c7', 'stroke-width': 1.4, 'stroke-linecap': 'round' }, g);
+  return g;
+}
+
+// 繪製圓蘋果（忠於原圖平滑圓形與頂部小凹點，鮮紅易區分）
+function drawAppleGraphic(parent, id, x, y, r = 12.5) {
+  const g = svgEl('g', { id, transform: `translate(${x},${y})` }, parent);
+  svgEl('circle', { cx: 0, cy: 0, r, fill: '#f43f5e', stroke: '#9f1239', 'stroke-width': 2 }, g);
+  svgEl('ellipse', { cx: -r * 0.32, cy: -r * 0.28, rx: r * 0.22, ry: r * 0.14, fill: 'rgba(255,255,255,0.45)', transform: 'rotate(-25)' }, g);
+  // 頂部凹點與短梗
+  svgEl('path', { d: `M ${-r*0.2} ${-r*0.72} Q 0 ${-r*0.52} ${r*0.2} ${-r*0.72}`, fill: 'none', stroke: '#881337', 'stroke-width': 1.6, 'stroke-linecap': 'round' }, g);
+  svgEl('path', { d: `M 0 ${-r*0.66} Q 1 ${-r*1.05} 3.5 ${-r*1.02}`, fill: 'none', stroke: '#15803d', 'stroke-width': 2, 'stroke-linecap': 'round' }, g);
+  return g;
+}
+
+// 繪製南瓜（飽滿瓜瓣＋綠色彎柄，橙色鮮明）
+function drawPumpkinGraphic(parent, id, x, y, scale = 1) {
+  const g = svgEl('g', { id, transform: `translate(${x},${y}) scale(${scale})` }, parent);
+  // 彎柄
+  svgEl('path', { d: 'M 0 -17 C 0 -27, 9 -29, 10 -22', fill: 'none', stroke: '#15803d', 'stroke-width': 3.5, 'stroke-linecap': 'round' }, g);
+  // 左中右瓜瓣
+  svgEl('ellipse', { cx: -11, cy: 2, rx: 11, ry: 17, fill: '#fb923c', stroke: '#c2410c', 'stroke-width': 2.2 }, g);
+  svgEl('ellipse', { cx: 11, cy: 2, rx: 11, ry: 17, fill: '#fb923c', stroke: '#c2410c', 'stroke-width': 2.2 }, g);
+  svgEl('ellipse', { cx: 0, cy: 2, rx: 10.5, ry: 18, fill: '#f97316', stroke: '#c2410c', 'stroke-width': 2.2 }, g);
+  svgEl('ellipse', { cx: -4, cy: -5, rx: 3, ry: 6, fill: 'rgba(255,255,255,0.32)' }, g);
+  return g;
+}
+
+// 繪製單座經典天平
+function drawBalanceBase(parent, cx, label) {
+  const g = svgEl('g', {}, parent);
+  // 底座梯形
+  svgEl('polygon', {
+    points: `${cx - 72},302 ${cx + 72},302 ${cx + 56},282 ${cx - 56},282`,
+    fill: '#e2e8f0', stroke: '#475569', 'stroke-width': 2.5, 'stroke-linejoin': 'round'
+  }, g);
+  // 中柱
+  svgEl('rect', { x: cx - 8, y: 218, width: 16, height: 64, rx: 3, fill: '#cbd5e1', stroke: '#475569', 'stroke-width': 2.5 }, g);
+  // 橫樑
+  svgEl('rect', { x: cx - 98, y: 214, width: 196, height: 11, rx: 5, fill: '#f1f5f9', stroke: '#475569', 'stroke-width': 2.5 }, g);
+  // 中樞支點圓
+  svgEl('circle', { cx, cy: 219.5, r: 9, fill: '#94a3b8', stroke: '#334155', 'stroke-width': 2.5 }, g);
+  svgEl('circle', { cx, cy: 219.5, r: 3, fill: '#ffffff' }, g);
+
+  // 左右托盤柱＋托盤
+  [-70, 70].forEach(dx => {
+    const px = cx + dx;
+    svgEl('rect', { x: px - 6, y: 196, width: 12, height: 22, rx: 2, fill: '#cbd5e1', stroke: '#475569', 'stroke-width': 2.2 }, g);
+    svgEl('circle', { cx: px, cy: 219.5, r: 4.5, fill: '#475569' }, g);
+    // 盤身
+    svgEl('path', {
+      d: `M ${px - 62} 187 L ${px + 62} 187 L ${px + 50} 197 L ${px - 50} 197 Z`,
+      fill: '#ffffff', stroke: '#334155', 'stroke-width': 2.5, 'stroke-linejoin': 'round'
+    }, g);
+  });
+
+  // 天平編號標籤
+  const t = svgEl('text', {
+    x: cx, y: 322, 'text-anchor': 'middle',
+    fill: '#475569', 'font-size': 15, 'font-weight': 800
+  }, g);
+  t.textContent = label;
+  return g;
+}
+
+// 繪製單層數字徽章（嚴禁圈中圈，直接單圓配阿拉伯數字）
+function drawBadge(parent, id, x, y, num, color) {
+  const g = svgEl('g', { id, transform: `translate(${x},${y})`, opacity: 0 }, parent);
+  svgEl('circle', { cx: 0, cy: 0, r: 12, fill: color, stroke: '#ffffff', 'stroke-width': 2.2 }, g);
+  const t = svgEl('text', {
+    x: 0, y: 4.5, 'text-anchor': 'middle',
+    fill: '#ffffff', 'font-size': 13, 'font-weight': 900
+  }, g);
+  t.textContent = String(num);
+  return g;
+}
+
+// 軌道 A 座標常數
+const B1_CX = 165, B2_CX = 455;
+const CAT_INIT = [{ x: 68, y: 150 }, { x: 122, y: 150 }];
+// 天平 1 右盤 8 個蘋果（忠於原圖 2 排 × 4 直行）
+const B1_APPLES_INIT = [
+  { x: 194, y: 173 }, { x: 221, y: 173 }, { x: 248, y: 173 }, { x: 275, y: 173 },
+  { x: 194, y: 147 }, { x: 221, y: 147 }, { x: 248, y: 147 }, { x: 275, y: 147 }
+];
+// 拆半後剩餘 4 個蘋果重排為 2 清楚直行對（每對 2 個）
+const B1_APPLES_HALF = [
+  { x: 212, y: 173 }, { x: 258, y: 173 },
+  null, null,
+  { x: 212, y: 147 }, { x: 258, y: 147 },
+  null, null
+];
+
+const stageRefs = {};
+function buildStageSVG() {
+  const svg = document.getElementById('stageSvg');
+  svg.innerHTML = '';
+
+  // 背景柔和色塊
+  svgEl('rect', { x: 0, y: 0, width: 600, height: 330, rx: 12, fill: '#fbfdff' }, svg);
+
+  // 兩座天平底座
+  drawBalanceBase(svg, B1_CX, '天平 1');
+  drawBalanceBase(svg, B2_CX, '天平 2');
+
+  // 區域高亮框層（位於物件後面）
+  const hlLayer = svgEl('g', {}, svg);
+  stageRefs.hlB1Cats = svgEl('rect', {
+    x: 36, y: 112, width: 118, height: 74, rx: 12,
+    fill: CONFIG.colors.cat, 'fill-opacity': 0, stroke: CONFIG.colors.cat, 'stroke-width': 3.2, opacity: 0
+  }, hlLayer);
+  stageRefs.hlB1Apples = svgEl('rect', {
+    x: 176, y: 128, width: 118, height: 59, rx: 12,
+    fill: CONFIG.colors.apple, 'fill-opacity': 0, stroke: CONFIG.colors.apple, 'stroke-width': 3.2, opacity: 0
+  }, hlLayer);
+  stageRefs.hlB2Apples = svgEl('rect', {
+    x: 344, y: 150, width: 82, height: 37, rx: 11,
+    fill: CONFIG.colors.apple, 'fill-opacity': 0, stroke: CONFIG.colors.apple, 'stroke-width': 3.2, opacity: 0
+  }, hlLayer);
+  stageRefs.hlB2Pump = svgEl('rect', {
+    x: 492, y: 132, width: 66, height: 55, rx: 12,
+    fill: CONFIG.colors.pump, 'fill-opacity': 0, stroke: CONFIG.colors.pump, 'stroke-width': 3.2, opacity: 0
+  }, hlLayer);
+
+  // 分組框（Step 5：第 1 組紫框、第 2 組綠框）
+  stageRefs.grp1Box = svgEl('rect', {
+    x: 193, y: 129, width: 38, height: 58, rx: 10,
+    fill: CONFIG.colors.grp1, 'fill-opacity': 0, stroke: CONFIG.colors.grp1, 'stroke-width': 3.2, opacity: 0
+  }, hlLayer);
+  stageRefs.grp2Box = svgEl('rect', {
+    x: 239, y: 129, width: 38, height: 58, rx: 10,
+    fill: CONFIG.colors.grp2, 'fill-opacity': 0, stroke: CONFIG.colors.grp2, 'stroke-width': 3.2, opacity: 0
+  }, hlLayer);
+
+  // 實物層
+  const objLayer = svgEl('g', {}, svg);
+  stageRefs.cats = [
+    drawCatGraphic(objLayer, 'cat0', CAT_INIT[0].x, CAT_INIT[0].y, 0.96),
+    drawCatGraphic(objLayer, 'cat1', CAT_INIT[1].x, CAT_INIT[1].y, 0.96)
+  ];
+
+  stageRefs.b1Apples = B1_APPLES_INIT.map((pt, i) =>
+    drawAppleGraphic(objLayer, `b1a${i}`, pt.x, pt.y, 12.2)
+  );
+
+  // 天平 2 原有 2 個蘋果 + 1 個南瓜
+  stageRefs.b2Apples = [
+    drawAppleGraphic(objLayer, 'b2a0', 369, 173, 13.5),
+    drawAppleGraphic(objLayer, 'b2a1', 401, 173, 13.5)
+  ];
+  stageRefs.b2Pump = drawPumpkinGraphic(objLayer, 'b2p0', 525, 166, 1.05);
+
+  // 代換飛入嘅 2 個新南瓜（預先隱藏）
+  stageRefs.newPumps = [
+    drawPumpkinGraphic(objLayer, 'newP0', 212, 166, 0.96),
+    drawPumpkinGraphic(objLayer, 'newP1', 258, 166, 0.96)
+  ];
+  setElOpacity(stageRefs.newPumps[0], 0);
+  setElOpacity(stageRefs.newPumps[1], 0);
+
+  // 拆半虛線層（Step 4）
+  stageRefs.splitCatLine = svgEl('line', {
+    x1: 95, y1: 106, x2: 95, y2: 192,
+    stroke: '#1e3a8a', 'stroke-width': 3, 'stroke-dasharray': '6 5', opacity: 0
+  }, svg);
+  stageRefs.splitAppleLine = svgEl('line', {
+    x1: 234.5, y1: 120, x2: 234.5, y2: 192,
+    stroke: '#1e3a8a', 'stroke-width': 3, 'stroke-dasharray': '6 5', opacity: 0
+  }, svg);
+
+  // 徽章層
+  const badgeLayer = svgEl('g', {}, svg);
+  stageRefs.b1CatBadges = [
+    drawBadge(badgeLayer, 'bc0', 68, 114, 1, CONFIG.colors.cat),
+    drawBadge(badgeLayer, 'bc1', 122, 114, 2, CONFIG.colors.cat)
+  ];
+  stageRefs.b1AppleCountBadge = drawBadge(badgeLayer, 'ba8', 235, 116, 8, CONFIG.colors.apple);
+  stageRefs.b1AppleHalfBadges = [
+    drawBadge(badgeLayer, 'bah0', 212, 118, 4, CONFIG.colors.apple)
+  ];
+  stageRefs.b2AppleBadges = [
+    drawBadge(badgeLayer, 'b2ab0', 369, 146, 1, CONFIG.colors.apple),
+    drawBadge(badgeLayer, 'b2ab1', 401, 146, 2, CONFIG.colors.apple)
+  ];
+  stageRefs.b2PumpBadge = drawBadge(badgeLayer, 'b2pb0', 525, 126, 1, CONFIG.colors.pump);
+
+  stageRefs.grpBadges = [
+    drawBadge(badgeLayer, 'gb1', 212, 116, 1, CONFIG.colors.grp1),
+    drawBadge(badgeLayer, 'gb2', 258, 116, 2, CONFIG.colors.grp2)
+  ];
+  stageRefs.newPumpBadges = [
+    drawBadge(badgeLayer, 'npb0', 212, 126, 1, CONFIG.colors.pump),
+    drawBadge(badgeLayer, 'npb1', 258, 126, 2, CONFIG.colors.pump)
+  ];
+
+  // 驗算成功綠章（Step 8）
+  const verG = svgEl('g', { transform: 'translate(165, 62)', opacity: 0 }, svg);
+  svgEl('rect', { x: -76, y: -20, width: 152, height: 38, rx: 19, fill: '#dcfce7', stroke: '#16a34a', 'stroke-width': 2.5 }, verG);
+  const verTxt = svgEl('text', { x: 0, y: 5, 'text-anchor': 'middle', fill: '#15803d', 'font-size': 16, 'font-weight': 900 }, verG);
+  verTxt.textContent = '1 貓 ＝ 2 瓜 ✓';
+  stageRefs.verifyPill = verG;
+
+  // 統一深藍筆尖視線嚮導（Track A）
+  stageRefs.pointer = svgEl('circle', {
+    cx: 95, cy: 150, r: 7.5, fill: '#1e3a8a', stroke: '#ffffff', 'stroke-width': 2.5, opacity: 0
+  }, svg);
+}
+
+/* =========================================================
+   5. SVG 繪製：✏️ 實戰鉛筆算草紙（Track B）
+   ========================================================= */
+const scratchRefs = {};
+function buildScratchSVG() {
+  const svg = document.getElementById('scratchSvg');
+  svg.innerHTML = '';
+
+  // 淺格仔草稿紙背景
+  const defs = svgEl('defs', {}, svg);
+  const pat = svgEl('pattern', { id: 'gridPat', width: 22, height: 22, patternUnits: 'userSpaceOnUse' }, defs);
+  svgEl('path', { d: 'M 22 0 L 0 0 0 22', fill: 'none', stroke: '#efe6cf', 'stroke-width': 1 }, pat);
+  svgEl('rect', { x: 0, y: 0, width: 460, height: 330, rx: 10, fill: '#fffdf3' }, svg);
+  svgEl('rect', { x: 0, y: 0, width: 460, height: 330, rx: 10, fill: 'url(#gridPat)' }, svg);
+
+  // 角落極簡符號圖例（無多筆畫中文字，以迷你圖示對應 △ / □ / ◇）
+  const legG = svgEl('g', { id: 'scLegend' }, svg);
+  // 貓圖例
+  scratchRefs.legCat = svgEl('g', { opacity: 0 }, legG);
+  svgEl('rect', { x: 14, y: 10, width: 74, height: 26, rx: 8, fill: '#e0f7fc', stroke: '#0aa5c9', 'stroke-width': 1.5 }, scratchRefs.legCat);
+  drawCatGraphic(scratchRefs.legCat, 'miniCat', 30, 23, 0.32);
+  let t = svgEl('text', { x: 46, y: 28, fill: '#0369a1', 'font-size': 15, 'font-weight': 900 }, scratchRefs.legCat);
+  t.textContent = '= △';
+
+  // 蘋果圖例
+  scratchRefs.legApple = svgEl('g', { opacity: 0 }, legG);
+  svgEl('rect', { x: 96, y: 10, width: 72, height: 26, rx: 8, fill: '#fde7f0', stroke: '#e8467c', 'stroke-width': 1.5 }, scratchRefs.legApple);
+  drawAppleGraphic(scratchRefs.legApple, 'miniApple', 112, 23, 7);
+  t = svgEl('text', { x: 126, y: 28, fill: '#be123c', 'font-size': 15, 'font-weight': 900 }, scratchRefs.legApple);
+  t.textContent = '= □';
+
+  // 南瓜圖例
+  scratchRefs.legPump = svgEl('g', { opacity: 0 }, legG);
+  svgEl('rect', { x: 176, y: 10, width: 74, height: 26, rx: 8, fill: '#fff0e5', stroke: '#f4711f', 'stroke-width': 1.5 }, scratchRefs.legPump);
+  drawPumpkinGraphic(scratchRefs.legPump, 'miniPump', 193, 24, 0.42);
+  t = svgEl('text', { x: 209, y: 28, fill: '#c2410c', 'font-size': 15, 'font-weight': 900 }, scratchRefs.legPump);
+  t.textContent = '= ◇';
+
+  // --- 區 1（左上）：天平 1 初記 [△ △](2) = 8_ (□) ---
+  scratchRefs.z1Box = svgEl('rect', {
+    x: 20, y: 66, width: 92, height: 42, rx: 8,
+    fill: '#e0f7fc', 'fill-opacity': 0.7, stroke: CONFIG.colors.cat, 'stroke-width': 2.5, opacity: 0
+  }, svg);
+  scratchRefs.z1NumTop = svgEl('text', {
+    x: 66, y: 60, 'text-anchor': 'middle', fill: CONFIG.colors.cat, 'font-size': 18, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.z1NumTop.textContent = '2';
+
+  // 兩隻貓 △ △（用可畫線 path）
+  scratchRefs.z1Tri1 = svgEl('path', {
+    d: 'M 44 74 L 31 99 L 57 99 Z', fill: 'none', stroke: CONFIG.colors.cat, 'stroke-width': 3.2, 'stroke-linejoin': 'round', opacity: 0
+  }, svg);
+  scratchRefs.z1Tri2 = svgEl('path', {
+    d: 'M 88 74 L 75 99 L 101 99 Z', fill: 'none', stroke: CONFIG.colors.cat, 'stroke-width': 3.2, 'stroke-linejoin': 'round', opacity: 0
+  }, svg);
+
+  scratchRefs.z1Eq = svgEl('text', {
+    x: 130, y: 95, 'text-anchor': 'middle', fill: '#334155', 'font-size': 26, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.z1Eq.textContent = '=';
+
+  // 大數量 8 配一筆快底線打包 + 小方格標記
+  scratchRefs.z1EightBg = svgEl('rect', {
+    x: 148, y: 64, width: 66, height: 44, rx: 8, fill: '#fde7f0', 'fill-opacity': 0.75, opacity: 0
+  }, svg);
+  scratchRefs.z1Eight = svgEl('text', {
+    x: 174, y: 95, 'text-anchor': 'middle', fill: CONFIG.colors.apple, 'font-size': 28, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.z1Eight.textContent = '8';
+  scratchRefs.z1MiniSq = svgEl('rect', {
+    x: 193, y: 78, width: 14, height: 14, rx: 2, fill: 'none', stroke: CONFIG.colors.apple, 'stroke-width': 2.5, opacity: 0
+  }, svg);
+  scratchRefs.z1EightLine = svgEl('path', {
+    d: 'M 152 103 L 210 103', fill: 'none', stroke: CONFIG.colors.apple, 'stroke-width': 3.4, 'stroke-linecap': 'round', opacity: 0
+  }, svg);
+
+  // --- 區間待連接「？」 ---
+  scratchRefs.qMark = svgEl('text', {
+    x: 236, y: 94, 'text-anchor': 'middle', fill: '#94a3b8', 'font-size': 24, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.qMark.textContent = '?';
+  scratchRefs.qSlash = svgEl('path', {
+    d: 'M 226 98 L 246 72', fill: 'none', stroke: '#ef4444', 'stroke-width': 3, 'stroke-linecap': 'round', opacity: 0
+  }, svg);
+
+  // --- 區 2（右上）：天平 2 初記 [□ □](2) = [◇](1) ---
+  scratchRefs.z2LeftBox = svgEl('rect', {
+    x: 258, y: 66, width: 84, height: 42, rx: 8,
+    fill: '#fde7f0', 'fill-opacity': 0.7, stroke: CONFIG.colors.apple, 'stroke-width': 2.5, opacity: 0
+  }, svg);
+  scratchRefs.z2LeftTop = svgEl('text', {
+    x: 300, y: 60, 'text-anchor': 'middle', fill: CONFIG.colors.apple, 'font-size': 18, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.z2LeftTop.textContent = '2';
+  scratchRefs.z2Sq1 = svgEl('path', {
+    d: 'M 270 76 H 292 V 98 H 270 Z', fill: 'none', stroke: CONFIG.colors.apple, 'stroke-width': 3, 'stroke-linejoin': 'round', opacity: 0
+  }, svg);
+  scratchRefs.z2Sq2 = svgEl('path', {
+    d: 'M 308 76 H 330 V 98 H 308 Z', fill: 'none', stroke: CONFIG.colors.apple, 'stroke-width': 3, 'stroke-linejoin': 'round', opacity: 0
+  }, svg);
+
+  scratchRefs.z2Eq = svgEl('text', {
+    x: 358, y: 95, 'text-anchor': 'middle', fill: '#334155', 'font-size': 26, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.z2Eq.textContent = '=';
+
+  scratchRefs.z2RightBox = svgEl('rect', {
+    x: 374, y: 66, width: 58, height: 42, rx: 8,
+    fill: '#fff0e5', 'fill-opacity': 0.8, stroke: CONFIG.colors.pump, 'stroke-width': 2.5, opacity: 0
+  }, svg);
+  scratchRefs.z2RightTop = svgEl('text', {
+    x: 403, y: 60, 'text-anchor': 'middle', fill: CONFIG.colors.pump, 'font-size': 18, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.z2RightTop.textContent = '1';
+  scratchRefs.z2Dia = svgEl('path', {
+    d: 'M 403 73 L 418 87 L 403 101 L 388 87 Z', fill: 'none', stroke: CONFIG.colors.pump, 'stroke-width': 3.2, 'stroke-linejoin': 'round', opacity: 0
+  }, svg);
+
+  // --- 拆半動作（Step 4）：虛線分割 + 8 拆成 4 和 4 + 劃走一半 ---
+  scratchRefs.splitCatDash = svgEl('path', {
+    d: 'M 66 62 L 66 112', fill: 'none', stroke: '#1e3a8a', 'stroke-width': 2.5, 'stroke-dasharray': '5 4', opacity: 0
+  }, svg);
+  scratchRefs.slashTri2 = svgEl('path', {
+    d: 'M 74 102 L 103 72', fill: 'none', stroke: '#64748b', 'stroke-width': 3, 'stroke-linecap': 'round', opacity: 0
+  }, svg);
+  scratchRefs.bondLines = svgEl('path', {
+    d: 'M 180 107 L 156 124 M 180 107 L 204 124', fill: 'none', stroke: CONFIG.colors.apple, 'stroke-width': 2.6, 'stroke-linecap': 'round', opacity: 0
+  }, svg);
+  scratchRefs.bondL4 = svgEl('text', {
+    x: 154, y: 143, 'text-anchor': 'middle', fill: CONFIG.colors.apple, 'font-size': 20, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.bondL4.textContent = '4';
+  scratchRefs.bondR4 = svgEl('text', {
+    x: 204, y: 143, 'text-anchor': 'middle', fill: CONFIG.colors.apple, 'font-size': 20, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.bondR4.textContent = '4';
+  scratchRefs.slashR4 = svgEl('path', {
+    d: 'M 193 144 L 215 125', fill: 'none', stroke: '#64748b', 'stroke-width': 2.8, 'stroke-linecap': 'round', opacity: 0
+  }, svg);
+
+  // --- 區 3（中層）：拆半結果 [△](1) = [□ □ □ □](4) ---
+  scratchRefs.z3CatBox = svgEl('rect', {
+    x: 20, y: 174, width: 54, height: 42, rx: 8,
+    fill: '#e0f7fc', 'fill-opacity': 0.75, stroke: CONFIG.colors.cat, 'stroke-width': 2.5, opacity: 0
+  }, svg);
+  scratchRefs.z3CatTop = svgEl('text', {
+    x: 47, y: 168, 'text-anchor': 'middle', fill: CONFIG.colors.cat, 'font-size': 18, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.z3CatTop.textContent = '1';
+  scratchRefs.z3Tri = svgEl('path', {
+    d: 'M 47 182 L 34 207 L 60 207 Z', fill: 'none', stroke: CONFIG.colors.cat, 'stroke-width': 3.2, 'stroke-linejoin': 'round', opacity: 0
+  }, svg);
+
+  scratchRefs.z3Eq = svgEl('text', {
+    x: 92, y: 203, 'text-anchor': 'middle', fill: '#334155', 'font-size': 26, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.z3Eq.textContent = '=';
+
+  scratchRefs.z3FourBox = svgEl('rect', {
+    x: 112, y: 174, width: 178, height: 42, rx: 8,
+    fill: '#fde7f0', 'fill-opacity': 0.55, stroke: CONFIG.colors.apple, 'stroke-width': 2.2, opacity: 0
+  }, svg);
+  scratchRefs.z3FourTop = svgEl('text', {
+    x: 201, y: 168, 'text-anchor': 'middle', fill: CONFIG.colors.apple, 'font-size': 18, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.z3FourTop.textContent = '4';
+
+  const sqXs = [124, 160, 212, 248];
+  scratchRefs.z3Sqs = sqXs.map((sx, idx) =>
+    svgEl('path', {
+      d: `M ${sx} 184 H ${sx + 22} V 206 H ${sx} Z`,
+      fill: 'none', stroke: CONFIG.colors.apple, 'stroke-width': 3, 'stroke-linejoin': 'round', opacity: 0
+    }, svg)
+  );
+
+  // --- Step 5：連結天平 2 箭咀 ＋ 分成 2 組彩色框 ---
+  scratchRefs.linkArrow = svgEl('path', {
+    d: 'M 332 112 C 336 146, 314 166, 294 176',
+    fill: 'none', stroke: '#8d5bd6', 'stroke-width': 2.8, 'stroke-dasharray': '6 4', 'stroke-linecap': 'round', opacity: 0
+  }, svg);
+  scratchRefs.z3Grp1 = svgEl('rect', {
+    x: 117, y: 178, width: 72, height: 34, rx: 7,
+    fill: CONFIG.colors.grp1, 'fill-opacity': 0.14, stroke: CONFIG.colors.grp1, 'stroke-width': 2.8, opacity: 0
+  }, svg);
+  scratchRefs.z3Grp2 = svgEl('rect', {
+    x: 205, y: 178, width: 72, height: 34, rx: 7,
+    fill: CONFIG.colors.grp2, 'fill-opacity': 0.14, stroke: CONFIG.colors.grp2, 'stroke-width': 2.8, opacity: 0
+  }, svg);
+
+  // --- Steps 6-7：劃走各組 ＋ 箭咀指向 ◇ ＋ 總結算式 ---
+  scratchRefs.slashGrp1 = svgEl('path', {
+    d: 'M 122 208 L 182 182', fill: 'none', stroke: CONFIG.colors.grp1, 'stroke-width': 3.2, 'stroke-linecap': 'round', opacity: 0
+  }, svg);
+  scratchRefs.arrGrp1 = svgEl('path', {
+    d: 'M 153 216 L 153 246 M 146 239 L 153 247 L 160 239',
+    fill: 'none', stroke: CONFIG.colors.grp1, 'stroke-width': 2.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0
+  }, svg);
+  scratchRefs.z4Dia1 = svgEl('path', {
+    d: 'M 153 254 L 169 269 L 153 284 L 137 269 Z',
+    fill: '#fff0e5', stroke: CONFIG.colors.pump, 'stroke-width': 3.2, 'stroke-linejoin': 'round', opacity: 0
+  }, svg);
+  scratchRefs.z4Num1 = svgEl('text', {
+    x: 153, y: 304, 'text-anchor': 'middle', fill: CONFIG.colors.pump, 'font-size': 18, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.z4Num1.textContent = '1';
+
+  scratchRefs.slashGrp2 = svgEl('path', {
+    d: 'M 210 208 L 270 182', fill: 'none', stroke: CONFIG.colors.grp2, 'stroke-width': 3.2, 'stroke-linecap': 'round', opacity: 0
+  }, svg);
+  scratchRefs.arrGrp2 = svgEl('path', {
+    d: 'M 241 216 L 241 246 M 234 239 L 241 247 L 248 239',
+    fill: 'none', stroke: CONFIG.colors.grp2, 'stroke-width': 2.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0
+  }, svg);
+  scratchRefs.z4Dia2 = svgEl('path', {
+    d: 'M 241 254 L 257 269 L 241 284 L 225 269 Z',
+    fill: '#fff0e5', stroke: CONFIG.colors.pump, 'stroke-width': 3.2, 'stroke-linejoin': 'round', opacity: 0
+  }, svg);
+  scratchRefs.z4Num2 = svgEl('text', {
+    x: 241, y: 304, 'text-anchor': 'middle', fill: CONFIG.colors.pump, 'font-size': 18, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.z4Num2.textContent = '1';
+
+  scratchRefs.z4Plus = svgEl('text', {
+    x: 197, y: 277, 'text-anchor': 'middle', fill: '#334155', 'font-size': 24, 'font-weight': 900, opacity: 0
+  }, svg);
+  scratchRefs.z4Plus.textContent = '+';
+
+  // 最終總結框（右下）：1 + 1 = 2 (△ = ◇ ◇)
+  scratchRefs.finalCard = svgEl('g', { opacity: 0 }, svg);
+  svgEl('rect', {
+    x: 294, y: 238, width: 152, height: 74, rx: 12,
+    fill: '#dcfce7', stroke: '#16a34a', 'stroke-width': 2.8
+  }, scratchRefs.finalCard);
+  const f1 = svgEl('text', { x: 370, y: 268, 'text-anchor': 'middle', fill: '#15803d', 'font-size': 22, 'font-weight': 900 }, scratchRefs.finalCard);
+  f1.textContent = '1 + 1 = 2';
+  const f2 = svgEl('text', { x: 370, y: 296, 'text-anchor': 'middle', fill: '#0f172a', 'font-size': 18, 'font-weight': 900 }, scratchRefs.finalCard);
+  f2.textContent = '△ = ◇ ◇';
+
+  // 目標提示框（Step 3 閃示）
+  scratchRefs.goalHint = svgEl('g', { opacity: 0 }, svg);
+  svgEl('rect', {
+    x: 294, y: 132, width: 152, height: 42, rx: 10,
+    fill: '#fef9c3', stroke: '#eab308', 'stroke-width': 2.4
+  }, scratchRefs.goalHint);
+  const gTxt = svgEl('text', { x: 370, y: 159, 'text-anchor': 'middle', fill: '#854d0e', 'font-size': 19, 'font-weight': 900 }, scratchRefs.goalHint);
+  gTxt.textContent = '△ = ? 個 ◇';
+
+  // 統一深藍鉛筆尖（Track B，與 Track A 互斥接力）
+  scratchRefs.pen = svgEl('circle', {
+    cx: 40, cy: 86, r: 7.5, fill: '#1e3a8a', stroke: '#ffffff', 'stroke-width': 2.5, opacity: 0
+  }, svg);
+}
+
+/* =========================================================
+   6. 純函數步驟渲染器 renderStep(stepIdx, p)
+   ========================================================= */
+function movePointer(which, x, y, show) {
+  if (which === 'stage' && show) {
+    stageRefs.pointer.setAttribute('cx', x);
+    stageRefs.pointer.setAttribute('cy', y);
+    stageRefs.pointer.setAttribute('opacity', '1');
+    scratchRefs.pen.setAttribute('opacity', '0');
+  } else if (which === 'scratch' && show) {
+    scratchRefs.pen.setAttribute('cx', x);
+    scratchRefs.pen.setAttribute('cy', y);
+    scratchRefs.pen.setAttribute('opacity', '1');
+    stageRefs.pointer.setAttribute('opacity', '0');
+  } else {
+    stageRefs.pointer.setAttribute('opacity', '0');
+    scratchRefs.pen.setAttribute('opacity', '0');
+  }
+}
+
+function renderStep(stepIdx, p) {
+  const c = clamp(p);
+
+  // --- 題目高亮與代號上標 ---
+  const stepObj = CONFIG.steps[stepIdx];
+  document.getElementById('qSeg0').classList.toggle('active', stepObj.hlSeg === 0);
+  document.getElementById('qSeg1').classList.toggle('active', stepObj.hlSeg === 1);
+  document.getElementById('tagCat').classList.toggle('show', stepIdx > 1 || (stepIdx === 1 && c > 0.2));
+  document.getElementById('tagPump').classList.toggle('show', stepIdx > 2 || (stepIdx === 2 && c > 0.35));
+
+  // --- 答案手寫筆劃（僅 Step 8 出現） ---
+  const ansPath = document.getElementById('ansDigitPath');
+  const ansDot = document.getElementById('ansPenDot');
+  if (stepIdx === 8) {
+    const dp = easeInOut(seg(c, 0.55, 0.92));
+    ansPath.style.strokeDashoffset = `${110 * (1 - dp)}`;
+    if (dp > 0.02 && dp < 0.99) {
+      const pt = ansPath.getPointAtLength(dp * ansPath.getTotalLength());
+      ansDot.setAttribute('cx', pt.x);
+      ansDot.setAttribute('cy', pt.y);
+      ansDot.setAttribute('opacity', '1');
+    } else {
+      ansDot.setAttribute('opacity', '0');
+    }
+  } else {
+    ansPath.style.strokeDashoffset = '110';
+    ansDot.setAttribute('opacity', '0');
+  }
+
+  // --- 先重置所有動態屬性至基準初態 ---
+  // Cats
+  const cat0X = stepIdx > 4 ? 95 : (stepIdx === 4 ? lerp(CAT_INIT[0].x, 95, easeInOut(seg(c, 0.55, 0.85))) : CAT_INIT[0].x);
+  stageRefs.cats[0].setAttribute('transform', `translate(${cat0X},${CAT_INIT[0].y}) scale(0.96)`);
+  setElOpacity(stageRefs.cats[0], 1);
+
+  if (stepIdx < 4) {
+    stageRefs.cats[1].setAttribute('transform', `translate(${CAT_INIT[1].x},${CAT_INIT[1].y}) scale(0.96)`);
+    setElOpacity(stageRefs.cats[1], 1);
+  } else if (stepIdx === 4) {
+    const fly = easeInOut(seg(c, 0.32, 0.65));
+    const cx = lerp(CAT_INIT[1].x, CAT_INIT[1].x + 55, fly);
+    const cy = lerp(CAT_INIT[1].y, CAT_INIT[1].y - 95, fly) - Math.sin(fly * Math.PI) * 20;
+    const sc = lerp(0.96, 0.25, fly);
+    stageRefs.cats[1].setAttribute('transform', `translate(${cx},${cy}) scale(${sc})`);
+    setElOpacity(stageRefs.cats[1], 1 - fly);
+  } else {
+    setElOpacity(stageRefs.cats[1], 0);
+  }
+
+  // Balance 1 Apples (8 items)
+  stageRefs.b1Apples.forEach((el, i) => {
+    const isRightHalf = (i === 2 || i === 3 || i === 6 || i === 7);
+    const isGrp1 = (i === 0 || i === 4);
+    const isGrp2 = (i === 1 || i === 5);
+
+    if (stepIdx < 4) {
+      el.setAttribute('transform', `translate(${B1_APPLES_INIT[i].x},${B1_APPLES_INIT[i].y}) scale(1)`);
+      setElOpacity(el, 1);
+    } else if (stepIdx === 4) {
+      if (isRightHalf) {
+        const fly = easeInOut(seg(c, 0.32, 0.65));
+        const ax = lerp(B1_APPLES_INIT[i].x, B1_APPLES_INIT[i].x + 70, fly);
+        const ay = lerp(B1_APPLES_INIT[i].y, B1_APPLES_INIT[i].y - 95, fly);
+        const sc = lerp(1, 0.2, fly);
+        el.setAttribute('transform', `translate(${ax},${ay}) scale(${sc})`);
+        setElOpacity(el, 1 - fly);
+      } else {
+        const slide = easeInOut(seg(c, 0.55, 0.85));
+        const ax = lerp(B1_APPLES_INIT[i].x, B1_APPLES_HALF[i].x, slide);
+        const ay = lerp(B1_APPLES_INIT[i].y, B1_APPLES_HALF[i].y, slide);
+        el.setAttribute('transform', `translate(${ax},${ay}) scale(1)`);
+        setElOpacity(el, 1);
+      }
+    } else {
+      if (isRightHalf) {
+        setElOpacity(el, 0);
+      } else if (isGrp1) {
+        if (stepIdx < 6) {
+          el.setAttribute('transform', `translate(${B1_APPLES_HALF[i].x},${B1_APPLES_HALF[i].y}) scale(1)`);
+          setElOpacity(el, 1);
+        } else if (stepIdx === 6) {
+          // 嚴格不重疊：0..0.22 閃示 -> 0.22..0.48 飛走 -> 0.48..0.56 短停 -> 新南瓜彈入
+          const fly = easeInOut(seg(c, 0.22, 0.48));
+          const ax = lerp(B1_APPLES_HALF[i].x, B1_APPLES_HALF[i].x - 40, fly);
+          const ay = lerp(B1_APPLES_HALF[i].y, B1_APPLES_HALF[i].y - 95, fly);
+          el.setAttribute('transform', `translate(${ax},${ay}) scale(${lerp(1, 0.2, fly)})`);
+          setElOpacity(el, 1 - fly);
+        } else {
+          setElOpacity(el, 0);
+        }
+      } else if (isGrp2) {
+        if (stepIdx < 7) {
+          el.setAttribute('transform', `translate(${B1_APPLES_HALF[i].x},${B1_APPLES_HALF[i].y}) scale(1)`);
+          setElOpacity(el, 1);
+        } else if (stepIdx === 7) {
+          const fly = easeInOut(seg(c, 0.16, 0.40));
+          const ax = lerp(B1_APPLES_HALF[i].x, B1_APPLES_HALF[i].x + 50, fly);
+          const ay = lerp(B1_APPLES_HALF[i].y, B1_APPLES_HALF[i].y - 95, fly);
+          el.setAttribute('transform', `translate(${ax},${ay}) scale(${lerp(1, 0.2, fly)})`);
+          setElOpacity(el, 1 - fly);
+        } else {
+          setElOpacity(el, 0);
+        }
+      }
+    }
+  });
+
+  // New Pumpkins flying in (Steps 6 & 7)
+  if (stepIdx < 6) {
+    setElOpacity(stageRefs.newPumps[0], 0);
+    setElOpacity(stageRefs.newPumps[1], 0);
+  } else if (stepIdx === 6) {
+    const enter = easeOut(seg(c, 0.56, 0.84));
+    const px = lerp(525, 212, enter);
+    const py = lerp(166, 166, enter) - Math.sin(enter * Math.PI) * 95;
+    const sc = lerp(0.35, 0.96, enter);
+    stageRefs.newPumps[0].setAttribute('transform', `translate(${px},${py}) scale(${sc})`);
+    setElOpacity(stageRefs.newPumps[0], enter > 0.01 ? 1 : 0);
+    setElOpacity(stageRefs.newPumps[1], 0);
+  } else if (stepIdx === 7) {
+    stageRefs.newPumps[0].setAttribute('transform', `translate(212,166) scale(0.96)`);
+    setElOpacity(stageRefs.newPumps[0], 1);
+    const enter = easeOut(seg(c, 0.48, 0.74));
+    const px = lerp(525, 258, enter);
+    const py = lerp(166, 166, enter) - Math.sin(enter * Math.PI) * 90;
+    const sc = lerp(0.35, 0.96, enter);
+    stageRefs.newPumps[1].setAttribute('transform', `translate(${px},${py}) scale(${sc})`);
+    setElOpacity(stageRefs.newPumps[1], enter > 0.01 ? 1 : 0);
+  } else {
+    stageRefs.newPumps[0].setAttribute('transform', `translate(212,166) scale(0.96)`);
+    stageRefs.newPumps[1].setAttribute('transform', `translate(258,166) scale(0.96)`);
+    setElOpacity(stageRefs.newPumps[0], 1);
+    setElOpacity(stageRefs.newPumps[1], 1);
+  }
+
+  // --- 區域高亮框與徽章（純函數控制，同組完成即淡出） ---
+  const applyHL = (el, f) => {
+    el.setAttribute('fill-opacity', f.fillOp.toFixed(3));
+    el.setAttribute('opacity', f.strokeOp.toFixed(3));
+  };
+  applyHL(stageRefs.hlB1Cats, { fillOp: 0, strokeOp: 0 });
+  applyHL(stageRefs.hlB1Apples, { fillOp: 0, strokeOp: 0 });
+  applyHL(stageRefs.hlB2Apples, { fillOp: 0, strokeOp: 0 });
+  applyHL(stageRefs.hlB2Pump, { fillOp: 0, strokeOp: 0 });
+  applyHL(stageRefs.grp1Box, { fillOp: 0, strokeOp: 0 });
+  applyHL(stageRefs.grp2Box, { fillOp: 0, strokeOp: 0 });
+
+  stageRefs.b1CatBadges.forEach(b => setElOpacity(b, 0));
+  setElOpacity(stageRefs.b1AppleCountBadge, 0);
+  setElOpacity(stageRefs.b1AppleHalfBadges[0], 0);
+  stageRefs.b2AppleBadges.forEach(b => setElOpacity(b, 0));
+  setElOpacity(stageRefs.b2PumpBadge, 0);
+  stageRefs.grpBadges.forEach(b => setElOpacity(b, 0));
+  stageRefs.newPumpBadges.forEach(b => setElOpacity(b, 0));
+  setElOpacity(stageRefs.splitCatLine, 0);
+  setElOpacity(stageRefs.splitAppleLine, 0);
+  setElOpacity(stageRefs.verifyPill, 0);
+
+  if (stepIdx === 1) {
+    const fCat = flash3(seg(c, 0.05, 0.32));
+    applyHL(stageRefs.hlB1Cats, fCat);
+    const catBadgeFade = 1 - seg(c, 0.45, 0.55);
+    stageRefs.b1CatBadges.forEach(b => setElOpacity(b, fCat.badge * catBadgeFade));
+
+    const fApp = flash3(seg(c, 0.42, 0.70));
+    applyHL(stageRefs.hlB1Apples, fApp);
+    setElOpacity(stageRefs.b1AppleCountBadge, fApp.badge);
+  } else if (stepIdx === 2) {
+    const fA = flash3(seg(c, 0.05, 0.34));
+    applyHL(stageRefs.hlB2Apples, fA);
+    stageRefs.b2AppleBadges.forEach(b => setElOpacity(b, fA.badge));
+
+    const fP = flash3(seg(c, 0.40, 0.68));
+    applyHL(stageRefs.hlB2Pump, fP);
+    setElOpacity(stageRefs.b2PumpBadge, fP.badge);
+  } else if (stepIdx === 3) {
+    const fCat = flash3(seg(c, 0.10, 0.55));
+    applyHL(stageRefs.hlB1Cats, fCat);
+  } else if (stepIdx === 4) {
+    const lineOp = seg(c, 0.05, 0.25) * (1 - seg(c, 0.62, 0.75));
+    setElOpacity(stageRefs.splitCatLine, lineOp);
+    setElOpacity(stageRefs.splitAppleLine, lineOp);
+    if (c > 0.72) {
+      setElOpacity(stageRefs.b1AppleHalfBadges[0], easeOut(seg(c, 0.75, 0.92)));
+      stageRefs.b1AppleHalfBadges[0].setAttribute('transform', 'translate(235, 118)');
+    }
+  } else if (stepIdx === 5) {
+    const f1 = flash3(seg(c, 0.12, 0.44));
+    applyHL(stageRefs.grp1Box, f1);
+    setElOpacity(stageRefs.grpBadges[0], f1.badge);
+
+    const f2 = flash3(seg(c, 0.46, 0.76));
+    applyHL(stageRefs.grp2Box, f2);
+    setElOpacity(stageRefs.grpBadges[1], f2.badge);
+  } else if (stepIdx === 6) {
+    // 第 1 組閃示後代換，第 2 組保持框住
+    const g1Fade = 1 - seg(c, 0.22, 0.35);
+    const f1 = flash3(seg(c, 0.0, 0.22));
+    applyHL(stageRefs.grp1Box, { fillOp: (0.14 + f1.fillOp) * g1Fade, strokeOp: 0.85 * g1Fade });
+    applyHL(stageRefs.grp2Box, { fillOp: 0.12, strokeOp: 0.8 });
+    setElOpacity(stageRefs.newPumpBadges[0], easeOut(seg(c, 0.80, 0.95)));
+  } else if (stepIdx === 7) {
+    const g2Fade = 1 - seg(c, 0.16, 0.28);
+    applyHL(stageRefs.grp2Box, { fillOp: 0.22 * g2Fade, strokeOp: 0.9 * g2Fade });
+    setElOpacity(stageRefs.newPumpBadges[0], 1);
+    setElOpacity(stageRefs.newPumpBadges[1], easeOut(seg(c, 0.72, 0.88)));
+  } else if (stepIdx === 8) {
+    setElOpacity(stageRefs.newPumpBadges[0], 1);
+    setElOpacity(stageRefs.newPumpBadges[1], 1);
+    const vOp = easeOut(seg(c, 0.08, 0.38));
+    setElOpacity(stageRefs.verifyPill, vOp);
+    applyHL(stageRefs.hlB1Cats, { fillOp: 0.1 * vOp, strokeOp: 0.6 * vOp });
+    applyHL(stageRefs.hlB1Apples, { fillOp: 0.08 * vOp, strokeOp: 0.55 * vOp });
+  }
+
+  // --- Track B 鉛筆算草紙純函數渲染 ---
+  // 角落圖例
+  setElOpacity(scratchRefs.legCat, stepIdx > 1 ? 1 : (stepIdx === 1 ? seg(c, 0.18, 0.32) : 0));
+  setElOpacity(scratchRefs.legApple, stepIdx > 1 ? 1 : (stepIdx === 1 ? seg(c, 0.55, 0.70) : 0));
+  setElOpacity(scratchRefs.legPump, stepIdx > 2 ? 1 : (stepIdx === 2 ? seg(c, 0.45, 0.62) : 0));
+
+  // Zone 1（天平 1 初記）
+  const z1P = stepIdx > 1 ? 1 : (stepIdx === 1 ? c : 0);
+  setElOpacity(scratchRefs.z1Box, seg(z1P, 0.24, 0.38));
+  setStrokeProg(scratchRefs.z1Tri1, 86, seg(z1P, 0.24, 0.36));
+  setStrokeProg(scratchRefs.z1Tri2, 86, seg(z1P, 0.36, 0.48));
+  setElOpacity(scratchRefs.z1NumTop, seg(z1P, 0.44, 0.54));
+  setElOpacity(scratchRefs.z1Eq, seg(z1P, 0.54, 0.62));
+  setElOpacity(scratchRefs.z1EightBg, seg(z1P, 0.65, 0.78));
+  setElOpacity(scratchRefs.z1Eight, seg(z1P, 0.68, 0.80));
+  setElOpacity(scratchRefs.z1MiniSq, seg(z1P, 0.76, 0.86));
+  setStrokeProg(scratchRefs.z1EightLine, 60, seg(z1P, 0.80, 0.94));
+
+  // Zone 2（天平 2 初記）
+  const z2P = stepIdx > 2 ? 1 : (stepIdx === 2 ? c : 0);
+  setElOpacity(scratchRefs.qMark, stepIdx >= 2 ? (stepIdx === 2 ? seg(c, 0.12, 0.25) : (stepIdx >= 5 ? 0.35 : 1)) : 0);
+  setElOpacity(scratchRefs.z2LeftBox, seg(z2P, 0.22, 0.36));
+  setStrokeProg(scratchRefs.z2Sq1, 90, seg(z2P, 0.22, 0.36));
+  setStrokeProg(scratchRefs.z2Sq2, 90, seg(z2P, 0.36, 0.50));
+  setElOpacity(scratchRefs.z2LeftTop, seg(z2P, 0.46, 0.56));
+  setElOpacity(scratchRefs.z2Eq, seg(z2P, 0.56, 0.64));
+  setElOpacity(scratchRefs.z2RightBox, seg(z2P, 0.64, 0.76));
+  setStrokeProg(scratchRefs.z2Dia, 90, seg(z2P, 0.66, 0.86));
+  setElOpacity(scratchRefs.z2RightTop, seg(z2P, 0.82, 0.94));
+
+  // Step 3 目標小框
+  setElOpacity(scratchRefs.goalHint, stepIdx === 3 ? easeOut(seg(c, 0.35, 0.65)) : (stepIdx > 3 && stepIdx < 7 ? 0.55 : 0));
+
+  // Step 4 拆半動作 ＋ Zone 3（[△](1) = [□ □ □ □](4)）
+  const s4P = stepIdx > 4 ? 1 : (stepIdx === 4 ? c : 0);
+  setStrokeProg(scratchRefs.splitCatDash, 52, seg(s4P, 0.08, 0.26));
+  setStrokeProg(scratchRefs.slashTri2, 46, seg(s4P, 0.28, 0.42));
+  setStrokeProg(scratchRefs.bondLines, 70, seg(s4P, 0.20, 0.38));
+  setElOpacity(scratchRefs.bondL4, seg(s4P, 0.34, 0.46));
+  setElOpacity(scratchRefs.bondR4, seg(s4P, 0.34, 0.46));
+  setStrokeProg(scratchRefs.slashR4, 34, seg(s4P, 0.46, 0.58));
+
+  setElOpacity(scratchRefs.z3CatBox, seg(s4P, 0.58, 0.68));
+  setStrokeProg(scratchRefs.z3Tri, 86, seg(s4P, 0.58, 0.70));
+  setElOpacity(scratchRefs.z3CatTop, seg(s4P, 0.66, 0.74));
+  setElOpacity(scratchRefs.z3Eq, seg(s4P, 0.70, 0.76));
+  setElOpacity(scratchRefs.z3FourBox, seg(s4P, 0.74, 0.84));
+  scratchRefs.z3Sqs.forEach((sq, i) => {
+    setStrokeProg(sq, 90, seg(s4P, 0.74 + i * 0.045, 0.82 + i * 0.045));
+  });
+  setElOpacity(scratchRefs.z3FourTop, seg(s4P, 0.88, 0.98));
+
+  // Step 5：劃走 ? ＋ 連接箭咀 ＋ 2 組彩框
+  const s5P = stepIdx > 5 ? 1 : (stepIdx === 5 ? c : 0);
+  setStrokeProg(scratchRefs.qSlash, 36, seg(s5P, 0.05, 0.22));
+  setStrokeProg(scratchRefs.linkArrow, 100, seg(s5P, 0.18, 0.45));
+  setElOpacity(scratchRefs.z3Grp1, seg(s5P, 0.42, 0.64));
+  setElOpacity(scratchRefs.z3Grp2, seg(s5P, 0.64, 0.88));
+
+  // Step 6：第 1 組劃走 -> 換出第 1 個 ◇
+  const s6P = stepIdx > 6 ? 1 : (stepIdx === 6 ? c : 0);
+  setStrokeProg(scratchRefs.slashGrp1, 70, seg(s6P, 0.35, 0.55));
+  setStrokeProg(scratchRefs.arrGrp1, 55, seg(s6P, 0.55, 0.72));
+  setStrokeProg(scratchRefs.z4Dia1, 92, seg(s6P, 0.70, 0.88));
+  setElOpacity(scratchRefs.z4Num1, seg(s6P, 0.85, 0.96));
+
+  // Step 7：第 2 組劃走 -> 換出第 2 個 ◇ ＋ 總結
+  const s7P = stepIdx > 7 ? 1 : (stepIdx === 7 ? c : 0);
+  setStrokeProg(scratchRefs.slashGrp2, 70, seg(s7P, 0.25, 0.44));
+  setStrokeProg(scratchRefs.arrGrp2, 55, seg(s7P, 0.44, 0.60));
+  setElOpacity(scratchRefs.z4Plus, seg(s7P, 0.56, 0.68));
+  setStrokeProg(scratchRefs.z4Dia2, 92, seg(s7P, 0.60, 0.78));
+  setElOpacity(scratchRefs.z4Num2, seg(s7P, 0.74, 0.86));
+  setElOpacity(scratchRefs.finalCard, easeOut(seg(s7P, 0.80, 0.98)));
+
+  // --- 單一深藍筆尖接力引導（Track A 與 Track B 嚴格互斥） ---
+  if (stepIdx === 0) {
+    movePointer('none', 0, 0, false);
+  } else if (stepIdx === 1) {
+    if (c < 0.24) movePointer('stage', lerp(68, 122, seg(c, 0, 0.24)), 145, true);
+    else if (c < 0.54) movePointer('scratch', lerp(36, 98, seg(c, 0.24, 0.54)), 86, true);
+    else if (c < 0.70) movePointer('stage', lerp(194, 275, seg(c, 0.54, 0.70)), 158, true);
+    else movePointer('scratch', lerp(152, 210, seg(c, 0.70, 0.95)), 103, true);
+  } else if (stepIdx === 2) {
+    if (c < 0.22) movePointer('stage', lerp(369, 401, seg(c, 0, 0.22)), 173, true);
+    else if (c < 0.56) movePointer('scratch', lerp(272, 328, seg(c, 0.22, 0.56)), 87, true);
+    else if (c < 0.68) movePointer('stage', 525, 166, true);
+    else movePointer('scratch', 403, 87, true);
+  } else if (stepIdx === 3) {
+    if (c < 0.50) movePointer('stage', 95, 148, true);
+    else movePointer('scratch', 370, 152, true);
+  } else if (stepIdx === 4) {
+    if (c < 0.30) movePointer('stage', 95, lerp(110, 188, seg(c, 0, 0.30)), true);
+    else if (c < 0.58) movePointer('scratch', lerp(66, 204, seg(c, 0.30, 0.58)), 125, true);
+    else movePointer('scratch', lerp(47, 265, seg(c, 0.58, 0.96)), 195, true);
+  } else if (stepIdx === 5) {
+    if (c < 0.45) movePointer('scratch', lerp(330, 294, seg(c, 0.15, 0.45)), lerp(112, 176, seg(c, 0.15, 0.45)), true);
+    else if (c < 0.72) movePointer('stage', lerp(212, 258, seg(c, 0.45, 0.72)), 158, true);
+    else movePointer('scratch', lerp(152, 240, seg(c, 0.72, 0.95)), 195, true);
+  } else if (stepIdx === 6) {
+    if (c < 0.55) movePointer('stage', 212, 160, true);
+    else movePointer('scratch', 153, lerp(216, 276, seg(c, 0.55, 0.92)), true);
+  } else if (stepIdx === 7) {
+    if (c < 0.45) movePointer('stage', 258, 160, true);
+    else movePointer('scratch', lerp(241, 370, seg(c, 0.45, 0.95)), 272, true);
+  } else {
+    movePointer('none', 0, 0, false);
+  }
+}
+
+/* =========================================================
+   7. 播放器狀態機（支援暫停、上一步、下一步、重播、Phase 傳送門）
+   ========================================================= */
+const state = {
+  stepIdx: 0,
+  p: 0,
+  playing: false,
+  muted: false,
+  rate: CONFIG.defaultRate,
+  waitingQuiz: false,
+  quizAnswered: {}, // stepIdx -> true
+  animDone: false,
+  speechDone: false,
+  rafId: null,
+  lastTs: 0,
+  confettiFired: false,
+  practiceIdx: 0
+};
+
+function updateUI() {
+  const step = CONFIG.steps[state.stepIdx];
+  document.getElementById('stepCounter').textContent = `${state.stepIdx + 1} / ${CONFIG.steps.length}`;
+  document.getElementById('stepTitleTag').textContent = step.title;
+  document.getElementById('prevBtn').disabled = state.stepIdx === 0;
+  document.getElementById('nextBtn').disabled = state.stepIdx === CONFIG.steps.length - 1;
+  document.getElementById('playBtn').textContent = state.playing ? '⏸' : '▶';
+
+  // Phase pills
+  document.querySelectorAll('.phase-pill').forEach((btn, idx) => {
+    const ph = CONFIG.phases[idx];
+    btn.classList.toggle('active', step.phase === ph.id);
+    btn.classList.toggle('done', step.phase > ph.id);
+  });
+
+  // Subtitle (讀題引用與解題思路清晰分界)
+  const sub = document.getElementById('subtitleBox');
+  if (step.quote) {
+    sub.innerHTML = `<span class="q-quote">${step.quote}</span> <span class="reason-txt">${step.reason}</span>`;
+  } else {
+    sub.innerHTML = `<span class="reason-txt">${step.reason}</span>`;
+  }
+
+  // Formula Strip
+  const fs = document.getElementById('formulaStrip');
+  fs.innerHTML = step.formulas.map(f => `<span class="f-pill ${f.cls}">${f.text}</span>`).join('');
+
+  // Celebrate Bar (Step 8)
+  const isFinal = state.stepIdx === CONFIG.steps.length - 1 && state.p >= 0.92;
+  document.getElementById('celebrateBar').classList.toggle('show', isFinal);
+}
+
+function showInlineQuiz(step) {
+  state.waitingQuiz = true;
+  state.playing = false;
+  cancelAnim();
+  stopSpeech();
+  renderStep(state.stepIdx, 0);
+  updateUI();
+
+  const box = document.getElementById('inlineQuiz');
+  document.getElementById('quizQuestion').textContent = step.quiz.q;
+  const fb = document.getElementById('quizFb');
+  fb.textContent = '';
+  fb.className = 'quiz-fb';
+
+  const optsDiv = document.getElementById('quizOpts');
+  optsDiv.innerHTML = '';
+  step.quiz.options.forEach((optText, i) => {
+    const b = document.createElement('button');
+    b.className = 'quiz-opt-btn';
+    b.textContent = optText;
+    b.onclick = () => {
+      if (i === step.quiz.answerIdx) {
+        b.classList.add('correct');
+        fb.textContent = step.quiz.okMsg;
+        fb.className = 'quiz-fb ok';
+        playSFX('ding');
+        state.quizAnswered[step.id] = true;
+        speakText(step.quiz.okMsg, () => {
+          if (state.waitingQuiz && state.stepIdx === step.id) {
+            box.classList.remove('show');
+            state.waitingQuiz = false;
+            startCurrentStep(true);
+          }
+        });
+      } else {
+        b.classList.add('wrong');
+        fb.textContent = step.quiz.wrongMsgs[i];
+        fb.className = 'quiz-fb err';
+        playSFX('wrong');
+        speakText(step.quiz.wrongMsgs[i]);
+      }
+    };
+    optsDiv.appendChild(b);
+  });
+
+  document.getElementById('quizSkipBtn').onclick = () => {
+    state.quizAnswered[step.id] = true;
+    box.classList.remove('show');
+    state.waitingQuiz = false;
+    startCurrentStep(true);
+  };
+
+  box.classList.add('show');
+  speakText(step.quiz.q);
+}
+
+function cancelAnim() {
+  if (state.rafId) {
+    cancelAnimationFrame(state.rafId);
+    state.rafId = null;
+  }
+}
+
+function checkAutoNext() {
+  if (!state.playing) return;
+  if (state.animDone && state.speechDone) {
+    if (state.stepIdx < CONFIG.steps.length - 1) {
+      goToStep(state.stepIdx + 1, true);
+    } else {
+      state.playing = false;
+      updateUI();
+    }
+  }
+}
+
+function tick(ts) {
+  if (!state.playing) return;
+  if (!state.lastTs) state.lastTs = ts;
+  const dt = ts - state.lastTs;
+  state.lastTs = ts;
+
+  const step = CONFIG.steps[state.stepIdx];
+  const speedScale = state.rate / CONFIG.defaultRate; // 1.0x 較快時動畫同步加快
+  const dur = step.duration / speedScale;
+  state.p = clamp(state.p + dt / dur);
+  renderStep(state.stepIdx, state.p);
+
+  if (state.stepIdx === CONFIG.steps.length - 1 && state.p >= 0.92 && !state.confettiFired) {
+    state.confettiFired = true;
+    playSFX('celebrate');
+    fireConfetti();
+    updateUI();
+  }
+
+  if (state.p >= 1) {
+    state.animDone = true;
+    cancelAnim();
+    checkAutoNext();
+  } else {
+    state.rafId = requestAnimationFrame(tick);
+  }
+}
+
+function startCurrentStep(autoPlay) {
+  const step = CONFIG.steps[state.stepIdx];
+  cancelAnim();
+  stopSpeech();
+  document.getElementById('inlineQuiz').classList.remove('show');
+  state.waitingQuiz = false;
+
+  // 若有未答互動停頓且處於播放流程，先彈內嵌問答條（絕不遮擋舞台）
+  if (autoPlay && step.quiz && !state.quizAnswered[step.id]) {
+    showInlineQuiz(step);
+    return;
+  }
+
+  state.p = 0;
+  state.animDone = false;
+  state.speechDone = false;
+  state.playing = !!autoPlay;
+  state.lastTs = 0;
+  if (state.stepIdx < CONFIG.steps.length - 1) state.confettiFired = false;
+
+  renderStep(state.stepIdx, state.p);
+  updateUI();
+
+  if (autoPlay) {
+    playSFX('pop');
+    const fullNarration = step.quote ? `${step.quote} ${step.reason}` : step.reason;
+    speakText(fullNarration, () => {
+      state.speechDone = true;
+      checkAutoNext();
+    });
+    state.rafId = requestAnimationFrame(tick);
+  }
+}
+
+function goToStep(idx, autoPlay = true) {
+  state.stepIdx = clamp(idx, 0, CONFIG.steps.length - 1);
+  // 隱藏擴充面板避免混淆
+  if (state.stepIdx < CONFIG.steps.length - 1) {
+    document.getElementById('practicePanel').classList.remove('show');
+    document.getElementById('geniusPanel').classList.remove('show');
+  }
+  if (!autoPlay) {
+    // 手動跳步但未按播放時，直接顯示該步完整狀態方便檢視
+    cancelAnim();
+    stopSpeech();
+    document.getElementById('inlineQuiz').classList.remove('show');
+    state.waitingQuiz = false;
+    state.playing = false;
+    state.p = 1;
+    renderStep(state.stepIdx, 1);
+    updateUI();
+    return;
+  }
+  startCurrentStep(true);
+}
+
+function togglePlay() {
+  if (state.waitingQuiz) return;
+  if (state.playing) {
+    state.playing = false;
+    cancelAnim();
+    stopSpeech();
+    updateUI();
+  } else {
+    if (state.p >= 0.99) {
+      if (state.stepIdx === CONFIG.steps.length - 1) {
+        goToStep(0, true);
+      } else {
+        startCurrentStep(true);
+      }
+    } else {
+      // 續播
+      const step = CONFIG.steps[state.stepIdx];
+      state.playing = true;
+      state.lastTs = 0;
+      state.speechDone = false;
+      updateUI();
+      const fullNarration = step.quote ? `${step.quote} ${step.reason}` : step.reason;
+      speakText(fullNarration, () => {
+        state.speechDone = true;
+        checkAutoNext();
+      });
+      state.rafId = requestAnimationFrame(tick);
+    }
+  }
+}
+
+/* =========================================================
+   8. 彩紙慶祝（輕量無阻塞）
+   ========================================================= */
+function fireConfetti() {
+  const cvs = document.getElementById('confettiCanvas');
+  const ctx = cvs.getContext('2d');
+  cvs.width = window.innerWidth;
+  cvs.height = window.innerHeight;
+  const palette = ['#0aa5c9', '#e8467c', '#f4711f', '#8d5bd6', '#33b26a', '#f0a500'];
+  const pieces = Array.from({ length: 75 }, () => ({
+    x: Math.random() * cvs.width,
+    y: -20 - Math.random() * 140,
+    w: 7 + Math.random() * 6,
+    h: 5 + Math.random() * 5,
+    vx: (Math.random() - 0.5) * 3.5,
+    vy: 2.8 + Math.random() * 4.2,
+    rot: Math.random() * 360,
+    vr: (Math.random() - 0.5) * 10,
+    color: palette[Math.floor(Math.random() * palette.length)]
+  }));
+  let frames = 0;
+  function draw() {
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    pieces.forEach(pt => {
+      pt.x += pt.vx; pt.y += pt.vy; pt.rot += pt.vr;
+      ctx.save();
+      ctx.translate(pt.x, pt.y);
+      ctx.rotate(pt.rot * Math.PI / 180);
+      ctx.fillStyle = pt.color;
+      ctx.fillRect(-pt.w / 2, -pt.h / 2, pt.w, pt.h);
+      ctx.restore();
+    });
+    frames++;
+    if (frames < 130) requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, cvs.width, cvs.height);
+  }
+  requestAnimationFrame(draw);
+}
+
+/* =========================================================
+   9. 🎯 挑戰類似題（預設無公仔，提供極簡草稿提示，答對先展開圖解）
+   ========================================================= */
+function renderPractice() {
+  const q = CONFIG.practiceBank[state.practiceIdx];
+  document.getElementById('practiceQText').textContent = q.text;
+  const optsDiv = document.getElementById('practiceOpts');
+  const fb = document.getElementById('practiceFb');
+  const hintBox = document.getElementById('practiceHintBox');
+  const verifyBox = document.getElementById('practiceVerifyBox');
+
+  fb.textContent = '';
+  fb.className = 'quiz-fb';
+  hintBox.classList.remove('show');
+  verifyBox.classList.remove('show');
+  optsDiv.innerHTML = '';
+
+  // 極簡安全符號草稿提示（純幾何符號，無彩色公仔）
+  const squares = Array.from({ length: q.halfFruits }, () => '□').join(' ');
+  const perGroupSq = Array.from({ length: q.perBig }, () => '□').join(' ');
+  const groupStr = Array.from({ length: q.ans }, () => `[${perGroupSq}]`).join('  ');
+  const dias = Array.from({ length: q.ans }, () => '◇').join(' ');
+  hintBox.innerHTML = `
+    <div style="font-size:15px;font-weight:800;color:#92400e;margin-bottom:6px;">✏️ 考場極簡草稿提示（△＝${q.catName}，□＝${q.fruitName}，◇＝${q.bigName}）：</div>
+    <div style="font-family:monospace;font-size:19px;font-weight:900;line-height:1.8;color:#1e293b;">
+      <div><span style="color:#0aa5c9;">[△ △]</span> ＝ <span style="color:#e8467c;text-decoration:underline;">${q.fruits}</span> □　｜　<span style="color:#e8467c;">[${perGroupSq}]</span> ＝ <span style="color:#f4711f;">[◇]</span></div>
+      <div>拆半：<span style="color:#0aa5c9;">[△]</span> ＝ <span style="color:#e8467c;">${squares}</span>（${q.halfFruits} 個）</div>
+      <div>每 ${q.perBig} 個一組：${groupStr} → 數下有幾組！</div>
+    </div>
+  `;
+
+  q.options.forEach((opt, i) => {
+    const b = document.createElement('button');
+    b.className = 'quiz-opt-btn';
+    b.textContent = opt;
+    b.onclick = () => {
+      if (i === q.answerIdx) {
+        b.classList.add('correct');
+        fb.textContent = `🎉 完全答啱！1 隻${q.catName}等於 ${q.ans} 個${q.bigName}！`;
+        fb.className = 'quiz-fb ok';
+        playSFX('celebrate');
+        speakText(`好叻呀！答啱喇！1 隻${q.catName}等於 ${q.ans} 個${q.bigName}！`);
+
+        // 答對後才展開視覺分組驗證圖！
+        let groupSvg = `<svg viewBox="0 0 540 110" style="width:100%;max-width:540px;display:block;margin:6px auto 0;">`;
+        groupSvg += `<rect x="8" y="22" width="110" height="64" rx="12" fill="#e0f7fc" stroke="#0aa5c9" stroke-width="2.5"/>`;
+        groupSvg += `<text x="63" y="52" text-anchor="middle" fill="#0369a1" font-size="18" font-weight="900">1 隻${q.catName}</text>`;
+        groupSvg += `<text x="63" y="75" text-anchor="middle" fill="#0aa5c9" font-size="14" font-weight="800">(拆半後)</text>`;
+        groupSvg += `<text x="140" y="62" text-anchor="middle" fill="#334155" font-size="26" font-weight="900">=</text>`;
+        const grpColors = ['#8d5bd6', '#33b26a', '#f4711f', '#0aa5c9'];
+        const gw = Math.min(82, Math.floor(350 / q.ans) - 10);
+        for (let g = 0; g < q.ans; g++) {
+          const gx = 164 + g * (gw + 10);
+          const col = grpColors[g % grpColors.length];
+          groupSvg += `<rect x="${gx}" y="14" width="${gw}" height="82" rx="10" fill="#fff" stroke="${col}" stroke-width="2.5"/>`;
+          groupSvg += `<text x="${gx + gw / 2}" y="40" text-anchor="middle" fill="#e8467c" font-size="14" font-weight="900">${q.perBig} 個${q.fruitName}</text>`;
+          groupSvg += `<text x="${gx + gw / 2}" y="60" text-anchor="middle" fill="${col}" font-size="15" font-weight="900">↓ 換</text>`;
+          groupSvg += `<text x="${gx + gw / 2}" y="84" text-anchor="middle" fill="#c2410c" font-size="15" font-weight="900">1 ${q.bigName}</text>`;
+        }
+        groupSvg += `</svg>`;
+
+        verifyBox.innerHTML = `
+          <div style="font-size:16px;font-weight:800;color:#166534;">✅ 實物分組驗證：${q.hintFormula}</div>
+          ${groupSvg}
+        `;
+        verifyBox.classList.add('show');
+      } else {
+        b.classList.add('wrong');
+        fb.textContent = `未啱喎！先將 ${q.fruits} 平分拆一半，再每 ${q.perBig} 個圈一組試吓！（可以按「✏️ 睇草稿提示」）`;
+        fb.className = 'quiz-fb err';
+        playSFX('wrong');
+      }
+    };
+    optsDiv.appendChild(b);
+  });
+}
+
+/* =========================================================
+   10. ✨ 高手秒殺思維（純視覺 SVG 動畫：4 直行直接變 4 南瓜再拆半）
+   ========================================================= */
+let geniusRaf = null;
+function buildGeniusSVG(gp = 0) {
+  const svg = document.getElementById('geniusSvg');
+  svg.innerHTML = '';
+  svgEl('rect', { x: 0, y: 0, width: 600, height: 265, rx: 12, fill: '#ffffff' }, svg);
+
+  // 繪製單座放大的天平 1（聚焦直覺結構）
+  const cx = 300;
+  svgEl('polygon', { points: '190,252 410,252 385,232 215,232', fill: '#e2e8f0', stroke: '#475569', 'stroke-width': 2.5 }, svg);
+  svgEl('rect', { x: 291, y: 176, width: 18, height: 56, rx: 3, fill: '#cbd5e1', stroke: '#475569', 'stroke-width': 2.5 }, svg);
+  svgEl('rect', { x: 115, y: 172, width: 370, height: 12, rx: 6, fill: '#f1f5f9', stroke: '#475569', 'stroke-width': 2.5 }, svg);
+  svgEl('circle', { cx: 300, cy: 178, r: 10, fill: '#94a3b8', stroke: '#334155', 'stroke-width': 2.5 }, svg);
+
+  // 左右托盤
+  [165, 435].forEach(px => {
+    svgEl('rect', { x: px - 7, y: 152, width: 14, height: 22, fill: '#cbd5e1', stroke: '#475569', 'stroke-width': 2.2 }, svg);
+    svgEl('path', { d: `M ${px - 98} 142 L ${px + 98} 142 L ${px + 84} 154 L ${px - 84} 154 Z`, fill: '#ffffff', stroke: '#334155', 'stroke-width': 2.5 }, svg);
+  });
+
+  // 左盤 2 隻小貓
+  const halfFade = seg(gp, 0.72, 0.92);
+  drawCatGraphic(svg, 'gCat0', 128, 104, 1.0);
+  const gCat1 = drawCatGraphic(svg, 'gCat1', 202, 104, 1.0);
+  setElOpacity(gCat1, 1 - halfFade * 0.72);
+
+  // 右盤：4 直行（每直行 2 個蘋果 → 直接變 1 個南瓜！）
+  const colXs = [368, 412, 456, 500];
+  const colColors = ['#8d5bd6', '#0aa5c9', '#33b26a', '#f0a500'];
+  const bracketOp = seg(gp, 0.05, 0.25) * (1 - seg(gp, 0.56, 0.66));
+  const morph = easeInOut(seg(gp, 0.34, 0.60));
+
+  colXs.forEach((x, idx) => {
+    // 直行彩色大框
+    if (bracketOp > 0.01) {
+      svgEl('rect', {
+        x: x - 18, y: 74, width: 36, height: 66, rx: 10,
+        fill: colColors[idx], 'fill-opacity': 0.14 * bracketOp,
+        stroke: colColors[idx], 'stroke-width': 2.8, opacity: bracketOp
+      }, svg);
+      const lb = svgEl('text', {
+        x, y: 65, 'text-anchor': 'middle', fill: colColors[idx], 'font-size': 13, 'font-weight': 900, opacity: bracketOp
+      }, svg);
+      lb.textContent = '2個';
+    }
+
+    // 蘋果（morph 前顯示，morph 時縮小淡出）
+    if (morph < 0.98) {
+      const a1 = drawAppleGraphic(svg, `ga_b_${idx}`, x, 126, 12.5);
+      const a2 = drawAppleGraphic(svg, `ga_t_${idx}`, x, 98, 12.5);
+      const op = 1 - morph;
+      setElOpacity(a1, op);
+      setElOpacity(a2, op);
+    }
+
+    // 南瓜（morph 後於同位彈現！右邊兩隻喺最後拆半時淡化）
+    if (morph > 0.05) {
+      const pOp = morph * (idx >= 2 ? (1 - halfFade * 0.72) : 1);
+      const sc = lerp(0.3, 0.88, morph);
+      const pm = drawPumpkinGraphic(svg, `gp_${idx}`, x, 122, sc);
+      setElOpacity(pm, pOp);
+    }
+  });
+
+  // 頂部規則小標籤（2 蘋果 = 1 南瓜）
+  const ruleOp = seg(gp, 0.08, 0.22);
+  if (ruleOp > 0.01) {
+    const rg = svgEl('g', { opacity: ruleOp }, svg);
+    svgEl('rect', { x: 186, y: 12, width: 228, height: 34, rx: 17, fill: '#f3e8ff', stroke: '#9333ea', 'stroke-width': 2 }, rg);
+    const rt = svgEl('text', { x: 300, y: 35, 'text-anchor': 'middle', fill: '#6b21a8', 'font-size': 15, 'font-weight': 900 }, rg);
+    rt.textContent = gp < 0.65 ? '每 1 直行（2 個蘋果）＝ 1 個南瓜！' : '2 隻貓 ＝ 4 個南瓜 → 拆半：1 貓 ＝ 2 瓜！';
+  }
+
+  // 最後拆半虛線（左盤中線＋右盤中線）
+  const splitOp = seg(gp, 0.68, 0.82);
+  if (splitOp > 0.01) {
+    svgEl('line', { x1: 165, y1: 62, x2: 165, y2: 152, stroke: '#9333ea', 'stroke-width': 3.2, 'stroke-dasharray': '6 4', opacity: splitOp }, svg);
+    svgEl('line', { x1: 434, y1: 62, x2: 434, y2: 152, stroke: '#9333ea', 'stroke-width': 3.2, 'stroke-dasharray': '6 4', opacity: splitOp }, svg);
+    // 左邊強調框
+    svgEl('rect', { x: 96, y: 66, width: 64, height: 76, rx: 10, fill: 'none', stroke: '#0aa5c9', 'stroke-width': 3, opacity: splitOp }, svg);
+    svgEl('rect', { x: 345, y: 92, width: 86, height: 50, rx: 10, fill: 'none', stroke: '#f4711f', 'stroke-width': 3, opacity: splitOp }, svg);
+  }
+}
+
+function playGeniusAnim() {
+  if (geniusRaf) cancelAnimationFrame(geniusRaf);
+  stopSpeech();
+  playSFX('pop');
+  const caption = document.getElementById('geniusCaption');
+  const script = '睇下高手點樣秒殺！唔使數 8 個，望住右邊每一直行剛剛好有 2 個蘋果，4 直行一齊直接變做 4 個南瓜！2 隻小貓等於 4 個南瓜，拆一半，一眼睇出 1 隻小貓等於 2 個南瓜！';
+  caption.textContent = '✨ 高手直覺：每 1 直行（2 個蘋果）直接變 1 個南瓜 → 4 直行即變 4 個南瓜 → 兩邊拆半，一眼睇出 1 隻小貓 ＝ 2 個南瓜！';
+  speakText(script);
+
+  const start = performance.now();
+  const totalMs = state.rate < 0.9 ? 7600 : 5800;
+  function frame(now) {
+    const gp = clamp((now - start) / totalMs);
+    buildGeniusSVG(gp);
+    if (gp < 1) {
+      geniusRaf = requestAnimationFrame(frame);
+    } else {
+      playSFX('ding');
+    }
+  }
+  geniusRaf = requestAnimationFrame(frame);
+}
+
+/* =========================================================
+   11. 初始化與事件綁定
+   ========================================================= */
+function init() {
+  buildStageSVG();
+  buildScratchSVG();
+  buildGeniusSVG(0);
+
+  // 建立頂部可點擊階段傳送門
+  const pillsWrap = document.getElementById('phasePills');
+  CONFIG.phases.forEach(ph => {
+    const btn = document.createElement('button');
+    btn.className = 'phase-pill';
+    btn.textContent = ph.label;
+    btn.onclick = () => goToStep(ph.startStep, true);
+    pillsWrap.appendChild(btn);
+  });
+
+  // 控制按鈕
+  document.getElementById('playBtn').onclick = togglePlay;
+  document.getElementById('prevBtn').onclick = () => {
+    if (state.stepIdx > 0) goToStep(state.stepIdx - 1, true);
+  };
+  document.getElementById('nextBtn').onclick = () => {
+    if (state.stepIdx < CONFIG.steps.length - 1) goToStep(state.stepIdx + 1, true);
+  };
+  document.getElementById('replayBtn').onclick = () => startCurrentStep(true);
+
+  // 語速切換（預設 0.75x 適中 ↔ 1.0x 較快）
+  const speedBtn = document.getElementById('speedBtn');
+  speedBtn.onclick = () => {
+    if (state.rate < 0.9) {
+      state.rate = CONFIG.fastRate;
+      speedBtn.textContent = '🚶 1.0x 較快';
+      speedBtn.classList.remove('active');
+    } else {
+      state.rate = CONFIG.defaultRate;
+      speedBtn.textContent = '🐢 0.75x 適中';
+      speedBtn.classList.add('active');
+    }
+    playSFX('pop');
+  };
+
+  // 靜音切換
+  const muteBtn = document.getElementById('muteBtn');
+  muteBtn.onclick = () => {
+    state.muted = !state.muted;
+    muteBtn.textContent = state.muted ? '🔇 靜音' : '🔊 有聲';
+    muteBtn.classList.toggle('active', state.muted);
+    if (state.muted) stopSpeech();
+  };
+
+  // 挑戰類似題按鈕
+  document.getElementById('openPracticeBtn').onclick = () => {
+    document.getElementById('geniusPanel').classList.remove('show');
+    const p = document.getElementById('practicePanel');
+    p.classList.add('show');
+    renderPractice();
+    p.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+  document.getElementById('closePracticeBtn').onclick = () => {
+    document.getElementById('practicePanel').classList.remove('show');
+  };
+  document.getElementById('nextPracticeBtn').onclick = () => {
+    state.practiceIdx = (state.practiceIdx + 1) % CONFIG.practiceBank.length;
+    renderPractice();
+    playSFX('pop');
+  };
+  document.getElementById('toggleHintBtn').onclick = () => {
+    document.getElementById('practiceHintBox').classList.toggle('show');
+    playSFX('pop');
+  };
+
+  // 高手秒殺思維按鈕
+  document.getElementById('openGeniusBtn').onclick = () => {
+    document.getElementById('practicePanel').classList.remove('show');
+    const g = document.getElementById('geniusPanel');
+    g.classList.add('show');
+    buildGeniusSVG(0);
+    g.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    playGeniusAnim();
+  };
+  document.getElementById('playGeniusBtn').onclick = playGeniusAnim;
+  document.getElementById('closeGeniusBtn').onclick = () => {
+    if (geniusRaf) cancelAnimationFrame(geniusRaf);
+    stopSpeech();
+    document.getElementById('geniusPanel').classList.remove('show');
+  };
+
+  // 鍵盤快捷鍵
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    else if (e.code === 'ArrowRight' && state.stepIdx < CONFIG.steps.length - 1) goToStep(state.stepIdx + 1, true);
+    else if (e.code === 'ArrowLeft' && state.stepIdx > 0) goToStep(state.stepIdx - 1, true);
+  });
+
+  // 開場忠實呈現第 0 步（不自動搶播，等小朋友按播放或點擊即開聲）
+  renderStep(0, 0);
+  updateUI();
+}
+
+init();
+</script>
+</body>
+</html>

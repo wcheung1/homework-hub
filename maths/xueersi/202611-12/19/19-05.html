@@ -1,0 +1,2493 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>拓展練習 5｜觀察天平・等量代換視覺教學動畫</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --ink: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --a-color: #f4711f;
+    --a-soft: #fff2e8;
+    --b-color: #0aa5c9;
+    --b-soft: #e6f8fc;
+    --c-color: #8d5bd6;
+    --c-soft: #f4eeff;
+    --ok: #16a34a;
+    --ok-soft: #ecfdf5;
+    --warn: #d97706;
+    --warn-soft: #fffbeb;
+    --pen: #1d4ed8;
+    --paper: #fffdf3;
+    --paper-grid: #e8e2cc;
+    --shadow: 0 6px 22px rgba(15, 23, 42, 0.07);
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "PingFang TC", "PingFang HK", "Microsoft JhengHei", "Noto Sans TC", system-ui, -apple-system, sans-serif;
+    line-height: 1.45;
+  }
+
+  .app {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 10px 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 100dvh;
+  }
+
+  /* 頂部進度與工具列 */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    box-shadow: var(--shadow);
+  }
+
+  .phase-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .phase-pill {
+    border: 1.5px solid var(--border);
+    background: #f8fafc;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: inherit;
+  }
+
+  .phase-pill:hover {
+    border-color: #94a3b8;
+    color: var(--ink);
+  }
+
+  .phase-pill.active {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #ffffff;
+    box-shadow: 0 3px 10px rgba(29, 78, 216, 0.28);
+  }
+
+  .phase-pill.done {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+  }
+
+  .top-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tool-btn {
+    border: 1.5px solid var(--border);
+    background: #ffffff;
+    color: var(--ink);
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 6px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+
+  .tool-btn:hover { background: #f1f5f9; }
+  .tool-btn.active { background: #eef2ff; border-color: #6366f1; color: #3730a3; }
+
+  .kbd-hint {
+    font-size: 12px;
+    color: var(--muted);
+    background: #f1f5f9;
+    padding: 4px 9px;
+    border-radius: 999px;
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    .kbd-hint { display: none; }
+  }
+
+  /* 題目卡片 */
+  .question-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .q-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+
+  .q-badge-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .q-title-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 8px;
+  }
+
+  .grade-tag {
+    background: #ecfeff;
+    color: #0e7490;
+    border: 1px solid #a5f3fc;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+
+  .mini-legend-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-height: 26px;
+  }
+
+  .sym-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13.5px;
+    font-weight: 800;
+    padding: 2px 9px;
+    border-radius: 999px;
+    opacity: 0;
+    transform: scale(0.85);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .sym-chip.show { opacity: 1; transform: scale(1); }
+  .sym-chip.chip-a { background: var(--a-soft); color: #c2410c; border: 1.5px solid #fdba74; }
+  .sym-chip.chip-b { background: var(--b-soft); color: #0e7490; border: 1.5px solid #67e8f9; }
+  .sym-chip.chip-c { background: var(--c-soft); color: #6d28d9; border: 1.5px solid #c4b5fd; }
+
+  .q-zh {
+    font-size: clamp(20px, 2.3vw, 24px);
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+
+  .q-seg {
+    padding: 2px 4px;
+    border-radius: 8px;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+    border-bottom: 3px solid transparent;
+  }
+
+  .q-seg.hl {
+    background: #fef08a;
+    border-bottom-color: #eab308;
+    color: #0f172a;
+  }
+
+  .q-en {
+    margin-top: 4px;
+    font-size: 13.5px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* 雙軌主舞台 */
+  .dual-stage {
+    display: grid;
+    grid-template-columns: 1.28fr 1fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  @media (max-width: 840px) {
+    .dual-stage {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .track-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .track-card.scratch-card {
+    background: var(--paper);
+    border-color: #e5dcc0;
+  }
+
+  .track-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 13px;
+    font-size: 14px;
+    font-weight: 800;
+    border-bottom: 1px solid var(--border);
+    background: #f8fafc;
+    color: #334155;
+  }
+
+  .scratch-card .track-head {
+    background: #faf3dc;
+    border-bottom-color: #e5dcc0;
+    color: #78350f;
+  }
+
+  .track-sub {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .svg-wrap {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 4px;
+  }
+
+  .svg-wrap svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-height: 410px;
+  }
+
+  /* 零遮擋內嵌互動停頓條 */
+  .inline-quiz {
+    display: none;
+    background: linear-gradient(135deg, #eff6ff 0%, #fefce8 100%);
+    border: 2px solid #3b82f6;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.14);
+    animation: popIn 0.25s ease;
+  }
+
+  .inline-quiz.show { display: block; }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .quiz-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .quiz-q {
+    font-size: 17.5px;
+    font-weight: 800;
+    color: #1e3a8a;
+  }
+
+  .quiz-opts {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .quiz-btn {
+    border: 2px solid #3b82f6;
+    background: #ffffff;
+    color: #1e3a8a;
+    font-size: 17px;
+    font-weight: 800;
+    padding: 8px 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    min-width: 96px;
+  }
+
+  .quiz-btn:hover { background: #dbeafe; transform: translateY(-1px); }
+  .quiz-btn.correct { background: #16a34a; border-color: #16a34a; color: #fff; }
+  .quiz-btn.wrong { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+
+  .quiz-skip {
+    border: 1.5px dashed #94a3b8;
+    background: transparent;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .quiz-skip:hover { background: #f1f5f9; }
+
+  .quiz-fb {
+    margin-top: 8px;
+    font-size: 15.5px;
+    font-weight: 700;
+    min-height: 22px;
+  }
+  .quiz-fb.ok { color: #15803d; }
+  .quiz-fb.err { color: #b91c1c; }
+
+  /* 結尾慶祝、口訣、彩蛋擴展區（零遮擋內嵌） */
+  .celebration-bar {
+    display: none;
+    background: linear-gradient(135deg, #ecfdf5 0%, #eff6ff 100%);
+    border: 2px solid #22c55e;
+    border-radius: var(--radius);
+    padding: 13px 16px;
+    box-shadow: var(--shadow);
+    animation: popIn 0.3s ease;
+  }
+
+  .celebration-bar.show { display: block; }
+
+  .cel-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .mantra-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 17.5px;
+    font-weight: 800;
+    color: #065f46;
+  }
+
+  .cel-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .cta-btn {
+    border: none;
+    font-size: 15.5px;
+    font-weight: 800;
+    padding: 10px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cta-btn:hover { transform: translateY(-1px); }
+
+  .cta-practice {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  }
+
+  .cta-genius {
+    background: linear-gradient(135deg, #7c3aed, #db2777);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
+  }
+
+  /* 類似題 & 高手思維展開面板 */
+  .extra-panel {
+    display: none;
+    margin-top: 12px;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .extra-panel.show { display: block; animation: popIn 0.25s ease; }
+
+  .extra-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .extra-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: #1e293b;
+  }
+
+  .close-extra {
+    border: 1px solid var(--border);
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 5px 11px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .practice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+  @media (max-width: 720px) {
+    .practice-grid { grid-template-columns: 1fr; }
+  }
+
+  .prac-box {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .prac-hint-paper {
+    background: var(--paper);
+    border: 1.5px dashed #d97706;
+    border-radius: 12px;
+    padding: 10px;
+    margin-top: 10px;
+    display: none;
+  }
+  .prac-hint-paper.show { display: block; }
+
+  .prac-verify {
+    margin-top: 10px;
+    display: none;
+    background: #f0fdf4;
+    border: 1.5px solid #86efac;
+    border-radius: 12px;
+    padding: 10px;
+  }
+  .prac-verify.show { display: block; }
+
+  /* 底部停靠區：字幕 ＋ 算式條 ＋ 控制鍵 */
+  .dock {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 15px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .subtitle-box {
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--ink);
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 10px 14px;
+    border-left: 5px solid #1d4ed8;
+    min-height: 58px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .sub-tag {
+    display: inline-block;
+    font-size: 12.5px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 6px;
+    vertical-align: middle;
+  }
+  .sub-tag.quote-tag { background: #fef08a; color: #854d0e; }
+  .sub-tag.think-tag { background: #dbeafe; color: #1e40af; }
+
+  .sub-quote {
+    background: #fef9c3;
+    color: #713f12;
+    font-weight: 800;
+    padding: 1px 7px;
+    border-radius: 7px;
+  }
+
+  .sub-think {
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .dock-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .formula-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 21px;
+    font-weight: 900;
+    min-height: 36px;
+  }
+
+  .f-pill {
+    padding: 3px 10px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    border: 1.5px solid #cbd5e1;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .f-pill.final {
+    background: #ecfdf5;
+    border-color: #22c55e;
+    color: #15803d;
+    font-size: 23px;
+  }
+
+  .c-a { color: var(--a-color); }
+  .c-b { color: var(--b-color); }
+  .c-c { color: var(--c-color); }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ctrl-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: #ffffff;
+    color: var(--ink);
+    font-size: 20px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  }
+
+  .ctrl-btn:hover { background: #f1f5f9; transform: translateY(-1px); }
+  .ctrl-btn:active { transform: scale(0.95); }
+  .ctrl-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .ctrl-btn.play-main {
+    width: 56px;
+    height: 56px;
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #ffffff;
+    font-size: 23px;
+    box-shadow: 0 6px 16px rgba(29, 78, 216, 0.3);
+  }
+  .ctrl-btn.play-main:hover { background: #1e40af; }
+
+  .step-counter {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--muted);
+    min-width: 52px;
+    text-align: center;
+  }
+
+  /* 彩紙層（不阻擋滑鼠／觸控） */
+  #confettiCanvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* 高手思維動畫控制 */
+  .genius-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .genius-sub {
+    font-size: 16.5px;
+    font-weight: 800;
+    color: #4c1d95;
+    background: #f5f3ff;
+    border-left: 4px solid #7c3aed;
+    padding: 8px 12px;
+    border-radius: 8px;
+    flex: 1;
+    min-width: 240px;
+  }
+</style>
+</head>
+<body>
+<canvas id="confettiCanvas"></canvas>
+
+<div class="app">
+  <!-- 頂部：可點擊階段傳送門 ＋ 語速 ＋ 靜音 -->
+  <header class="topbar">
+    <nav class="phase-pills" id="phasePills" aria-label="解題階段"></nav>
+    <div class="top-tools">
+      <span class="kbd-hint">空白鍵 播放/暫停 ｜ ← → 切換步驟</span>
+      <button class="tool-btn active" id="speedBtn" type="button" title="切換語速">🐢 0.75x 適中</button>
+      <button class="tool-btn" id="muteBtn" type="button" title="開關語音與音效">🔊 聲音開</button>
+    </div>
+  </header>
+
+  <!-- 中上：題目卡片 -->
+  <section class="question-card">
+    <div class="q-head">
+      <div class="q-badge-wrap">
+        <span class="q-title-tag">
+          <svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true">
+            <polygon points="18,2 18,18 2,18" fill="#94a3b8"/>
+            <polygon points="14,9 14,15 8,15" fill="#ffffff"/>
+          </svg>
+          拓展練習 5
+        </span>
+        <span class="grade-tag">小一至小二｜等量代換</span>
+      </div>
+      <div class="mini-legend-bar" id="miniLegendBar" aria-label="草稿代號對照">
+        <span class="sym-chip chip-a" id="chipA">A → □</span>
+        <span class="sym-chip chip-b" id="chipB">B → ◇</span>
+        <span class="sym-chip chip-c" id="chipC">C → △</span>
+      </div>
+    </div>
+    <div class="q-zh" id="questionZh"></div>
+    <div class="q-en">Observe the balance scales. How many boxes of C need to be placed on the right side of the last scale to achieve balance?</div>
+  </section>
+
+  <!-- 中間主舞台：雙軌同步 -->
+  <main class="dual-stage">
+    <!-- 軌道 A：具象動畫舞台 -->
+    <section class="track-card">
+      <div class="track-head">
+        <span>⚖️ 具象動畫舞台</span>
+        <span class="track-sub">實物天平原理</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="stageSvg" viewBox="0 0 560 390" role="img" aria-label="三個天平具象動畫"></svg>
+      </div>
+    </section>
+
+    <!-- 軌道 B：實戰鉛筆算草紙 -->
+    <section class="track-card scratch-card">
+      <div class="track-head">
+        <span>✏️ 實戰鉛筆算草紙</span>
+        <span class="track-sub">極簡符號・無代數・零混淆</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="scratchSvg" viewBox="0 0 430 390" role="img" aria-label="實戰鉛筆算草紙示範"></svg>
+      </div>
+    </section>
+  </main>
+
+  <!-- 零遮擋內嵌互動停頓條 -->
+  <section class="inline-quiz" id="inlineQuiz" aria-live="polite">
+    <div class="quiz-row">
+      <div class="quiz-q" id="quizQuestion"></div>
+      <div class="quiz-opts" id="quizOptions"></div>
+    </div>
+    <div class="quiz-fb" id="quizFeedback"></div>
+  </section>
+
+  <!-- 片尾慶祝、口訣、挑戰類似題 ＋ 高手秒殺思維 -->
+  <section class="celebration-bar" id="celebrationBar">
+    <div class="cel-top">
+      <div class="mantra-box">
+        <span>🎉</span>
+        <span id="mantraText">考場口訣：先找相等，換成一樣，再數答案！</span>
+      </div>
+      <div class="cel-actions">
+        <button class="cta-btn cta-practice" id="openPracticeBtn" type="button">🎯 挑戰類似題</button>
+        <button class="cta-btn cta-genius" id="openGeniusBtn" type="button">✨ 高手秒殺思維</button>
+      </div>
+    </div>
+
+    <!-- 挑戰類似題內嵌面板 -->
+    <div class="extra-panel" id="practicePanel">
+      <div class="extra-head">
+        <div class="extra-title">🎯 實戰挑戰類似題（換新數字，考吓你！）</div>
+        <div>
+          <button class="tool-btn" id="newPracticeBtn" type="button">🔀 換一題</button>
+          <button class="close-extra" id="closePracticeBtn" type="button">收起</button>
+        </div>
+      </div>
+      <div class="practice-grid">
+        <div class="prac-box">
+          <div id="pracText" style="font-size:17px;font-weight:800;margin-bottom:10px;line-height:1.6;"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;" id="pracChoices"></div>
+          <div id="pracFeedback" style="margin-top:8px;font-weight:800;font-size:15.5px;min-height:22px;"></div>
+          <div style="margin-top:8px;">
+            <button class="tool-btn" id="togglePracHintBtn" type="button">✏️ 睇草稿提示</button>
+          </div>
+          <div class="prac-hint-paper" id="pracHintPaper">
+            <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:4px;">✏️ 極簡草稿提示（無公仔・考場速記）：</div>
+            <svg id="pracHintSvg" viewBox="0 0 380 155" style="width:100%;height:auto;"></svg>
+          </div>
+        </div>
+        <div>
+          <div id="pracWaitMsg" style="background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;padding:18px;text-align:center;color:#64748b;font-weight:700;font-size:15px;">
+            💡 先試試自己喺紙上用極簡符號畫草稿計答案！<br/>答啱之後，呢度會展開彩色實物天平驗證！
+          </div>
+          <div class="prac-verify" id="pracVerify">
+            <div style="font-size:14px;font-weight:800;color:#15803d;margin-bottom:6px;">✅ 實物天平驗證：</div>
+            <svg id="pracVerifySvg" viewBox="0 0 420 220" style="width:100%;height:auto;"></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 高手秒殺思維（純圖像視覺化動畫） -->
+    <div class="extra-panel" id="geniusPanel">
+      <div class="extra-head">
+        <div class="extra-title">✨ 高手秒殺思維：整體打包・唔使拆半・一眼睇穿！</div>
+        <button class="close-extra" id="closeGeniusBtn" type="button">收起</button>
+      </div>
+      <svg id="geniusSvg" viewBox="0 0 760 270" style="width:100%;height:auto;background:#faf5ff;border-radius:12px;border:1.5px solid #ddd6fe;"></svg>
+      <div class="genius-ctrl">
+        <button class="cta-btn cta-genius" id="replayGeniusBtn" type="button" style="padding:8px 14px;font-size:14.5px;">▶ 重播秒殺動畫</button>
+        <div class="genius-sub" id="geniusSub">點擊「重播秒殺動畫」，睇高手點樣連拆半都唔使，2 秒秒殺！</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 底部固定停靠區：字幕 ＋ 算式條 ＋ 控制鍵 -->
+  <footer class="dock">
+    <div class="subtitle-box" id="subtitleBox" aria-live="polite"></div>
+    <div class="dock-bottom">
+      <div class="formula-strip" id="formulaStrip"></div>
+      <div class="controls">
+        <button class="ctrl-btn" id="prevBtn" type="button" title="上一步 (←)" aria-label="上一步">⏮</button>
+        <button class="ctrl-btn play-main" id="playBtn" type="button" title="播放或暫停 (空白鍵)" aria-label="播放或暫停">▶</button>
+        <button class="ctrl-btn" id="nextBtn" type="button" title="下一步 (→)" aria-label="下一步">⏭</button>
+        <button class="ctrl-btn" id="replayBtn" type="button" title="由頭重播" aria-label="由頭重播">🔄</button>
+        <span class="step-counter" id="stepCounter">1 / 9</span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* =====================================================================
+   集中 CONFIG 區：題目、分句高亮、色板、異讀聲調映射、預設語速、步驟與互動
+   ===================================================================== */
+const CONFIG = {
+  defaultSpeed: 0.75,
+  colors: {
+    A: '#f4711f', ASoft: '#fff2e8',
+    B: '#0aa5c9', BSoft: '#e6f8fc',
+    C: '#8d5bd6', CSoft: '#f4eeff',
+    neutral: '#a6a198', neutralDark: '#7a756c', neutralLight: '#e7e4de',
+    beam: '#8c857b', beamHi: '#475569',
+    pen: '#1d4ed8', ok: '#16a34a', warn: '#f0a500'
+  },
+  // 原題按語意拆句（一字不漏，零改動）
+  questionSegments: [
+    '觀察天平，',
+    '最後一個天平的右側要放多少個箱子 C ',
+    '才可使天平成立？'
+  ],
+  phases: [
+    { id: 0, label: '1 讀題睇圖', startStep: 0 },
+    { id: 1, label: '2 睇清目標', startStep: 3 },
+    { id: 2, label: '3 等量代換', startStep: 4 },
+    { id: 3, label: '4 填答驗算', startStep: 8 }
+  ],
+  // 廣東話異讀字與聲調精準映射表（字幕字正、語音腔圓）
+  HETERO_MAP: [
+    ['一排', '一徘'],
+    ['畫低', '劃低'],
+    ['畫出', '劃出'],
+    ['畫線', '劃線'],
+    ['畫條', '劃條'],
+    ['畫虛線', '劃虛線'],
+    ['畫底線', '劃底線'],
+    ['畫框', '劃框'],
+    ['畫走', '劃走'],
+    ['唔畫', '唔劃'],
+    ['數一數', '嫂一嫂'],
+    ['數吓', '嫂吓'],
+    ['數出', '嫂出'],
+    ['數答案', '嫂答案'],
+    ['從左數', '從左嫂'],
+    ['從右數', '從右嫂'],
+    ['重新', '從新'],
+    ['重複', '從複']
+  ],
+  mantra: '考場口訣：先找相等，換成一樣，再數答案！',
+  quizzes: [
+    {
+      question: '🤔 停一停，估一估：睇返第一個天平，左邊呢 2 個 A 可以換成乜嘢？',
+      options: [
+        { label: '1 個 B', correct: true, fb: '🎉 答啱晒！第一個天平講明 2 個 A 同 1 個 B 一樣重！' },
+        { label: '2 個 B', correct: false, fb: '💡 望真第一個天平右邊，只係得 1 個 B 咋，再試吓！' },
+        { label: '1 個 C', correct: false, fb: '💡 第一個天平係 A 同 B 比重量，未出現 C 喎，再諗諗！' }
+      ]
+    },
+    {
+      question: '🤔 停一停，估一估：左邊依家有 2 個 B，右邊要放幾多個 C 先至平？',
+      options: [
+        { label: '1 個 C', correct: false, fb: '💡 1 個 B 先等於 1 個 C，依家左邊有 2 個 B 喎，再數吓！' },
+        { label: '2 個 C', correct: true, fb: '🎉 好醒目！2 個 B 剛好換成 2 個 C！' },
+        { label: '3 個 C', correct: false, fb: '💡 左邊只係得 2 個 B，每個 B 換 1 個 C，唔會多咗一個呀！' }
+      ]
+    }
+  ],
+  steps: [
+    {
+      phase: 0,
+      hl: [],
+      prefix: '',
+      quote: '',
+      think: '準備好未？先望真畫面三個天平，按「播放」或「下一步」，我哋逐句拆題。',
+      duration: 2.0,
+      sound: null
+    },
+    {
+      phase: 0,
+      hl: [0],
+      prefix: '題目話：',
+      quote: '觀察天平，',
+      think: '先睇第一個天平。左邊 2 個 A，右邊 1 個 B，即係 2 個 A 等於 1 個 B，即刻記低。',
+      duration: 2.8,
+      sound: 'pop'
+    },
+    {
+      phase: 0,
+      hl: [0],
+      prefix: '',
+      quote: '',
+      think: '再睇第二個天平。2 個 B 等於 2 個 C。兩邊平分兩份，1 個 B 就等於 1 個 C！',
+      duration: 3.1,
+      sound: 'pop'
+    },
+    {
+      phase: 1,
+      hl: [1, 2],
+      prefix: '題目問：',
+      quote: '最後一個天平的右側要放多少個箱子 C 才可使天平成立？',
+      think: '最後一個天平左邊有 2 個 A 加 1 個 B，右邊要放 C。先記低左邊，再統一換成 C！',
+      duration: 2.8,
+      sound: 'pop'
+    },
+    {
+      phase: 2,
+      hl: [1],
+      prefix: '',
+      quote: '',
+      think: '左邊又有 A 又有 B，唔同箱子加唔埋。停一停，估一估：呢 2 個 A 可以換成乜嘢？',
+      duration: 2.0,
+      quizIndex: 0,
+      sound: null
+    },
+    {
+      phase: 2,
+      hl: [1],
+      prefix: '',
+      quote: '',
+      think: '由第一個天平知，2 個 A 等於 1 個 B。換走 2 個 A，變做 1 個 B，左邊就有 2 個 B！',
+      duration: 3.2,
+      sound: 'whoosh'
+    },
+    {
+      phase: 2,
+      hl: [1, 2],
+      prefix: '',
+      quote: '',
+      think: '好喇！左邊依家全部係 B，共有 2 個 B。停一停，估一估：右邊要放幾多個 C 先至平？',
+      duration: 2.0,
+      quizIndex: 1,
+      sound: null
+    },
+    {
+      phase: 2,
+      hl: [1, 2],
+      prefix: '',
+      quote: '',
+      think: '1 個 B 等於 1 個 C。第一個 B 換 1 個 C，第二個 B 再換 1 個 C。1 加 1 等於 2！',
+      duration: 3.2,
+      sound: 'whoosh'
+    },
+    {
+      phase: 3,
+      hl: [1, 2],
+      prefix: '',
+      quote: '',
+      think: '喺括號入面寫上 2！驗算：2 個 A 換成 1 個 B，加埋原本 1 個 B 共 2 個 B，剛好等於 2 個 C！',
+      duration: 2.8,
+      isFinal: true,
+      sound: 'celebrate'
+    }
+  ]
+};
+
+/* =====================================================================
+   全域狀態與音訊／語音引擎（Web Audio + zh-HK speechSynthesis）
+   ===================================================================== */
+const state = {
+  step: 0,
+  progress: 1,       // 0..1 純函數動畫進度
+  playing: false,
+  speed: CONFIG.defaultSpeed, // 預設 0.75x
+  muted: false,
+  quizResolved: { 0: false, 1: false },
+  waitingQuiz: false,
+  rafId: null,
+  lastTime: 0,
+  speechDone: true,
+  speechGuardTimer: null,
+  audioCtx: null,
+  voices: [],
+  celebrated: false,
+  geniusRaf: null,
+  geniusProgress: 0,
+  practiceIdx: 0
+};
+
+function initAudio() {
+  if (!state.audioCtx && (window.AudioContext || window.webkitAudioContext)) {
+    state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (state.audioCtx && state.audioCtx.state === 'suspended') {
+    state.audioCtx.resume().catch(() => {});
+  }
+}
+
+function playSound(type) {
+  if (state.muted || !type) return;
+  try {
+    initAudio();
+    const ctx = state.audioCtx;
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    if (type === 'pop') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(760, now + 0.09);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.11, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now); osc.stop(now + 0.14);
+    } else if (type === 'whoosh') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(280, now);
+      osc.frequency.exponentialRampToValueAtTime(560, now + 0.18);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.08, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now); osc.stop(now + 0.24);
+    } else if (type === 'ding') {
+      [587.3, 880].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + i * 0.08);
+        gain.gain.setValueAtTime(0.001, now + i * 0.08);
+        gain.gain.linearRampToValueAtTime(0.11, now + i * 0.08 + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.28);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + i * 0.08); osc.stop(now + i * 0.08 + 0.3);
+      });
+    } else if (type === 'wrong') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.linearRampToValueAtTime(230, now + 0.16);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now); osc.stop(now + 0.2);
+    } else if (type === 'celebrate') {
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + i * 0.09);
+        gain.gain.setValueAtTime(0.001, now + i * 0.09);
+        gain.gain.linearRampToValueAtTime(0.12, now + i * 0.09 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.45);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now + i * 0.09); osc.stop(now + i * 0.09 + 0.48);
+      });
+    }
+  } catch (e) {}
+}
+
+function loadVoices() {
+  if (!window.speechSynthesis) return;
+  state.voices = window.speechSynthesis.getVoices() || [];
+}
+if (window.speechSynthesis) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function pickHKVoice() {
+  const vs = state.voices.length ? state.voices : (window.speechSynthesis ? window.speechSynthesis.getVoices() : []);
+  return (
+    vs.find(v => /zh[-_]?HK/i.test(v.lang) && /sinji|hiugaai|wanlung|cantonese|hong\s*kong/i.test(v.name)) ||
+    vs.find(v => /zh[-_]?HK/i.test(v.lang)) ||
+    vs.find(v => /yue/i.test(v.lang)) ||
+    vs.find(v => /zh/i.test(v.lang)) ||
+    null
+  );
+}
+
+function cleanForTTS(text) {
+  let s = (text || '')
+    .replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, '')
+    .replace(/[□◇△☆|｜【】「」『』]/g, ' ')
+    .replace(/−|-/g, ' 減 ')
+    .replace(/\+/g, ' 加 ')
+    .replace(/×/g, ' 乘 ')
+    .replace(/÷/g, ' 除 ')
+    .replace(/=/g, ' 等於 ');
+  for (const [src, dst] of CONFIG.HETERO_MAP) {
+    s = s.split(src).join(dst);
+  }
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+function cancelSpeech() {
+  if (state.speechGuardTimer) {
+    clearTimeout(state.speechGuardTimer);
+    state.speechGuardTimer = null;
+  }
+  if (window.speechSynthesis) {
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
+  state.speechDone = true;
+}
+
+function speakText(rawText, onFinish) {
+  cancelSpeech();
+  const cleaned = cleanForTTS(rawText);
+  if (!cleaned) {
+    state.speechDone = true;
+    if (onFinish) onFinish();
+    return;
+  }
+  state.speechDone = false;
+
+  const estMs = Math.max(1800, Math.round((cleaned.length * 250) / state.speed));
+  const finishOnce = () => {
+    if (state.speechDone) return;
+    state.speechDone = true;
+    if (state.speechGuardTimer) {
+      clearTimeout(state.speechGuardTimer);
+      state.speechGuardTimer = null;
+    }
+    if (onFinish) onFinish();
+  };
+
+  if (state.muted || !window.speechSynthesis) {
+    state.speechGuardTimer = setTimeout(finishOnce, estMs);
+    return;
+  }
+
+  try {
+    const u = new SpeechSynthesisUtterance(cleaned);
+    const v = pickHKVoice();
+    if (v) u.voice = v;
+    u.lang = 'zh-HK';
+    u.rate = state.speed;
+    u.pitch = 1.03;
+    u.onend = finishOnce;
+    u.onerror = finishOnce;
+    window.speechSynthesis.speak(u);
+    state.speechGuardTimer = setTimeout(finishOnce, estMs + 4500);
+  } catch (e) {
+    state.speechGuardTimer = setTimeout(finishOnce, estMs);
+  }
+}
+
+/* =====================================================================
+   數學補間工具（純函數）
+   ===================================================================== */
+const clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
+const seg = (p, a, b) => clamp((p - a) / (b - a), 0, 1);
+const easeOut = t => 1 - Math.pow(1 - clamp(t), 3);
+const easeInOut = t => {
+  const x = clamp(t);
+  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+};
+const lerp = (a, b, t) => a + (b - a) * clamp(t);
+
+// 區域高亮三部曲：閃 3 下後定住淡色
+function flash3Opacity(p, a = 0, b = 0.55) {
+  if (p < a) return 0;
+  if (p >= b) return 0.22;
+  const t = (p - a) / (b - a);
+  const wave = Math.abs(Math.sin(t * Math.PI * 3));
+  return 0.14 + wave * 0.44;
+}
+
+/* =====================================================================
+   初始化靜態 UI（頂部 Phase Pills、題目分句、SVG 骨架）
+   ===================================================================== */
+const dom = {
+  phasePills: document.getElementById('phasePills'),
+  questionZh: document.getElementById('questionZh'),
+  stageSvg: document.getElementById('stageSvg'),
+  scratchSvg: document.getElementById('scratchSvg'),
+  subtitleBox: document.getElementById('subtitleBox'),
+  formulaStrip: document.getElementById('formulaStrip'),
+  stepCounter: document.getElementById('stepCounter'),
+  prevBtn: document.getElementById('prevBtn'),
+  playBtn: document.getElementById('playBtn'),
+  nextBtn: document.getElementById('nextBtn'),
+  replayBtn: document.getElementById('replayBtn'),
+  speedBtn: document.getElementById('speedBtn'),
+  muteBtn: document.getElementById('muteBtn'),
+  inlineQuiz: document.getElementById('inlineQuiz'),
+  quizQuestion: document.getElementById('quizQuestion'),
+  quizOptions: document.getElementById('quizOptions'),
+  quizFeedback: document.getElementById('quizFeedback'),
+  celebrationBar: document.getElementById('celebrationBar'),
+  chipA: document.getElementById('chipA'),
+  chipB: document.getElementById('chipB'),
+  chipC: document.getElementById('chipC')
+};
+
+function buildStaticUI() {
+  dom.phasePills.innerHTML = CONFIG.phases.map(ph =>
+    `<button class="phase-pill" data-phase="${ph.id}" type="button">${ph.label}</button>`
+  ).join('');
+
+  dom.phasePills.querySelectorAll('.phase-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ph = CONFIG.phases.find(x => x.id === Number(btn.dataset.phase));
+      if (ph) goToStep(ph.startStep, true);
+    });
+  });
+
+  dom.questionZh.innerHTML = CONFIG.questionSegments.map((txt, idx) =>
+    `<span class="q-seg" id="qSeg${idx}">${txt}</span>`
+  ).join('');
+
+  buildStageSVG();
+  buildScratchSVG();
+}
+
+/* 繪製天平骨架輔助函式 */
+function scaleBaseMarkup(id, cx, cy, label) {
+  return `
+    <g id="${id}" transform="translate(${cx},${cy})">
+      <text x="0" y="-76" text-anchor="middle" font-size="13" font-weight="800" fill="#64748b" opacity="0" id="${id}_tag">${label}</text>
+      <!-- 底座與中柱 -->
+      <path d="M -32 42 L 32 42 L 26 30 L -26 30 Z" fill="#a8a29e" stroke="#57534e" stroke-width="1.8"/>
+      <path d="M -18 30 C -14 14, -7 6, -5 -16 L 5 -16 C 7 6, 14 14, 18 30 Z" fill="#c7c2bc" stroke="#57534e" stroke-width="1.8"/>
+      <circle cx="0" cy="-18" r="4.5" fill="#e7e5e4" stroke="#57534e" stroke-width="1.8"/>
+      <!-- 橫樑與左右托盤（可微傾斜） -->
+      <g id="${id}_beam">
+        <path d="M -84 -10 Q -42 2, 0 -4 Q 42 2, 84 -10" fill="none" stroke="#57534e" stroke-width="4" stroke-linecap="round"/>
+        <polygon points="0,-16 -6,-4 6,-4" fill="#d6d3d1" stroke="#57534e" stroke-width="1.6"/>
+        <!-- 左托盤 -->
+        <path d="M -116 -14 L -48 -14 C -56 -4, -108 -4, -116 -14 Z" fill="#d6d3d1" stroke="#57534e" stroke-width="1.8"/>
+        <!-- 右托盤 -->
+        <path d="M 48 -14 L 116 -14 C 108 -4, 56 -4, 48 -14 Z" fill="#d6d3d1" stroke="#57534e" stroke-width="1.8"/>
+      </g>
+    </g>
+  `;
+}
+
+function boxSquare(id, x, y, fill = '#b8b2a8', stroke = '#57534e', textCol = '#1e293b') {
+  return `
+    <g id="${id}" transform="translate(${x},${y})">
+      <rect x="-19" y="-38" width="38" height="38" rx="5" fill="${fill}" stroke="${stroke}" stroke-width="2.2" class="shape-fill"/>
+      <text x="0" y="-12" text-anchor="middle" font-size="21" font-weight="900" fill="${textCol}" class="shape-txt">A</text>
+    </g>
+  `;
+}
+
+function boxCircle(id, x, y, fill = '#b8b2a8', stroke = '#57534e', textCol = '#1e293b') {
+  return `
+    <g id="${id}" transform="translate(${x},${y})">
+      <circle cx="0" cy="-20" r="20" fill="${fill}" stroke="${stroke}" stroke-width="2.2" class="shape-fill"/>
+      <text x="0" y="-13" text-anchor="middle" font-size="21" font-weight="900" fill="${textCol}" class="shape-txt">B</text>
+    </g>
+  `;
+}
+
+function boxTriangle(id, x, y, fill = '#b8b2a8', stroke = '#57534e', textCol = '#1e293b') {
+  return `
+    <g id="${id}" transform="translate(${x},${y})">
+      <polygon points="0,-40 -22,0 22,0" fill="${fill}" stroke="${stroke}" stroke-width="2.2" stroke-linejoin="round" class="shape-fill"/>
+      <text x="0" y="-8" text-anchor="middle" font-size="19" font-weight="900" fill="${textCol}" class="shape-txt">C</text>
+    </g>
+  `;
+}
+
+function badgeCircle(id, x, y, num, bg) {
+  return `
+    <g id="${id}" transform="translate(${x},${y})" opacity="0">
+      <circle cx="0" cy="0" r="13" fill="${bg}" stroke="#ffffff" stroke-width="2.2"/>
+      <text x="0" y="5" text-anchor="middle" font-size="14" font-weight="900" fill="#ffffff">${num}</text>
+    </g>
+  `;
+}
+
+function buildStageSVG() {
+  dom.stageSvg.innerHTML = `
+    <defs>
+      <filter id="glowSoft" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#1d4ed8" flood-opacity="0.28"/>
+      </filter>
+    </defs>
+
+    <!-- 淡色分區高亮框（三部曲用） -->
+    <rect id="hlScale1" x="14" y="18" width="256" height="162" rx="16" fill="#fff7ed" stroke="#f4711f" stroke-width="3" opacity="0"/>
+    <rect id="hlScale2" x="290" y="18" width="256" height="162" rx="16" fill="#ecfeff" stroke="#0aa5c9" stroke-width="3" opacity="0"/>
+    <rect id="hlScale3" x="128" y="196" width="304" height="184" rx="16" fill="#f5f3ff" stroke="#8d5bd6" stroke-width="3" opacity="0"/>
+
+    <!-- 天平 1（左上） -->
+    ${scaleBaseMarkup('scale1', 142, 128, '天平 1')}
+    <g id="s1Items">
+      ${boxSquare('s1A1', 42, 113)}
+      ${boxSquare('s1A2', 82, 113)}
+      ${boxCircle('s1B1', 224, 113)}
+    </g>
+    <!-- 天平 1 高亮框與關係標記 -->
+    <rect id="s1GroupA" x="19" y="69" width="86" height="48" rx="8" fill="#f4711f" fill-opacity="0" stroke="#f4711f" stroke-width="2.5" opacity="0"/>
+    <rect id="s1GroupB" x="198" y="69" width="52" height="48" rx="8" fill="#0aa5c9" fill-opacity="0" stroke="#0aa5c9" stroke-width="2.5" opacity="0"/>
+
+    <!-- 天平 2（右上） -->
+    ${scaleBaseMarkup('scale2', 418, 128, '天平 2')}
+    <g id="s2Items">
+      ${boxCircle('s2B1', 316, 113)}
+      ${boxCircle('s2B2', 358, 113)}
+      ${boxTriangle('s2C1', 478, 113)}
+      ${boxTriangle('s2C2', 522, 113)}
+    </g>
+    <!-- 天平 2 虛線平分一半（小一至小二拆半概念） -->
+    <g id="s2SplitGroup" opacity="0">
+      <line x1="337" y1="58" x2="337" y2="118" stroke="#0aa5c9" stroke-width="2.8" stroke-dasharray="6 4"/>
+      <line x1="500" y1="58" x2="500" y2="118" stroke="#8d5bd6" stroke-width="2.8" stroke-dasharray="6 4"/>
+      <rect x="292" y="68" width="44" height="48" rx="8" fill="#0aa5c9" fill-opacity="0.16" stroke="#0aa5c9" stroke-width="2.2"/>
+      <rect x="453" y="68" width="46" height="48" rx="8" fill="#8d5bd6" fill-opacity="0.16" stroke="#8d5bd6" stroke-width="2.2"/>
+      <text x="418" y="42" text-anchor="middle" font-size="14" font-weight="900" fill="#0e7490">平分一半：1 個 B ＝ 1 個 C</text>
+    </g>
+
+    <!-- 天平 3（下方中央：最後一個天平） -->
+    ${scaleBaseMarkup('scale3', 280, 326, '最後一個天平')}
+    <g id="s3Items">
+      ${boxSquare('s3A1', 178, 311)}
+      ${boxSquare('s3A2', 218, 311)}
+      ${boxCircle('s3B1', 198, 272)}
+      <!-- 飛入的新 B（由 2 個 A 換成） -->
+      <g id="s3NewB" transform="translate(224,113)" opacity="0">
+        <circle cx="0" cy="-20" r="20" fill="#0aa5c9" stroke="#0e7490" stroke-width="2.4"/>
+        <text x="0" y="-13" text-anchor="middle" font-size="21" font-weight="900" fill="#ffffff">B</text>
+      </g>
+      <!-- 右側原題格式：(   )個 C（以固定座標排版確保括號闊度精準置中） -->
+      <g id="s3RightPrompt" transform="translate(362, 310)">
+        <text x="-68" y="-9" text-anchor="middle" font-size="24" font-weight="800" fill="#334155">(</text>
+        <text x="-34" y="-9" text-anchor="middle" font-size="24" font-weight="800" fill="#334155">)</text>
+        <text x="-16" y="-9" text-anchor="middle" font-size="21" font-weight="800" fill="#334155">個</text>
+        <g id="s3PromptC" transform="translate(20, 1)">
+          <polygon points="0,-40 -22,0 22,0" fill="#b8b2a8" stroke="#57534e" stroke-width="2.2" stroke-linejoin="round" class="shape-fill"/>
+          <text x="0" y="-8" text-anchor="middle" font-size="19" font-weight="900" fill="#1e293b" class="shape-txt">C</text>
+        </g>
+        <!-- 筆尖親手填入嘅「2」（精準置中於 x = -51 括號正中） -->
+        <path id="s3AnswerTwo" d="M -57 -23 C -57 -30, -45 -30, -45 -23 C -45 -17, -57 -12, -57 -9 L -44 -9"
+              fill="none" stroke="#1d4ed8" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"
+              stroke-dasharray="70" stroke-dashoffset="70"/>
+      </g>
+      <!-- 飛入右側驗證用嘅 2 個 C（擺喺括號上方，展示 2 個 C 同左邊平衡） -->
+      <g id="s3FlyC1" transform="translate(478,113)" opacity="0">
+        <polygon points="0,-36 -20,0 20,0" fill="#8d5bd6" stroke="#5b21b6" stroke-width="2.2" stroke-linejoin="round"/>
+        <text x="0" y="-7" text-anchor="middle" font-size="17" font-weight="900" fill="#ffffff">C</text>
+      </g>
+      <g id="s3FlyC2" transform="translate(522,113)" opacity="0">
+        <polygon points="0,-36 -20,0 20,0" fill="#8d5bd6" stroke="#5b21b6" stroke-width="2.2" stroke-linejoin="round"/>
+        <text x="0" y="-7" text-anchor="middle" font-size="17" font-weight="900" fill="#ffffff">C</text>
+      </g>
+    </g>
+
+    <!-- 天平 3 左邊 2 個 A 高亮虛線框 -->
+    <rect id="s3GroupA" x="155" y="268" width="86" height="47" rx="8" fill="#f4711f" fill-opacity="0" stroke="#f4711f" stroke-width="2.8" stroke-dasharray="6 4" opacity="0"/>
+    <!-- 天平 3 左邊 2 個 B 高亮框 -->
+    <rect id="s3GroupBB" x="152" y="266" width="94" height="49" rx="8" fill="#0aa5c9" fill-opacity="0" stroke="#0aa5c9" stroke-width="2.6" opacity="0"/>
+    <!-- 天平 3 右側問題高亮框 -->
+    <rect id="s3RightHl" x="288" y="264" width="122" height="52" rx="10" fill="#8d5bd6" fill-opacity="0" stroke="#8d5bd6" stroke-width="2.8" opacity="0"/>
+
+    <!-- 單層圓圈數字徽章（嚴禁圈中圈） -->
+    ${badgeCircle('badgeC1', 339, 212, '1', '#8d5bd6')}
+    ${badgeCircle('badgeC2', 385, 212, '2', '#8d5bd6')}
+
+    <!-- 軌道 A 筆尖嚮導（與軌道 B 互斥顯示） -->
+    <g id="stagePen" opacity="0" filter="url(#glowSoft)">
+      <circle cx="0" cy="0" r="10" fill="#1d4ed8" fill-opacity="0.22"/>
+      <circle cx="0" cy="0" r="5.5" fill="#1d4ed8" stroke="#ffffff" stroke-width="2"/>
+    </g>
+  `;
+}
+
+/* 繪製鉛筆算草紙骨架（零代數、禁用 ○/O，小數量重複簡圖加框上標數） */
+function buildScratchSVG() {
+  // 格仔背景
+  let gridLines = '';
+  for (let x = 22; x < 430; x += 22) {
+    gridLines += `<line x1="${x}" y1="0" x2="${x}" y2="390" stroke="#efe9d5" stroke-width="1"/>`;
+  }
+  for (let y = 22; y < 390; y += 22) {
+    gridLines += `<line x1="0" y1="${y}" x2="430" y2="${y}" stroke="#efe9d5" stroke-width="1"/>`;
+  }
+
+  dom.scratchSvg.innerHTML = `
+    <rect x="0" y="0" width="430" height="390" fill="#fffdf3"/>
+    ${gridLines}
+    <line x1="28" y1="0" x2="28" y2="390" stroke="#f5c6c6" stroke-width="1.5"/>
+
+    <!-- 角落極簡對照表（隨步驟漸次出現，絕不迷失） -->
+    <g id="scLegend" font-size="14" font-weight="800">
+      <g id="scLegA" opacity="0">
+        <rect x="40" y="10" width="78" height="26" rx="7" fill="#fff2e8" stroke="#fdba74" stroke-width="1.4"/>
+        <text x="53" y="28" fill="#c2410c">A ＝</text>
+        <rect x="92" y="16" width="14" height="14" rx="2" fill="none" stroke="#f4711f" stroke-width="2.4"/>
+      </g>
+      <g id="scLegB" opacity="0">
+        <rect x="128" y="10" width="78" height="26" rx="7" fill="#e6f8fc" stroke="#67e8f9" stroke-width="1.4"/>
+        <text x="141" y="28" fill="#0e7490">B ＝</text>
+        <polygon points="187,14 195,23 187,32 179,23" fill="none" stroke="#0aa5c9" stroke-width="2.4"/>
+      </g>
+      <g id="scLegC" opacity="0">
+        <rect x="216" y="10" width="78" height="26" rx="7" fill="#f4eeff" stroke="#c4b5fd" stroke-width="1.4"/>
+        <text x="229" y="28" fill="#6d28d9">C ＝</text>
+        <polygon points="275,15 267,30 283,30" fill="none" stroke="#8d5bd6" stroke-width="2.4" stroke-linejoin="round"/>
+      </g>
+    </g>
+
+    <!-- 第 1 行（天平 1）：框住 □ □ (上標 2) ＝ 框住 ◇ (上標 1) -->
+    <g id="scRow1">
+      <text id="scR1NumL" x="96" y="64" text-anchor="middle" font-size="16" font-weight="900" fill="#f4711f" opacity="0">2</text>
+      <rect id="scR1BoxL" x="48" y="69" width="96" height="44" rx="9" fill="#fff2e8" fill-opacity="0.7" stroke="#f4711f" stroke-width="2.4" stroke-dasharray="300" stroke-dashoffset="300"/>
+      <path id="scR1Sq1" d="M 62 79 H 86 V 103 H 62 Z" fill="none" stroke="#f4711f" stroke-width="3" stroke-linejoin="round" stroke-dasharray="110" stroke-dashoffset="110"/>
+      <path id="scR1Sq2" d="M 104 79 H 128 V 103 H 104 Z" fill="none" stroke="#f4711f" stroke-width="3" stroke-linejoin="round" stroke-dasharray="110" stroke-dashoffset="110"/>
+
+      <path id="scR1Eq" d="M 162 86 H 184 M 162 96 H 184" fill="none" stroke="#334155" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="60" stroke-dashoffset="60"/>
+
+      <text id="scR1NumR" x="228" y="64" text-anchor="middle" font-size="16" font-weight="900" fill="#0aa5c9" opacity="0">1</text>
+      <rect id="scR1BoxR" x="200" y="69" width="56" height="44" rx="9" fill="#e6f8fc" fill-opacity="0.75" stroke="#0aa5c9" stroke-width="2.4" stroke-dasharray="220" stroke-dashoffset="220"/>
+      <path id="scR1Dia1" d="M 228 77 L 241 91 L 228 105 L 215 91 Z" fill="none" stroke="#0aa5c9" stroke-width="3" stroke-linejoin="round" stroke-dasharray="90" stroke-dashoffset="90"/>
+    </g>
+
+    <!-- 第 2 行（天平 2）：框住 ◇ ◇ (2) ＝ 框住 △ △ (2) → 平分 ◇ (1) ＝ △ (1) -->
+    <g id="scRow2">
+      <text id="scR2NumL" x="96" y="138" text-anchor="middle" font-size="16" font-weight="900" fill="#0aa5c9" opacity="0">2</text>
+      <rect id="scR2BoxL" x="48" y="143" width="96" height="44" rx="9" fill="#e6f8fc" fill-opacity="0.75" stroke="#0aa5c9" stroke-width="2.4" stroke-dasharray="300" stroke-dashoffset="300"/>
+      <path id="scR2Dia1" d="M 74 151 L 87 165 L 74 179 L 61 165 Z" fill="none" stroke="#0aa5c9" stroke-width="3" stroke-linejoin="round" stroke-dasharray="90" stroke-dashoffset="90"/>
+      <path id="scR2Dia2" d="M 116 151 L 129 165 L 116 179 L 103 165 Z" fill="none" stroke="#0aa5c9" stroke-width="3" stroke-linejoin="round" stroke-dasharray="90" stroke-dashoffset="90"/>
+
+      <path id="scR2Eq" d="M 156 160 H 174 M 156 170 H 174" fill="none" stroke="#334155" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+
+      <text id="scR2NumR" x="234" y="138" text-anchor="middle" font-size="16" font-weight="900" fill="#8d5bd6" opacity="0">2</text>
+      <rect id="scR2BoxR" x="184" y="143" width="100" height="44" rx="9" fill="#f4eeff" fill-opacity="0.8" stroke="#8d5bd6" stroke-width="2.4" stroke-dasharray="300" stroke-dashoffset="300"/>
+      <path id="scR2Tri1" d="M 212 152 L 198 177 H 226 Z" fill="none" stroke="#8d5bd6" stroke-width="3" stroke-linejoin="round" stroke-dasharray="100" stroke-dashoffset="100"/>
+      <path id="scR2Tri2" d="M 256 152 L 242 177 H 270 Z" fill="none" stroke="#8d5bd6" stroke-width="3" stroke-linejoin="round" stroke-dasharray="100" stroke-dashoffset="100"/>
+
+      <!-- 虛線平分一半 -->
+      <line id="scR2CutL" x1="95" y1="138" x2="95" y2="192" stroke="#0e7490" stroke-width="2.5" stroke-dasharray="5 4" opacity="0"/>
+      <line id="scR2CutR" x1="234" y1="138" x2="234" y2="192" stroke="#6d28d9" stroke-width="2.5" stroke-dasharray="5 4" opacity="0"/>
+
+      <!-- 箭咀 → 推出 1 個 ◇ ＝ 1 個 △ -->
+      <path id="scR2Arrow" d="M 294 165 H 314 M 307 159 L 315 165 L 307 171" fill="none" stroke="#475569" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+      <g id="scR2Half" opacity="0">
+        <rect x="321" y="143" width="96" height="44" rx="9" fill="#ffffff" stroke="#64748b" stroke-width="2"/>
+        <path d="M 342 153 L 353 165 L 342 177 L 331 165 Z" fill="#e6f8fc" stroke="#0aa5c9" stroke-width="2.8" stroke-linejoin="round"/>
+        <text x="369" y="172" text-anchor="middle" font-size="20" font-weight="900" fill="#334155">＝</text>
+        <path d="M 396 153 L 384 176 H 408 Z" fill="#f4eeff" stroke="#8d5bd6" stroke-width="2.8" stroke-linejoin="round"/>
+      </g>
+    </g>
+
+    <!-- 分隔橫線 -->
+    <line id="scDivider" x1="42" y1="204" x2="412" y2="204" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6 5" opacity="0"/>
+
+    <!-- 第 3 行（最後一個天平目標）：框住 □ □ ＋ ◇ ＝ ? △ -->
+    <g id="scRow3">
+      <rect id="scR3BoxA" x="48" y="218" width="96" height="44" rx="9" fill="#fff2e8" fill-opacity="0.7" stroke="#f4711f" stroke-width="2.4" stroke-dasharray="300" stroke-dashoffset="300"/>
+      <path id="scR3Sq1" d="M 62 228 H 86 V 252 H 62 Z" fill="none" stroke="#f4711f" stroke-width="3" stroke-linejoin="round" stroke-dasharray="110" stroke-dashoffset="110"/>
+      <path id="scR3Sq2" d="M 104 228 H 128 V 252 H 104 Z" fill="none" stroke="#f4711f" stroke-width="3" stroke-linejoin="round" stroke-dasharray="110" stroke-dashoffset="110"/>
+
+      <path id="scR3Plus" d="M 157 240 H 175 M 166 231 V 249" fill="none" stroke="#334155" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+
+      <rect id="scR3BoxB" x="188" y="218" width="52" height="44" rx="9" fill="#e6f8fc" fill-opacity="0.75" stroke="#0aa5c9" stroke-width="2.4" stroke-dasharray="220" stroke-dashoffset="220"/>
+      <path id="scR3Dia" d="M 214 226 L 227 240 L 214 254 L 201 240 Z" fill="none" stroke="#0aa5c9" stroke-width="3" stroke-linejoin="round" stroke-dasharray="90" stroke-dashoffset="90"/>
+
+      <path id="scR3Eq" d="M 254 235 H 274 M 254 245 H 274" fill="none" stroke="#334155" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+
+      <g id="scR3Target" opacity="0">
+        <text x="294" y="249" font-size="25" font-weight="900" fill="#8d5bd6">?</text>
+        <path d="M 332 227 L 318 252 H 346 Z" fill="#f4eeff" stroke="#8d5bd6" stroke-width="3" stroke-linejoin="round"/>
+      </g>
+
+      <!-- 斜線劃走 □ □（抵銷／代換記號） -->
+      <path id="scR3Slash" d="M 52 260 L 140 220" fill="none" stroke="#dc2626" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="120" stroke-dashoffset="120"/>
+    </g>
+
+    <!-- 第 4 行（代換後）：↓ 變做 ◇ ＋ ◇ -->
+    <g id="scRow4">
+      <path id="scR4Arr1" d="M 96 266 V 284 M 90 278 L 96 285 L 102 278" fill="none" stroke="#f4711f" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+      <path id="scR4Arr2" d="M 214 266 V 284 M 208 278 L 214 285 L 220 278" fill="none" stroke="#0aa5c9" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+
+      <path id="scR4Dia1" d="M 96 290 L 109 304 L 96 318 L 83 304 Z" fill="#e6f8fc" stroke="#0aa5c9" stroke-width="3" stroke-linejoin="round" stroke-dasharray="90" stroke-dashoffset="90"/>
+      <path id="scR4Plus" d="M 146 304 H 164 M 155 295 V 313" fill="none" stroke="#334155" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+      <path id="scR4Dia2" d="M 214 290 L 227 304 L 214 318 L 201 304 Z" fill="#e6f8fc" stroke="#0aa5c9" stroke-width="3" stroke-linejoin="round" stroke-dasharray="90" stroke-dashoffset="90"/>
+    </g>
+
+    <!-- 第 5 行（換成 C 並連加）：△ ＋ △  ⇒  1 ＋ 1 ＝ 2 -->
+    <g id="scRow5">
+      <path id="scR5Arr1" d="M 96 322 V 337 M 91 332 L 96 338 L 101 332" fill="none" stroke="#8d5bd6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+      <path id="scR5Tri1" d="M 96 344 L 82 370 H 110 Z" fill="#f4eeff" stroke="#8d5bd6" stroke-width="3" stroke-linejoin="round" stroke-dasharray="100" stroke-dashoffset="100"/>
+
+      <path id="scR5Plus" d="M 146 358 H 164 M 155 349 V 367" fill="none" stroke="#334155" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+
+      <path id="scR5Arr2" d="M 214 322 V 337 M 209 332 L 214 338 L 219 332" fill="none" stroke="#8d5bd6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="40" stroke-dashoffset="40"/>
+      <path id="scR5Tri2" d="M 214 344 L 200 370 H 228 Z" fill="#f4eeff" stroke="#8d5bd6" stroke-width="3" stroke-linejoin="round" stroke-dasharray="100" stroke-dashoffset="100"/>
+
+      <!-- 實戰算式：1 + 1 = 2 -->
+      <g id="scFinalEq" font-size="28" font-weight="900">
+        <text id="scEq1" x="268" y="368" fill="#8d5bd6" opacity="0">1</text>
+        <text id="scEqPlus" x="296" y="368" fill="#334155" opacity="0">＋</text>
+        <text id="scEq2" x="328" y="368" fill="#8d5bd6" opacity="0">1</text>
+        <text id="scEqEq" x="355" y="368" fill="#334155" opacity="0">＝</text>
+        <text id="scEqAns" x="387" y="368" fill="#16a34a" opacity="0">2</text>
+        <rect id="scAnsCircle" x="374" y="339" width="42" height="38" rx="10" fill="none" stroke="#16a34a" stroke-width="3" stroke-dasharray="170" stroke-dashoffset="170"/>
+      </g>
+    </g>
+
+    <!-- 軌道 B 筆尖嚮導（與軌道 A 互斥顯示） -->
+    <g id="scratchPen" opacity="0">
+      <circle cx="0" cy="0" r="9.5" fill="#1d4ed8" fill-opacity="0.22"/>
+      <circle cx="0" cy="0" r="5" fill="#1d4ed8" stroke="#ffffff" stroke-width="2"/>
+    </g>
+  `;
+}
+
+/* =====================================================================
+   純函數渲染器：renderFrame(stepIndex, p)
+   確保任何前後跳步、重播、暫停均 100% 乾淨無殘影！
+   ===================================================================== */
+function setStrokeProgress(id, totalLen, t) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.setAttribute('stroke-dashoffset', (totalLen * (1 - clamp(t))).toFixed(1));
+}
+
+function setBoxStyle(id, active, color, darkStroke) {
+  const g = document.getElementById(id);
+  if (!g) return;
+  const fill = g.querySelector('.shape-fill');
+  const txt = g.querySelector('.shape-txt');
+  if (active) {
+    fill.setAttribute('fill', color);
+    fill.setAttribute('stroke', darkStroke);
+    txt.setAttribute('fill', '#ffffff');
+  } else {
+    fill.setAttribute('fill', '#b8b2a8');
+    fill.setAttribute('stroke', '#57534e');
+    txt.setAttribute('fill', '#1e293b');
+  }
+}
+
+function setTransform(id, tr) {
+  const el = document.getElementById(id);
+  if (el) el.setAttribute('transform', tr);
+}
+function setAttr(id, k, v) {
+  const el = document.getElementById(id);
+  if (el) el.setAttribute(k, v);
+}
+
+function placePen(track, x, y, show) {
+  const sp = document.getElementById('stagePen');
+  const bp = document.getElementById('scratchPen');
+  if (!show) {
+    sp.setAttribute('opacity', '0');
+    bp.setAttribute('opacity', '0');
+    return;
+  }
+  if (track === 'stage') {
+    sp.setAttribute('opacity', '1');
+    sp.setAttribute('transform', `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+    bp.setAttribute('opacity', '0');
+  } else {
+    bp.setAttribute('opacity', '1');
+    bp.setAttribute('transform', `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+    sp.setAttribute('opacity', '0');
+  }
+}
+
+function renderFrame(step, p) {
+  // 1. 頂部題目高亮與代號小標記（Step 0 全隱藏）
+  const stepCfg = CONFIG.steps[step];
+  CONFIG.questionSegments.forEach((_, idx) => {
+    const el = document.getElementById('qSeg' + idx);
+    if (el) el.classList.toggle('hl', stepCfg.hl.includes(idx));
+  });
+
+  dom.chipA.classList.toggle('show', step >= 1);
+  dom.chipB.classList.toggle('show', step >= 1);
+  dom.chipC.classList.toggle('show', step >= 2);
+
+  // 2. 階段按鈕狀態
+  dom.phasePills.querySelectorAll('.phase-pill').forEach(btn => {
+    const pid = Number(btn.dataset.phase);
+    btn.classList.toggle('active', pid === stepCfg.phase);
+    btn.classList.toggle('done', pid < stepCfg.phase);
+  });
+
+  // 3. 字幕區（讀題引用 vs 思路清晰視覺分隔）
+  let subHtml = '';
+  if (stepCfg.quote) {
+    subHtml += `<span class="sub-tag quote-tag">📖 ${stepCfg.prefix || '題目：'}</span>`;
+    subHtml += `<span class="sub-quote">「${stepCfg.quote}」</span>`;
+  }
+  if (stepCfg.think) {
+    subHtml += `<span class="sub-tag think-tag">💡 思路</span>`;
+    subHtml += `<span class="sub-think">${stepCfg.think}</span>`;
+  }
+  dom.subtitleBox.innerHTML = subHtml;
+
+  // 4. 底部同色算式條
+  let fHtml = '';
+  if (step >= 1) {
+    fHtml += `<span class="f-pill"><span class="c-a">2 個 A</span> ＝ <span class="c-b">1 個 B</span></span>`;
+  }
+  if (step >= 2 && (step > 2 || p >= 0.65)) {
+    fHtml += `<span class="f-pill"><span class="c-b">1 個 B</span> ＝ <span class="c-c">1 個 C</span></span>`;
+  }
+  if (step >= 7 && (step > 7 || p >= 0.35)) {
+    const part = (step > 7 || p >= 0.78) ? '1 ＋ 1 ＝ 2（個 C）' : '1 ＋ …';
+    fHtml += `<span class="f-pill final">${part}</span>`;
+  }
+  dom.formulaStrip.innerHTML = fHtml || `<span style="font-size:15px;color:#64748b;font-weight:700;">⚖️ 先觀察天平上的箱子關係…</span>`;
+
+  // 5. 控制列計數與按鈕
+  dom.stepCounter.textContent = `${step + 1} / ${CONFIG.steps.length}`;
+  dom.prevBtn.disabled = step === 0;
+  dom.nextBtn.disabled = step === CONFIG.steps.length - 1;
+  dom.playBtn.textContent = state.playing ? '⏸' : '▶';
+
+  // 6. 結尾慶祝列
+  const showCel = step === CONFIG.steps.length - 1 && p >= 0.75;
+  dom.celebrationBar.classList.toggle('show', showCel);
+  if (showCel && !state.celebrated) {
+    state.celebrated = true;
+    launchConfetti();
+  }
+  if (step < CONFIG.steps.length - 1) {
+    state.celebrated = false;
+  }
+
+  /* ================== 軌道 A：具象舞台純函數狀態 ================== */
+  // 基礎著色（第 0 步全原圖灰，之後隨引入亮起專屬色）
+  const colorA = step >= 1;
+  const colorB = step >= 1;
+  const colorC = step >= 2;
+
+  setBoxStyle('s1A1', colorA, CONFIG.colors.A, '#c2410c');
+  setBoxStyle('s1A2', colorA, CONFIG.colors.A, '#c2410c');
+  setBoxStyle('s1B1', colorB, CONFIG.colors.B, '#0e7490');
+
+  setBoxStyle('s2B1', step >= 2, CONFIG.colors.B, '#0e7490');
+  setBoxStyle('s2B2', step >= 2, CONFIG.colors.B, '#0e7490');
+  setBoxStyle('s2C1', colorC, CONFIG.colors.C, '#5b21b6');
+  setBoxStyle('s2C2', colorC, CONFIG.colors.C, '#5b21b6');
+
+  setBoxStyle('s3A1', step >= 3, CONFIG.colors.A, '#c2410c');
+  setBoxStyle('s3A2', step >= 3, CONFIG.colors.A, '#c2410c');
+  setBoxStyle('s3B1', step >= 3, CONFIG.colors.B, '#0e7490');
+  setBoxStyle('s3PromptC', step >= 3, CONFIG.colors.C, '#5b21b6');
+
+  // 天平標籤
+  setAttr('scale1_tag', 'opacity', step >= 1 ? '1' : '0');
+  setAttr('scale2_tag', 'opacity', step >= 2 ? '1' : '0');
+  setAttr('scale3_tag', 'opacity', step >= 3 ? '1' : '0');
+
+  // 三大天平分區高亮框（三部曲：閃三下後定住淡色或退去）
+  if (step === 1) {
+    setAttr('hlScale1', 'opacity', flash3Opacity(p, 0, 0.45).toFixed(2));
+    setAttr('s1GroupA', 'opacity', p > 0.15 ? '1' : '0');
+    setAttr('s1GroupA', 'fill-opacity', (p > 0.15 ? flash3Opacity(p, 0.15, 0.55) : 0).toFixed(2));
+    setAttr('s1GroupB', 'opacity', p > 0.45 ? '1' : '0');
+    setAttr('s1GroupB', 'fill-opacity', (p > 0.45 ? flash3Opacity(p, 0.45, 0.85) : 0).toFixed(2));
+  } else {
+    setAttr('hlScale1', 'opacity', (step === 4 || (step === 5 && p < 0.35)) ? '0.28' : '0');
+    setAttr('s1GroupA', 'opacity', '0');
+    setAttr('s1GroupB', 'opacity', '0');
+  }
+
+  if (step === 2) {
+    setAttr('hlScale2', 'opacity', flash3Opacity(p, 0, 0.42).toFixed(2));
+    setAttr('s2SplitGroup', 'opacity', easeOut(seg(p, 0.48, 0.78)).toFixed(2));
+  } else {
+    setAttr('hlScale2', 'opacity', (step === 6 || step === 7) ? '0.22' : '0');
+    setAttr('s2SplitGroup', 'opacity', step > 2 ? '0.85' : '0');
+  }
+
+  if (step === 3) {
+    setAttr('hlScale3', 'opacity', flash3Opacity(p, 0, 0.45).toFixed(2));
+    setAttr('s3RightHl', 'opacity', p > 0.35 ? '1' : '0');
+    setAttr('s3RightHl', 'fill-opacity', flash3Opacity(p, 0.35, 0.85).toFixed(2));
+  } else {
+    setAttr('hlScale3', 'opacity', step >= 4 && step <= 7 ? '0.16' : '0');
+    setAttr('s3RightHl', 'opacity', step === 8 && p < 0.6 ? '0.65' : '0');
+  }
+
+  // 雙軌聯動輕微跳動效果
+  const pulseS1A = (step === 1 && p > 0.3 && p < 0.65) ? (1 + 0.06 * Math.sin(seg(p, 0.3, 0.65) * Math.PI * 2)) : 1;
+  setTransform('s1A1', `translate(42,113) scale(${pulseS1A.toFixed(3)})`);
+  setTransform('s1A2', `translate(82,113) scale(${pulseS1A.toFixed(3)})`);
+
+  // Step 4: 脈衝框住天平 3 左邊的 2 個 A（配合互動停頓 1）
+  if (step === 4) {
+    setAttr('s3GroupA', 'opacity', '1');
+    setAttr('s3GroupA', 'fill-opacity', (0.12 + 0.16 * Math.abs(Math.sin(p * Math.PI * 3))).toFixed(2));
+  } else if (step === 5 && p < 0.32) {
+    setAttr('s3GroupA', 'opacity', '1');
+    setAttr('s3GroupA', 'fill-opacity', flash3Opacity(p, 0, 0.28).toFixed(2));
+  } else {
+    setAttr('s3GroupA', 'opacity', '0');
+  }
+
+  // Step 5: 乾淨無重疊代換（閃示目標 → 2個A飛走完全消失 → 短停 → 新B由天平1飛入落位，原B平穩落到左邊並排）
+  if (step < 5) {
+    setAttr('s3A1', 'opacity', '1');
+    setAttr('s3A2', 'opacity', '1');
+    setTransform('s3A1', 'translate(178,311)');
+    setTransform('s3A2', 'translate(218,311)');
+    setTransform('s3B1', 'translate(198,272)');
+    setAttr('s3NewB', 'opacity', '0');
+  } else if (step === 5) {
+    // 1) 0..0.28 閃示；2) 0.28..0.54 兩塊 A 飛走縮小淡出；3) 0.54..0.64 短停；4) 0.64..0.95 新 B 沿弧線飛入
+    const flyOut = easeInOut(seg(p, 0.28, 0.54));
+    const aOp = 1 - flyOut;
+    const aScale = 1 - 0.55 * flyOut;
+    setAttr('s3A1', 'opacity', aOp.toFixed(2));
+    setAttr('s3A2', 'opacity', aOp.toFixed(2));
+    setTransform('s3A1', `translate(${(178 - 70 * flyOut).toFixed(1)},${(311 - 60 * flyOut).toFixed(1)}) scale(${aScale.toFixed(2)})`);
+    setTransform('s3A2', `translate(${(218 - 55 * flyOut).toFixed(1)},${(311 - 75 * flyOut).toFixed(1)}) scale(${aScale.toFixed(2)})`);
+
+    // 原本上方嘅 B 喺 2 個 A 消失後（0.56..0.78）順滑降落到盤面右側 (218, 311)
+    const bDrop = easeOut(seg(p, 0.56, 0.78));
+    setTransform('s3B1', `translate(${lerp(198, 219, bDrop).toFixed(1)},${lerp(272, 311, bDrop).toFixed(1)})`);
+
+    // 新 B 由天平 1 右盤 (224, 113) 沿弧線飛入天平 3 左盤 (175, 311)
+    const bIn = easeOut(seg(p, 0.64, 0.94));
+    if (bIn <= 0.001) {
+      setAttr('s3NewB', 'opacity', '0');
+    } else {
+      const bx = lerp(224, 175, bIn) - Math.sin(bIn * Math.PI) * 45;
+      const by = lerp(113, 311, bIn) - Math.sin(bIn * Math.PI) * 28;
+      const bs = lerp(0.55, 1.0, bIn);
+      setAttr('s3NewB', 'opacity', Math.min(1, bIn * 2.5).toFixed(2));
+      setTransform('s3NewB', `translate(${bx.toFixed(1)},${by.toFixed(1)}) scale(${bs.toFixed(2)})`);
+    }
+  } else {
+    // step >= 6：已換成兩個並排的 B
+    setAttr('s3A1', 'opacity', '0');
+    setAttr('s3A2', 'opacity', '0');
+    setTransform('s3B1', 'translate(219,311)');
+    setAttr('s3NewB', 'opacity', '1');
+    setTransform('s3NewB', 'translate(175,311)');
+  }
+
+  // Step 6: 脈衝框住天平 3 左邊的 2 個 B（配合互動停頓 2）
+  if (step === 6) {
+    setAttr('s3GroupBB', 'opacity', '1');
+    setAttr('s3GroupBB', 'fill-opacity', (0.12 + 0.16 * Math.abs(Math.sin(p * Math.PI * 3))).toFixed(2));
+  } else {
+    setAttr('s3GroupBB', 'opacity', '0');
+  }
+
+  // Step 7: 逐個 B 換成 C 飛落天平 3 右側上方（先慢示範第 1 個，再飛第 2 個）＋ 數字徽章 1、2
+  if (step < 7) {
+    setAttr('s3FlyC1', 'opacity', '0');
+    setAttr('s3FlyC2', 'opacity', '0');
+    setAttr('badgeC1', 'opacity', '0');
+    setAttr('badgeC2', 'opacity', '0');
+    setTransform('scale3_beam', 'rotate(0)');
+  } else if (step === 7) {
+    // 第 1 個 B 輕微跳動 (0..0.22)，第 1 個 C 飛入 (0.15..0.48)
+    const pB1 = (p < 0.25) ? (1 + 0.09 * Math.sin(seg(p, 0, 0.25) * Math.PI * 2)) : 1;
+    setTransform('s3NewB', `translate(175,311) scale(${pB1.toFixed(3)})`);
+
+    const c1 = easeOut(seg(p, 0.14, 0.46));
+    if (c1 > 0.001) {
+      const cx1 = lerp(478, 339, c1) + Math.sin(c1 * Math.PI) * 28;
+      const cy1 = lerp(113, 263, c1) - Math.sin(c1 * Math.PI) * 35;
+      setAttr('s3FlyC1', 'opacity', Math.min(1, c1 * 2.5).toFixed(2));
+      setTransform('s3FlyC1', `translate(${cx1.toFixed(1)},${cy1.toFixed(1)}) scale(${lerp(0.6, 1, c1).toFixed(2)})`);
+    } else {
+      setAttr('s3FlyC1', 'opacity', '0');
+    }
+    setAttr('badgeC1', 'opacity', easeOut(seg(p, 0.44, 0.54)).toFixed(2));
+
+    // 第 2 個 B 跳動 (0.50..0.68)，第 2 個 C 飛入 (0.54..0.84)
+    const pB2 = (p >= 0.48 && p < 0.72) ? (1 + 0.09 * Math.sin(seg(p, 0.48, 0.72) * Math.PI * 2)) : 1;
+    setTransform('s3B1', `translate(219,311) scale(${pB2.toFixed(3)})`);
+
+    const c2 = easeOut(seg(p, 0.54, 0.84));
+    if (c2 > 0.001) {
+      const cx2 = lerp(522, 385, c2) + Math.sin(c2 * Math.PI) * 26;
+      const cy2 = lerp(113, 263, c2) - Math.sin(c2 * Math.PI) * 30;
+      setAttr('s3FlyC2', 'opacity', Math.min(1, c2 * 2.5).toFixed(2));
+      setTransform('s3FlyC2', `translate(${cx2.toFixed(1)},${cy2.toFixed(1)}) scale(${lerp(0.6, 1, c2).toFixed(2)})`);
+    } else {
+      setAttr('s3FlyC2', 'opacity', '0');
+    }
+    setAttr('badgeC2', 'opacity', easeOut(seg(p, 0.82, 0.92)).toFixed(2));
+
+    // 天平平衡微動：放 1 個 C 時微傾左，放滿 2 個 C 回正平穩！
+    let tilt = -4.5;
+    if (c1 > 0) tilt = lerp(-4.5, -2.0, c1);
+    if (c2 > 0) tilt = lerp(-2.0, 0, c2) + Math.sin(seg(p, 0.84, 1) * Math.PI * 2) * 1.1 * (1 - seg(p, 0.84, 1));
+    setTransform('scale3_beam', `rotate(${tilt.toFixed(2)})`);
+  } else {
+    // Step 8：完成驗證，同組數字徽章同時淡出，2 個 C 穩穩停喺右上方，括號內親手寫入「2」
+    setAttr('s3FlyC1', 'opacity', '0.95');
+    setTransform('s3FlyC1', 'translate(339,263)');
+    setAttr('s3FlyC2', 'opacity', '0.95');
+    setTransform('s3FlyC2', 'translate(385,263)');
+    const bFade = 1 - easeOut(seg(p, 0, 0.25));
+    setAttr('badgeC1', 'opacity', bFade.toFixed(2));
+    setAttr('badgeC2', 'opacity', bFade.toFixed(2));
+    setTransform('scale3_beam', 'rotate(0)');
+  }
+
+  // Step 8 真・作答動作：筆尖親手喺 (  )個 C 括號入面寫出「2」
+  if (step < 8) {
+    setStrokeProgress('s3AnswerTwo', 70, 0);
+  } else {
+    setStrokeProgress('s3AnswerTwo', 70, easeOut(seg(p, 0.18, 0.62)));
+  }
+
+  /* ================== 軌道 B：實戰鉛筆算草紙純函數狀態 ================== */
+  // 角落對照表
+  setAttr('scLegA', 'opacity', step >= 1 ? (step === 1 ? easeOut(seg(p, 0.05, 0.25)).toFixed(2) : '1') : '0');
+  setAttr('scLegB', 'opacity', step >= 1 ? (step === 1 ? easeOut(seg(p, 0.45, 0.65)).toFixed(2) : '1') : '0');
+  setAttr('scLegC', 'opacity', step >= 2 ? (step === 2 ? easeOut(seg(p, 0.2, 0.4)).toFixed(2) : '1') : '0');
+
+  // Row 1 (Step 1)
+  const r1 = step > 1 ? 1 : (step === 1 ? p : 0);
+  setStrokeProgress('scR1Sq1', 110, seg(r1, 0.15, 0.34));
+  setStrokeProgress('scR1Sq2', 110, seg(r1, 0.30, 0.48));
+  setStrokeProgress('scR1BoxL', 300, seg(r1, 0.44, 0.60));
+  setAttr('scR1NumL', 'opacity', easeOut(seg(r1, 0.56, 0.66)).toFixed(2));
+  setStrokeProgress('scR1Eq', 60, seg(r1, 0.62, 0.72));
+  setStrokeProgress('scR1Dia1', 90, seg(r1, 0.70, 0.84));
+  setStrokeProgress('scR1BoxR', 220, seg(r1, 0.80, 0.94));
+  setAttr('scR1NumR', 'opacity', easeOut(seg(r1, 0.88, 0.98)).toFixed(2));
+
+  // Row 2 (Step 2)
+  const r2 = step > 2 ? 1 : (step === 2 ? p : 0);
+  setStrokeProgress('scR2Dia1', 90, seg(r2, 0.06, 0.18));
+  setStrokeProgress('scR2Dia2', 90, seg(r2, 0.15, 0.26));
+  setStrokeProgress('scR2BoxL', 300, seg(r2, 0.22, 0.34));
+  setAttr('scR2NumL', 'opacity', easeOut(seg(r2, 0.30, 0.38)).toFixed(2));
+  setStrokeProgress('scR2Eq', 50, seg(r2, 0.34, 0.42));
+  setStrokeProgress('scR2Tri1', 100, seg(r2, 0.38, 0.48));
+  setStrokeProgress('scR2Tri2', 100, seg(r2, 0.45, 0.55));
+  setStrokeProgress('scR2BoxR', 300, seg(r2, 0.50, 0.60));
+  setAttr('scR2NumR', 'opacity', easeOut(seg(r2, 0.56, 0.64)).toFixed(2));
+  // 虛線平分一半 + 箭咀推出 ◇ = △
+  const cutOp = easeOut(seg(r2, 0.62, 0.76));
+  setAttr('scR2CutL', 'opacity', cutOp.toFixed(2));
+  setAttr('scR2CutR', 'opacity', cutOp.toFixed(2));
+  setStrokeProgress('scR2Arrow', 50, seg(r2, 0.72, 0.84));
+  setAttr('scR2Half', 'opacity', easeOut(seg(r2, 0.80, 0.96)).toFixed(2));
+
+  // Divider + Row 3 (Step 3)
+  const r3 = step > 3 ? 1 : (step === 3 ? p : 0);
+  setAttr('scDivider', 'opacity', r3 > 0.02 ? '1' : '0');
+  setStrokeProgress('scR3Sq1', 110, seg(r3, 0.10, 0.28));
+  setStrokeProgress('scR3Sq2', 110, seg(r3, 0.24, 0.40));
+  setStrokeProgress('scR3BoxA', 300, seg(r3, 0.36, 0.50));
+  setStrokeProgress('scR3Plus', 50, seg(r3, 0.48, 0.58));
+  setStrokeProgress('scR3Dia', 90, seg(r3, 0.56, 0.70));
+  setStrokeProgress('scR3BoxB', 220, seg(r3, 0.66, 0.78));
+  setStrokeProgress('scR3Eq', 50, seg(r3, 0.76, 0.85));
+  setAttr('scR3Target', 'opacity', easeOut(seg(r3, 0.84, 0.98)).toFixed(2));
+
+  // Row 4 (Step 5: 劃走 □ □，箭咀落嚟寫 ◇ ＋ ◇)
+  const r4 = step > 5 ? 1 : (step === 5 ? p : 0);
+  setStrokeProgress('scR3Slash', 120, seg(r4, 0.28, 0.48));
+  setStrokeProgress('scR4Arr1', 50, seg(r4, 0.55, 0.68));
+  setStrokeProgress('scR4Dia1', 90, seg(r4, 0.65, 0.80));
+  setStrokeProgress('scR4Plus', 50, seg(r4, 0.76, 0.85));
+  setStrokeProgress('scR4Arr2', 50, seg(r4, 0.78, 0.88));
+  setStrokeProgress('scR4Dia2', 90, seg(r4, 0.84, 0.98));
+
+  // Row 5 (Step 7: 逐個 ◇ 換 △，邊數邊寫 1 + 1 = 2)
+  const r5 = step > 7 ? 1 : (step === 7 ? p : 0);
+  setStrokeProgress('scR5Arr1', 40, seg(r5, 0.16, 0.28));
+  setStrokeProgress('scR5Tri1', 100, seg(r5, 0.24, 0.42));
+  setAttr('scEq1', 'opacity', easeOut(seg(r5, 0.38, 0.48)).toFixed(2));
+
+  setStrokeProgress('scR5Plus', 50, seg(r5, 0.48, 0.56));
+  setAttr('scEqPlus', 'opacity', easeOut(seg(r5, 0.52, 0.60)).toFixed(2));
+
+  setStrokeProgress('scR5Arr2', 40, seg(r5, 0.58, 0.68));
+  setStrokeProgress('scR5Tri2', 100, seg(r5, 0.65, 0.80));
+  setAttr('scEq2', 'opacity', easeOut(seg(r5, 0.76, 0.84)).toFixed(2));
+  setAttr('scEqEq', 'opacity', easeOut(seg(r5, 0.82, 0.89)).toFixed(2));
+  setAttr('scEqAns', 'opacity', easeOut(seg(r5, 0.87, 0.94)).toFixed(2));
+  setStrokeProgress('scAnsCircle', 170, seg(r5, 0.90, 1.0));
+
+  /* ================== 全場唯一筆尖嚮導（互斥接力） ================== */
+  if (step === 0) {
+    placePen('stage', 0, 0, false);
+  } else if (step === 1) {
+    if (p < 0.25) placePen('stage', lerp(42, 224, p / 0.25), 95, true);
+    else placePen('scratch', lerp(62, 235, seg(p, 0.25, 0.95)), 91, true);
+  } else if (step === 2) {
+    if (p < 0.20) placePen('stage', lerp(316, 522, p / 0.20), 95, true);
+    else placePen('scratch', lerp(74, 396, seg(p, 0.20, 0.95)), 165, true);
+  } else if (step === 3) {
+    if (p < 0.32) placePen('stage', lerp(178, 365, p / 0.32), 292, true);
+    else placePen('scratch', lerp(62, 336, seg(p, 0.32, 0.96)), 240, true);
+  } else if (step === 4) {
+    placePen('stage', 198, 290, true);
+  } else if (step === 5) {
+    if (p < 0.55) placePen('scratch', lerp(52, 140, seg(p, 0.25, 0.52)), lerp(260, 220, seg(p, 0.25, 0.52)), true);
+    else placePen('scratch', lerp(96, 214, seg(p, 0.55, 0.96)), 304, true);
+  } else if (step === 6) {
+    placePen('stage', 197, 290, true);
+  } else if (step === 7) {
+    if (p < 0.45) placePen('scratch', lerp(96, 268, seg(p, 0.18, 0.45)), 358, true);
+    else placePen('scratch', lerp(214, 395, seg(p, 0.55, 0.96)), 358, true);
+  } else if (step === 8) {
+    if (p < 0.65) {
+      const t = seg(p, 0.18, 0.62);
+      placePen('stage', lerp(305, 318, t), lerp(286, 301, t), true);
+    } else {
+      placePen('stage', 0, 0, false);
+    }
+  }
+}
+
+/* =====================================================================
+   互動停頓條（零遮擋內嵌）
+   ===================================================================== */
+function showInlineQuiz(quizIdx) {
+  const q = CONFIG.quizzes[quizIdx];
+  state.waitingQuiz = true;
+  state.playing = false;
+  dom.playBtn.textContent = '▶';
+  dom.quizQuestion.textContent = q.question;
+  dom.quizFeedback.textContent = '';
+  dom.quizFeedback.className = 'quiz-fb';
+  dom.quizOptions.innerHTML = '';
+
+  q.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'quiz-btn';
+    btn.textContent = opt.label;
+    btn.addEventListener('click', () => {
+      if (opt.correct) {
+        btn.classList.add('correct');
+        dom.quizFeedback.textContent = opt.fb;
+        dom.quizFeedback.className = 'quiz-fb ok';
+        playSound('ding');
+        state.quizResolved[quizIdx] = true;
+        speakText(opt.fb, () => {
+          hideInlineQuiz();
+          if (state.step < CONFIG.steps.length - 1) {
+            goToStep(state.step + 1, true);
+          }
+        });
+      } else {
+        btn.classList.add('wrong');
+        dom.quizFeedback.textContent = opt.fb;
+        dom.quizFeedback.className = 'quiz-fb err';
+        playSound('wrong');
+        speakText(opt.fb);
+      }
+    });
+    dom.quizOptions.appendChild(btn);
+  });
+
+  const skipBtn = document.createElement('button');
+  skipBtn.type = 'button';
+  skipBtn.className = 'quiz-skip';
+  skipBtn.textContent = '跳過 ⏭';
+  skipBtn.addEventListener('click', () => {
+    state.quizResolved[quizIdx] = true;
+    hideInlineQuiz();
+    if (state.step < CONFIG.steps.length - 1) {
+      goToStep(state.step + 1, true);
+    }
+  });
+  dom.quizOptions.appendChild(skipBtn);
+
+  dom.inlineQuiz.classList.add('show');
+}
+
+function hideInlineQuiz() {
+  state.waitingQuiz = false;
+  dom.inlineQuiz.classList.remove('show');
+}
+
+/* =====================================================================
+   主播放迴圈與步驟控制（100% 乾淨撤銷）
+   ===================================================================== */
+function stopLoop() {
+  if (state.rafId) {
+    cancelAnimationFrame(state.rafId);
+    state.rafId = null;
+  }
+}
+
+function fullNarrationForStep(stepCfg) {
+  const parts = [];
+  if (stepCfg.quote) parts.push(`${stepCfg.prefix || ''}${stepCfg.quote}`);
+  if (stepCfg.think) parts.push(stepCfg.think);
+  return parts.join(' ');
+}
+
+function goToStep(idx, autoPlay = false) {
+  stopLoop();
+  cancelSpeech();
+  hideInlineQuiz();
+
+  state.step = clamp(idx, 0, CONFIG.steps.length - 1);
+  const cfg = CONFIG.steps[state.step];
+
+  // 若回退到互動點之前，重設其互動解決狀態讓小朋友可再玩
+  if (state.step <= 4) state.quizResolved[0] = false;
+  if (state.step <= 6) state.quizResolved[1] = false;
+
+  if (autoPlay) {
+    state.progress = 0;
+    state.playing = true;
+    renderFrame(state.step, 0);
+    if (cfg.sound) playSound(cfg.sound);
+    startStepPlayback();
+  } else {
+    state.progress = 1;
+    state.playing = false;
+    renderFrame(state.step, 1);
+    if (cfg.quizIndex !== undefined && !state.quizResolved[cfg.quizIndex]) {
+      showInlineQuiz(cfg.quizIndex);
+    }
+    speakText(fullNarrationForStep(cfg));
+  }
+}
+
+function startStepPlayback() {
+  stopLoop();
+  const cfg = CONFIG.steps[state.step];
+  state.lastTime = performance.now();
+
+  const onSpeechFinished = () => {
+    // 當動畫都行到 1 且仍然處於播放狀態，先處理互動或自動去下一步
+    if (state.progress >= 1 && state.playing) {
+      handleStepComplete();
+    }
+  };
+
+  speakText(fullNarrationForStep(cfg), onSpeechFinished);
+
+  const tick = (now) => {
+    if (!state.playing) return;
+    const dt = Math.min(0.08, (now - state.lastTime) / 1000);
+    state.lastTime = now;
+    const dur = (cfg.duration || 2.5) / (state.speed / 0.75);
+    state.progress = clamp(state.progress + dt / dur, 0, 1);
+    renderFrame(state.step, state.progress);
+
+    if (state.progress < 1) {
+      state.rafId = requestAnimationFrame(tick);
+    } else {
+      state.rafId = null;
+      if (state.speechDone) {
+        handleStepComplete();
+      }
+    }
+  };
+  state.rafId = requestAnimationFrame(tick);
+}
+
+function handleStepComplete() {
+  const cfg = CONFIG.steps[state.step];
+  if (cfg.quizIndex !== undefined && !state.quizResolved[cfg.quizIndex]) {
+    showInlineQuiz(cfg.quizIndex);
+    return;
+  }
+  if (state.step < CONFIG.steps.length - 1) {
+    goToStep(state.step + 1, true);
+  } else {
+    state.playing = false;
+    renderFrame(state.step, 1);
+  }
+}
+
+function togglePlay() {
+  initAudio();
+  if (state.waitingQuiz) return;
+  if (state.playing) {
+    state.playing = false;
+    stopLoop();
+    cancelSpeech();
+    renderFrame(state.step, state.progress);
+  } else {
+    if (state.step === CONFIG.steps.length - 1 && state.progress >= 1) {
+      goToStep(1, true);
+    } else if (state.step === 0 && state.progress >= 1) {
+      goToStep(1, true);
+    } else if (state.progress >= 1) {
+      goToStep(Math.min(state.step + 1, CONFIG.steps.length - 1), true);
+    } else {
+      state.playing = true;
+      startStepPlayback();
+    }
+  }
+}
+
+/* =====================================================================
+   彩紙慶祝（輕量 Canvas，不阻擋點擊）
+   ===================================================================== */
+function launchConfetti() {
+  const cv = document.getElementById('confettiCanvas');
+  const ctx = cv.getContext('2d');
+  cv.width = window.innerWidth;
+  cv.height = window.innerHeight;
+  const cols = ['#f4711f', '#0aa5c9', '#8d5bd6', '#22c55e', '#facc15', '#ec4899'];
+  const pieces = Array.from({ length: 72 }, () => ({
+    x: Math.random() * cv.width,
+    y: -20 - Math.random() * 140,
+    vx: (Math.random() - 0.5) * 4,
+    vy: 2.5 + Math.random() * 3.8,
+    size: 6 + Math.random() * 6,
+    rot: Math.random() * 360,
+    vrot: (Math.random() - 0.5) * 10,
+    col: cols[Math.floor(Math.random() * cols.length)]
+  }));
+  let frames = 0;
+  function draw() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    pieces.forEach(pt => {
+      pt.x += pt.vx;
+      pt.y += pt.vy;
+      pt.rot += pt.vrot;
+      ctx.save();
+      ctx.translate(pt.x, pt.y);
+      ctx.rotate((pt.rot * Math.PI) / 180);
+      ctx.fillStyle = pt.col;
+      ctx.fillRect(-pt.size / 2, -pt.size / 2, pt.size, pt.size * 0.6);
+      ctx.restore();
+    });
+    frames++;
+    if (frames < 130) requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, cv.width, cv.height);
+  }
+  requestAnimationFrame(draw);
+}
+
+/* =====================================================================
+   🎯 挑戰類似題（預設無公仔，可點「睇草稿提示」，答對後展開實物驗證）
+   ===================================================================== */
+const PRACTICE_BANK = [
+  {
+    s1A: 2, s1B: 1,
+    s2B: 3, s2C: 3,
+    s3A: 2, s3B: 2,
+    ans: 3,
+    options: [2, 3, 4],
+    desc: '天平 1：左邊有 2 個 A，右邊有 1 個 B。<br/>天平 2：左邊有 3 個 B，右邊有 3 個 C。<br/>最後一個天平：左邊有 <b>2 個 A 和 2 個 B</b>，右邊要放多少個 C 才平衡？'
+  },
+  {
+    s1A: 3, s1B: 1,
+    s2B: 2, s2C: 2,
+    s3A: 3, s3B: 1,
+    ans: 2,
+    options: [1, 2, 3],
+    desc: '天平 1：左邊有 3 個 A，右邊有 1 個 B。<br/>天平 2：左邊有 2 個 B，右邊有 2 個 C。<br/>最後一個天平：左邊有 <b>3 個 A 和 1 個 B</b>，右邊要放多少個 C 才平衡？'
+  },
+  {
+    s1A: 2, s1B: 1,
+    s2B: 1, s2C: 2,
+    s3A: 2, s3B: 1,
+    ans: 4,
+    options: [2, 3, 4],
+    desc: '天平 1：左邊有 2 個 A，右邊有 1 個 B。<br/>天平 2：左邊有 1 個 B，右邊有 2 個 C。<br/>最後一個天平：左邊有 <b>2 個 A 和 1 個 B</b>，右邊要放多少個 C 才平衡？'
+  }
+];
+
+function renderPractice() {
+  const item = PRACTICE_BANK[state.practiceIdx % PRACTICE_BANK.length];
+  document.getElementById('pracText').innerHTML = item.desc;
+  document.getElementById('pracFeedback').textContent = '';
+  document.getElementById('pracHintPaper').classList.remove('show');
+  document.getElementById('pracVerify').classList.remove('show');
+  document.getElementById('pracWaitMsg').style.display = 'block';
+
+  // 繪製純符號草稿提示（嚴禁彩色公仔、嚴禁 ○/O、嚴禁代數）
+  const sqRow = (n, x0, y) => Array.from({ length: n }, (_, i) =>
+    `<rect x="${x0 + i * 24}" y="${y}" width="18" height="18" rx="2" fill="none" stroke="#f4711f" stroke-width="2.4"/>`
+  ).join('');
+  const diaRow = (n, x0, y) => Array.from({ length: n }, (_, i) =>
+    `<polygon points="${x0 + i * 24 + 9},${y} ${x0 + i * 24 + 18},${y + 9} ${x0 + i * 24 + 9},${y + 18} ${x0 + i * 24},${y + 9}" fill="none" stroke="#0aa5c9" stroke-width="2.4"/>`
+  ).join('');
+  const triRow = (n, x0, y) => Array.from({ length: n }, (_, i) =>
+    `<polygon points="${x0 + i * 24 + 9},${y} ${x0 + i * 24},${y + 18} ${x0 + i * 24 + 18},${y + 18}" fill="none" stroke="#8d5bd6" stroke-width="2.4"/>`
+  ).join('');
+
+  const cPerB = item.s2C / item.s2B;
+  const totalB = 1 + item.s3B;
+  document.getElementById('pracHintSvg').innerHTML = `
+    <g font-size="14" font-weight="800" fill="#334155">
+      ${sqRow(item.s1A, 14, 14)}
+      <text x="${20 + item.s1A * 24}" y="28">＝</text>
+      ${diaRow(item.s1B, 44 + item.s1A * 24, 14)}
+
+      ${diaRow(item.s2B, 14, 52)}
+      <text x="${20 + item.s2B * 24}" y="66">＝</text>
+      ${triRow(item.s2C, 44 + item.s2B * 24, 52)}
+      <text x="${52 + (item.s2B + item.s2C) * 24}" y="66" fill="#0e7490">→ 1 ◇ ＝ ${cPerB} △</text>
+
+      <line x1="12" y1="86" x2="365" y2="86" stroke="#cbd5e1" stroke-dasharray="5 4"/>
+      ${sqRow(item.s3A, 14, 98)}
+      <line x1="12" y1="118" x2="${14 + item.s3A * 24}" y2="96" stroke="#dc2626" stroke-width="2.4"/>
+      <text x="${20 + item.s3A * 24}" y="112">＋</text>
+      ${diaRow(item.s3B, 42 + item.s3A * 24, 98)}
+      <text x="${50 + (item.s3A + item.s3B) * 24}" y="112" fill="#0e7490">→ 共 ${totalB} 個 ◇</text>
+      <text x="14" y="144" fill="#6d28d9">每個 ◇ 換 ${cPerB} 個 △，加埋幾多個 △？</text>
+    </g>
+  `;
+
+  // 答案選項
+  const box = document.getElementById('pracChoices');
+  box.innerHTML = '';
+  item.options.forEach(val => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'quiz-btn';
+    btn.textContent = `${val} 個 C`;
+    btn.addEventListener('click', () => {
+      const fb = document.getElementById('pracFeedback');
+      if (val === item.ans) {
+        btn.classList.add('correct');
+        fb.style.color = '#15803d';
+        fb.textContent = `🎉 滿分！${item.s3A} 個 A 換做 1 個 B，加埋 ${item.s3B} 個 B 共 ${totalB} 個 B，剛好等於 ${item.ans} 個 C！`;
+        playSound('celebrate');
+        speakText(fb.textContent);
+        renderPracticeVerify(item, totalB);
+      } else {
+        btn.classList.add('wrong');
+        fb.style.color = '#b91c1c';
+        fb.textContent = '💡 仲差少少！先將左邊啲 A 換成 B，數清楚總共有幾多個 B，再換成 C！';
+        playSound('wrong');
+        speakText(fb.textContent);
+      }
+    });
+    box.appendChild(btn);
+  });
+}
+
+function renderPracticeVerify(item, totalB) {
+  document.getElementById('pracWaitMsg').style.display = 'none';
+  document.getElementById('pracVerify').classList.add('show');
+  const bCircles = Array.from({ length: totalB }, (_, i) => {
+    const x = 66 + i * 38;
+    return `<circle cx="${x}" cy="112" r="16" fill="#0aa5c9" stroke="#0e7490" stroke-width="2"/><text x="${x}" y="118" text-anchor="middle" font-size="16" font-weight="900" fill="#fff">B</text>`;
+  }).join('');
+  const cTris = Array.from({ length: item.ans }, (_, i) => {
+    const x = 248 + i * 36;
+    return `<polygon points="${x},94 ${x - 16},128 ${x + 16},128" fill="#8d5bd6" stroke="#5b21b6" stroke-width="2"/><text x="${x}" y="122" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">C</text>`;
+  }).join('');
+
+  document.getElementById('pracVerifySvg').innerHTML = `
+    <g>
+      <text x="210" y="26" text-anchor="middle" font-size="15" font-weight="800" fill="#15803d">
+        左邊換完 ＝ ${totalB} 個 B ｜ 右邊放 ${item.ans} 個 C → 完全平衡！
+      </text>
+      <rect x="46" y="130" width="136" height="8" rx="4" fill="#94a3b8"/>
+      <rect x="230" y="130" width="154" height="8" rx="4" fill="#94a3b8"/>
+      <line x1="114" y1="138" x2="307" y2="138" stroke="#475569" stroke-width="5" stroke-linecap="round"/>
+      <polygon points="210,138 192,190 228,190" fill="#cbd5e1" stroke="#475569" stroke-width="2"/>
+      <rect x="174" y="190" width="72" height="12" rx="4" fill="#94a3b8"/>
+      ${bCircles}
+      ${cTris}
+    </g>
+  `;
+}
+
+/* =====================================================================
+   ✨ 高手秒殺思維（100% 視覺化 SVG 動畫：整體打包配對，連拆半都唔使！）
+   ===================================================================== */
+function buildGeniusSVG() {
+  document.getElementById('geniusSvg').innerHTML = `
+    <!-- 左邊：天平 3（目標） -->
+    <g>
+      <text x="190" y="28" text-anchor="middle" font-size="16" font-weight="900" fill="#1e293b">最後一個天平</text>
+      <line x1="65" y1="212" x2="315" y2="212" stroke="#475569" stroke-width="5" stroke-linecap="round"/>
+      <polygon points="190,212 175,246 205,246" fill="#cbd5e1" stroke="#475569" stroke-width="2"/>
+      <rect x="158" y="246" width="64" height="10" rx="4" fill="#94a3b8"/>
+
+      <!-- 原始 A A -->
+      <g id="gAWrap">
+        <rect x="64" y="168" width="38" height="38" rx="5" fill="#f4711f" stroke="#c2410c" stroke-width="2.2"/>
+        <text x="83" y="194" text-anchor="middle" font-size="20" font-weight="900" fill="#fff">A</text>
+        <rect x="108" y="168" width="38" height="38" rx="5" fill="#f4711f" stroke="#c2410c" stroke-width="2.2"/>
+        <text x="127" y="194" text-anchor="middle" font-size="20" font-weight="900" fill="#fff">A</text>
+        <rect x="57" y="161" width="96" height="50" rx="10" fill="none" stroke="#f4711f" stroke-width="3" stroke-dasharray="6 4"/>
+      </g>
+      <!-- 原本嘅 B -->
+      <g id="gBOrig" transform="translate(105,144)">
+        <circle cx="0" cy="0" r="20" fill="#0aa5c9" stroke="#0e7490" stroke-width="2.2"/>
+        <text x="0" y="7" text-anchor="middle" font-size="20" font-weight="900" fill="#fff">B</text>
+      </g>
+      <!-- 變身後嘅新 B -->
+      <g id="gBNew" transform="translate(84,187)" opacity="0">
+        <circle cx="0" cy="0" r="20" fill="#0aa5c9" stroke="#0e7490" stroke-width="2.4"/>
+        <text x="0" y="7" text-anchor="middle" font-size="20" font-weight="900" fill="#fff">B</text>
+      </g>
+
+      <!-- 整體打包大括弧框（左盤 B B） -->
+      <rect id="gMatchBoxL" x="56" y="159" width="98" height="54" rx="12" fill="#22c55e" fill-opacity="0.16" stroke="#16a34a" stroke-width="3.5" opacity="0"/>
+      <text id="gMatchTxtL" x="105" y="146" text-anchor="middle" font-size="14.5" font-weight="900" fill="#15803d" opacity="0">一模一樣！</text>
+
+      <!-- 右盤問號 -->
+      <text id="gQMark" x="274" y="194" text-anchor="middle" font-size="26" font-weight="900" fill="#8d5bd6">？</text>
+    </g>
+
+    <!-- 右邊：天平 2（現成大禮包！） -->
+    <g>
+      <text x="565" y="28" text-anchor="middle" font-size="16" font-weight="900" fill="#1e293b">天平 2（現成答案！）</text>
+      <line x1="440" y1="212" x2="690" y2="212" stroke="#475569" stroke-width="5" stroke-linecap="round"/>
+      <polygon points="565,212 550,246 580,246" fill="#cbd5e1" stroke="#475569" stroke-width="2"/>
+      <rect x="533" y="246" width="64" height="10" rx="4" fill="#94a3b8"/>
+
+      <circle cx="464" cy="187" r="20" fill="#0aa5c9" stroke="#0e7490" stroke-width="2.2"/>
+      <text x="464" y="194" text-anchor="middle" font-size="20" font-weight="900" fill="#fff">B</text>
+      <circle cx="510" cy="187" r="20" fill="#0aa5c9" stroke="#0e7490" stroke-width="2.2"/>
+      <text x="510" y="194" text-anchor="middle" font-size="20" font-weight="900" fill="#fff">B</text>
+
+      <!-- 整體配對框（天平 2 左盤 B B） -->
+      <rect id="gMatchBoxR" x="437" y="159" width="100" height="54" rx="12" fill="#22c55e" fill-opacity="0.16" stroke="#16a34a" stroke-width="3.5" opacity="0"/>
+      <text id="gMatchTxtR" x="487" y="146" text-anchor="middle" font-size="14.5" font-weight="900" fill="#15803d" opacity="0">呢邊都係 2 個 B！</text>
+
+      <!-- 天平 2 右盤原 C C -->
+      <polygon points="628,166 607,206 649,206" fill="#8d5bd6" stroke="#5b21b6" stroke-width="2.2"/>
+      <text x="628" y="198" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">C</text>
+      <polygon points="674,166 653,206 695,206" fill="#8d5bd6" stroke="#5b21b6" stroke-width="2.2"/>
+      <text x="674" y="198" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">C</text>
+
+      <!-- 整個打包飛過去嘅 C C 分身 -->
+      <g id="gFlyPack" transform="translate(0,0)" opacity="0">
+        <rect x="600" y="158" width="102" height="54" rx="12" fill="#8d5bd6" fill-opacity="0.16" stroke="#7c3aed" stroke-width="3" stroke-dasharray="6 4"/>
+        <polygon points="628,166 607,206 649,206" fill="#8d5bd6" stroke="#5b21b6" stroke-width="2.2"/>
+        <text x="628" y="198" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">C</text>
+        <polygon points="674,166 653,206 695,206" fill="#8d5bd6" stroke="#5b21b6" stroke-width="2.2"/>
+        <text x="674" y="198" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">C</text>
+      </g>
+    </g>
+
+    <!-- 連線弧形箭咀（配對高亮） -->
+    <path id="gLinkArc" d="M 105 128 Q 296 58, 487 128" fill="none" stroke="#16a34a" stroke-width="3.5" stroke-dasharray="9 6" opacity="0"/>
+    <text id="gDoneBadge" x="380" y="72" text-anchor="middle" font-size="18" font-weight="900" fill="#7c3aed" opacity="0">⚡ 直接成組搬過去：2 個 C 秒殺！</text>
+  `;
+}
+
+function renderGeniusFrame(t) {
+  // t: 0..1
+  // 0..0.32: A A 變 B，原 B 落位 -> 左邊變 B B
+  const swap = easeInOut(seg(t, 0.08, 0.32));
+  setAttr('gAWrap', 'opacity', (1 - swap).toFixed(2));
+  setAttr('gBNew', 'opacity', swap.toFixed(2));
+  setTransform('gBOrig', `translate(${lerp(105, 130, swap).toFixed(1)},${lerp(144, 187, swap).toFixed(1)})`);
+
+  // 0.35..0.60: 兩個綠色大框同時閃起配對！
+  const match = easeOut(seg(t, 0.35, 0.56));
+  setAttr('gMatchBoxL', 'opacity', match.toFixed(2));
+  setAttr('gMatchBoxR', 'opacity', match.toFixed(2));
+  setAttr('gMatchTxtL', 'opacity', match.toFixed(2));
+  setAttr('gMatchTxtR', 'opacity', match.toFixed(2));
+  setAttr('gLinkArc', 'opacity', match.toFixed(2));
+
+  // 0.58..0.94: 成組 C C 由右盤一飛衝天搬去天平 3 右盤！
+  const fly = easeInOut(seg(t, 0.58, 0.92));
+  if (fly > 0.01) {
+    const dx = lerp(0, -378, fly);
+    const dy = -Math.sin(fly * Math.PI) * 90;
+    setAttr('gFlyPack', 'opacity', '1');
+    setTransform('gFlyPack', `translate(${dx.toFixed(1)},${dy.toFixed(1)})`);
+    setAttr('gQMark', 'opacity', (1 - fly).toFixed(2));
+  } else {
+    setAttr('gFlyPack', 'opacity', '0');
+    setAttr('gQMark', 'opacity', '1');
+  }
+  setAttr('gDoneBadge', 'opacity', easeOut(seg(t, 0.85, 1)).toFixed(2));
+
+  const sub = document.getElementById('geniusSub');
+  if (t < 0.34) sub.textContent = '① 將 2 個 A 變做 1 個 B，左邊即刻變做 2 個 B！';
+  else if (t < 0.58) sub.textContent = '② 嘩！同天平 2 左邊一模一樣，連拆半都唔使計！';
+  else sub.textContent = '③ 直接將天平 2 右邊成組 2 個 C 搬過去，2 秒秒殺！';
+}
+
+function playGeniusAnim() {
+  if (state.geniusRaf) cancelAnimationFrame(state.geniusRaf);
+  state.geniusProgress = 0;
+  let last = performance.now();
+  speakText('高手秒殺思維！將 2 個 A 換成 1 個 B，左邊變成 2 個 B，同第二個天平一模一樣！連平分一半都唔使，直接成組搬 2 個 C 過去，秒殺完成！');
+  const loop = (now) => {
+    const dt = Math.min(0.06, (now - last) / 1000);
+    last = now;
+    state.geniusProgress = clamp(state.geniusProgress + dt / 5.2, 0, 1);
+    renderGeniusFrame(state.geniusProgress);
+    if (state.geniusProgress < 1) {
+      state.geniusRaf = requestAnimationFrame(loop);
+    }
+  };
+  state.geniusRaf = requestAnimationFrame(loop);
+}
+
+/* =====================================================================
+   事件綁定
+   ===================================================================== */
+dom.playBtn.addEventListener('click', togglePlay);
+dom.prevBtn.addEventListener('click', () => { initAudio(); if (state.step > 0) goToStep(state.step - 1, false); });
+dom.nextBtn.addEventListener('click', () => { initAudio(); if (state.step < CONFIG.steps.length - 1) goToStep(state.step + 1, true); });
+dom.replayBtn.addEventListener('click', () => { initAudio(); goToStep(1, true); });
+
+dom.speedBtn.addEventListener('click', () => {
+  state.speed = state.speed === 0.75 ? 1.0 : 0.75;
+  dom.speedBtn.textContent = state.speed === 0.75 ? '🐢 0.75x 適中' : '🚶 1.0x 較快';
+  dom.speedBtn.classList.toggle('active', state.speed === 0.75);
+});
+
+dom.muteBtn.addEventListener('click', () => {
+  state.muted = !state.muted;
+  dom.muteBtn.textContent = state.muted ? '🔇 已靜音' : '🔊 聲音開';
+  if (state.muted) cancelSpeech();
+});
+
+// 鍵盤快捷鍵
+document.addEventListener('keydown', (e) => {
+  if (e.target && ['INPUT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)) return;
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  else if (e.code === 'ArrowRight') { e.preventDefault(); if (state.step < CONFIG.steps.length - 1) goToStep(state.step + 1, true); }
+  else if (e.code === 'ArrowLeft') { e.preventDefault(); if (state.step > 0) goToStep(state.step - 1, false); }
+});
+
+// 類似題與高手思維開關
+document.getElementById('openPracticeBtn').addEventListener('click', () => {
+  document.getElementById('geniusPanel').classList.remove('show');
+  document.getElementById('practicePanel').classList.add('show');
+  renderPractice();
+  document.getElementById('practicePanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
+document.getElementById('closePracticeBtn').addEventListener('click', () => {
+  document.getElementById('practicePanel').classList.remove('show');
+});
+document.getElementById('newPracticeBtn').addEventListener('click', () => {
+  state.practiceIdx++;
+  renderPractice();
+});
+document.getElementById('togglePracHintBtn').addEventListener('click', () => {
+  document.getElementById('pracHintPaper').classList.toggle('show');
+});
+
+document.getElementById('openGeniusBtn').addEventListener('click', () => {
+  document.getElementById('practicePanel').classList.remove('show');
+  document.getElementById('geniusPanel').classList.add('show');
+  buildGeniusSVG();
+  playGeniusAnim();
+  document.getElementById('geniusPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
+document.getElementById('closeGeniusBtn').addEventListener('click', () => {
+  if (state.geniusRaf) cancelAnimationFrame(state.geniusRaf);
+  cancelSpeech();
+  document.getElementById('geniusPanel').classList.remove('show');
+});
+document.getElementById('replayGeniusBtn').addEventListener('click', playGeniusAnim);
+
+/* 啟動初始畫面（開場忠實：第 0 步純原圖 ＋ 空白算草紙） */
+buildStaticUI();
+renderFrame(0, 1);
+</script>
+</body>
+</html>

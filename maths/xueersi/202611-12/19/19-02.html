@@ -1,0 +1,2437 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>拓展練習 2｜天秤等量代換・視覺化教學動畫</title>
+<style>
+  :root {
+    --bg: #f6f8fc;
+    --card: #ffffff;
+    --ink: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --sq: #0aa5c9;
+    --sq-soft: #e0f6fb;
+    --cir: #f4711f;
+    --cir-soft: #fff1e6;
+    --tri: #8d5bd6;
+    --tri-soft: #f3ecff;
+    --g1: #f4711f;
+    --g2: #33b26a;
+    --g3: #e8467c;
+    --gold: #f0a500;
+    --pen: #1d4ed8;
+    --paper: #fffdf2;
+    --accent: #2563eb;
+    --shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "PingFang TC", "Hiragino Sans CNS", "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 10px 12px 14px;
+    gap: 10px;
+  }
+
+  /* 頂部進度列 */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 8px 12px;
+    box-shadow: var(--shadow);
+  }
+
+  .phase-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .phase-pill {
+    border: 1.5px solid var(--border);
+    background: #f8fafc;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .phase-pill:hover { border-color: #93c5fd; background: #eff6ff; }
+  .phase-pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.28);
+  }
+  .phase-pill.done {
+    background: #ecfdf5;
+    border-color: #6ee7b7;
+    color: #047857;
+  }
+
+  .top-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tool-btn {
+    border: 1.5px solid var(--border);
+    background: #fff;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+  }
+  .tool-btn:hover { background: #f1f5f9; }
+  .tool-btn.active-toggle {
+    background: #eff6ff;
+    border-color: #60a5fa;
+    color: #1d4ed8;
+  }
+  .tool-btn.muted {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+  }
+
+  /* 題目卡片 */
+  .question-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .q-main {
+    flex: 1 1 520px;
+  }
+
+  .q-tag-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+
+  .q-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #eef2ff;
+    color: #3730a3;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  .grade-badge {
+    display: inline-flex;
+    align-items: center;
+    background: #ecfeff;
+    color: #0e7490;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid #a5f3fc;
+  }
+
+  .q-zh {
+    font-size: 22px;
+    line-height: 1.55;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+  }
+
+  .q-seg {
+    display: inline;
+    padding: 2px 4px;
+    border-radius: 8px;
+    transition: all 0.25s ease;
+    border-bottom: 3px solid transparent;
+  }
+  .q-seg.hl {
+    background: #fef08a;
+    border-bottom: 3px solid #ea580c;
+    color: #0f172a;
+  }
+
+  .q-en {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 4px 0 0;
+    font-weight: 500;
+  }
+
+  .symbol-key-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fffbeb;
+    border: 1.5px dashed #f59e0b;
+    border-radius: 12px;
+    padding: 6px 12px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #92400e;
+    opacity: 0;
+    transform: scale(0.92);
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+  .symbol-key-box.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* 雙軌主舞台 */
+  .stage-grid {
+    display: grid;
+    grid-template-columns: 1.22fr 0.95fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 360px;
+  }
+
+  .track-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .track-card.paper-card {
+    background: var(--paper);
+    border-color: #e6dbb8;
+    background-image:
+      linear-gradient(to right, rgba(210, 198, 160, 0.28) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(210, 198, 160, 0.28) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .track-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(4px);
+  }
+
+  .track-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .track-sub {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+  }
+
+  .svg-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    position: relative;
+    min-height: 310px;
+  }
+
+  .svg-wrap svg {
+    width: 100%;
+    height: 100%;
+    max-height: 415px;
+    display: block;
+    overflow: visible;
+  }
+
+  /* 零遮擋內嵌條（互動題 / 慶祝口訣 / 類似題 / 高手思維） */
+  .inline-panel {
+    display: none;
+    background: var(--card);
+    border: 2px solid #93c5fd;
+    border-radius: 16px;
+    padding: 12px 16px;
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12);
+    animation: slideDown 0.25s ease;
+  }
+  .inline-panel.open { display: block; }
+  .inline-panel.celebrate {
+    border-color: #34d399;
+    background: linear-gradient(135deg, #ecfdf5 0%, #fffbeb 100%);
+  }
+  .inline-panel.master {
+    border-color: #a855f7;
+    background: linear-gradient(135deg, #faf5ff 0%, #fff7ed 100%);
+  }
+  .inline-panel.practice {
+    border-color: #0ea5e9;
+    background: #f0f9ff;
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .quiz-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .quiz-q {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1e3a8a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .quiz-opts {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .opt-btn {
+    border: 2px solid #bfdbfe;
+    background: #fff;
+    color: #1e293b;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 8px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    min-width: 78px;
+  }
+  .opt-btn:hover { background: #eff6ff; border-color: #3b82f6; transform: translateY(-1px); }
+  .opt-btn.correct { background: #10b981; border-color: #059669; color: #fff; }
+  .opt-btn.wrong { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
+
+  .skip-btn {
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 6px 10px;
+    text-decoration: underline;
+  }
+
+  .quiz-feedback {
+    margin-top: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    min-height: 22px;
+  }
+  .quiz-feedback.ok { color: #047857; }
+  .quiz-feedback.err { color: #b91c1c; }
+
+  /* 慶祝條 */
+  .celebrate-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .mantra-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .mantra-label {
+    background: #059669;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+
+  .mantra-text {
+    font-size: 20px;
+    font-weight: 900;
+    color: #065f46;
+  }
+
+  .bonus-btns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .action-pill {
+    border: none;
+    border-radius: 999px;
+    padding: 9px 16px;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .action-pill:hover { transform: translateY(-1px); }
+  .action-pill.practice-btn {
+    background: #0284c7;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+  }
+  .action-pill.master-btn {
+    background: linear-gradient(135deg, #7c3aed, #db2777);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.28);
+  }
+  .action-pill.close-btn {
+    background: #e2e8f0;
+    color: #334155;
+  }
+
+  /* 類似題與高手思維內部佈局 */
+  .subpanel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .subpanel-title {
+    font-size: 18px;
+    font-weight: 900;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .practice-body {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 12px;
+    align-items: center;
+  }
+  .practice-svg-box {
+    background: #fff;
+    border: 1.5px solid #bae6fd;
+    border-radius: 14px;
+    padding: 8px;
+  }
+  .practice-svg-box svg { width: 100%; height: auto; display: block; }
+  .practice-ctrl {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .practice-q-text {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0c4a6e;
+    margin: 0;
+    line-height: 1.5;
+  }
+  .hint-box {
+    display: none;
+    background: var(--paper);
+    border: 1.5px dashed #d97706;
+    border-radius: 12px;
+    padding: 8px 10px;
+  }
+  .hint-box.show { display: block; }
+  .hint-box svg { width: 100%; height: auto; display: block; }
+
+  .master-stage {
+    display: grid;
+    grid-template-columns: 1.35fr 0.75fr;
+    gap: 12px;
+    align-items: center;
+  }
+  .master-svg-box {
+    background: #fff;
+    border: 1.5px solid #d8b4fe;
+    border-radius: 14px;
+    padding: 8px;
+  }
+  .master-svg-box svg { width: 100%; height: auto; display: block; }
+  .master-steps-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .master-step-btn {
+    text-align: left;
+    border: 1.5px solid #e9d5ff;
+    background: #fff;
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    color: #3b0764;
+    transition: all 0.2s ease;
+  }
+  .master-step-btn.active {
+    background: #7c3aed;
+    border-color: #7c3aed;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+  }
+
+  /* 底部停靠列 */
+  .bottom-dock {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    padding: 12px 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .caption-formula-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .subtitle-box {
+    flex: 1 1 460px;
+    font-size: 18px;
+    line-height: 1.6;
+    font-weight: 700;
+    color: #0f172a;
+    min-height: 32px;
+  }
+
+  .q-quote {
+    display: inline;
+    background: #fef9c3;
+    border: 1px solid #fde047;
+    color: #854d0e;
+    padding: 1px 6px;
+    border-radius: 6px;
+    margin-right: 4px;
+    font-weight: 800;
+  }
+
+  .formula-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 6px 14px;
+    font-size: 24px;
+    font-weight: 900;
+    color: #0f172a;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+
+  .controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ctrl-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: #fff;
+    color: #1e293b;
+    font-size: 20px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    transition: all 0.15s ease;
+  }
+  .ctrl-btn:hover { background: #f1f5f9; transform: scale(1.04); }
+  .ctrl-btn:active { transform: scale(0.96); }
+  .ctrl-btn.primary {
+    width: 56px;
+    height: 56px;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-size: 22px;
+    box-shadow: 0 5px 14px rgba(37, 99, 235, 0.32);
+  }
+  .ctrl-btn.primary:hover { background: #1d4ed8; }
+  .ctrl-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .step-counter {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--muted);
+    background: #f1f5f9;
+    padding: 5px 12px;
+    border-radius: 999px;
+  }
+
+  .kbd-hints {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 600;
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .kbd-hints { display: none !important; }
+  }
+
+  /* 響應式：手機直屏上下緊貼排列 */
+  @media (max-width: 860px) {
+    .stage-grid {
+      grid-template-columns: 1fr;
+    }
+    .practice-body, .master-stage {
+      grid-template-columns: 1fr;
+    }
+    .q-zh { font-size: 20px; }
+    .subtitle-box { font-size: 17px; }
+    .formula-bar { font-size: 22px; }
+    .svg-wrap { min-height: 250px; }
+  }
+
+  /* 彩紙畫布（pointer-events: none，絕不遮擋操作） */
+  #confettiCanvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 999;
+  }
+</style>
+</head>
+<body>
+<canvas id="confettiCanvas"></canvas>
+
+<div class="app-shell">
+  <!-- 頂部：可點擊階段進度傳送門 ＋ 語速與靜音 -->
+  <header class="top-bar">
+    <div class="phase-pills" id="phasePills"></div>
+    <div class="top-tools">
+      <button class="tool-btn active-toggle" id="rateBtn" title="切換旁白語速">🐢 0.75x 適中</button>
+      <button class="tool-btn" id="muteBtn" title="開關語音及音效">🔊 開啟聲音</button>
+    </div>
+  </header>
+
+  <!-- 中上：題目卡片 -->
+  <section class="question-card">
+    <div class="q-main">
+      <div class="q-tag-row">
+        <span class="q-badge">📐 拓展練習 2</span>
+        <span class="grade-badge">小一至小二・分組代換（不用乘除代數）</span>
+      </div>
+      <h1 class="q-zh">
+        <span class="q-seg" id="qSeg0">需要多少個 △</span>
+        <span class="q-seg" id="qSeg1">在下面天秤的右方使它平衡。</span>
+      </h1>
+      <p class="q-en">How many △ are needed on the right side of the balance to make it balance?</p>
+    </div>
+    <div class="symbol-key-box" id="symbolKeyBox">
+      <span>✏️ 草稿速記防撈亂：</span>
+      <span style="color:#f4711f;">○ → ◇</span>
+      <span style="color:#64748b;font-weight:600;">(免似數字 0)</span>
+    </div>
+  </section>
+
+  <!-- 中間主舞台：軌道 A（具象天秤）＋ 軌道 B（✏️ 實戰鉛筆算草紙） -->
+  <main class="stage-grid">
+    <section class="track-card">
+      <div class="track-header">
+        <span class="track-title">⚖️ 具象理解舞台（原圖天秤）</span>
+        <span class="track-sub" id="trackASub">忠實還原原題</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="stageSVG" viewBox="0 0 600 410" aria-label="具象天秤動畫舞台"></svg>
+      </div>
+    </section>
+
+    <section class="track-card paper-card">
+      <div class="track-header">
+        <span class="track-title">✏️ 實戰鉛筆算草紙</span>
+        <span class="track-sub">不用乘除・絕不畫 ○</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="paperSVG" viewBox="0 0 460 415" aria-label="實戰鉛筆算草紙"></svg>
+      </div>
+    </section>
+  </main>
+
+  <!-- 零遮擋內嵌條 1：停一停，估一估 -->
+  <section class="inline-panel" id="quizPanel">
+    <div class="quiz-row">
+      <div class="quiz-q" id="quizQuestion">🤔 停一停，估一估！</div>
+      <div class="quiz-opts" id="quizOptions"></div>
+    </div>
+    <div class="quiz-feedback" id="quizFeedback"></div>
+  </section>
+
+  <!-- 零遮擋內嵌條 2：片尾慶祝、口訣與進階按鈕 -->
+  <section class="inline-panel celebrate" id="celebratePanel">
+    <div class="celebrate-row">
+      <div class="mantra-box">
+        <span class="mantra-label">🏆 考場實戰口訣</span>
+        <span class="mantra-text" id="mantraText">先換圓，兩個圈，再換三角加埋完！</span>
+      </div>
+      <div class="bonus-btns">
+        <button class="action-pill practice-btn" id="openPracticeBtn">🎯 挑戰類似題</button>
+        <button class="action-pill master-btn" id="openMasterBtn">✨ 高手秒殺思維</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 零遮擋內嵌條 3：挑戰類似題（預設無彩色公仔 → 草稿提示 → 答對才展開彩色實物驗證） -->
+  <section class="inline-panel practice" id="practicePanel">
+    <div class="subpanel-head">
+      <span class="subpanel-title" id="practiceTitle">🎯 挑戰類似題（第 1 題）</span>
+      <div class="bonus-btns">
+        <button class="tool-btn" id="toggleHintBtn">✏️ 睇草稿提示</button>
+        <button class="tool-btn" id="nextPracticeBtn">換另一題 ↻</button>
+        <button class="action-pill close-btn" id="closePracticeBtn">收起 ✕</button>
+      </div>
+    </div>
+    <div class="practice-body">
+      <div class="practice-svg-box">
+        <svg id="practiceSVG" viewBox="0 0 540 270"></svg>
+      </div>
+      <div class="practice-ctrl">
+        <p class="practice-q-text" id="practiceQText"></p>
+        <div class="hint-box" id="practiceHintBox">
+          <svg id="practiceHintSVG" viewBox="0 0 380 125"></svg>
+        </div>
+        <div class="quiz-opts" id="practiceOpts"></div>
+        <div class="quiz-feedback" id="practiceFeedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 零遮擋內嵌條 4：高手秒殺思維（純視覺化「底二頂一・手拖手」動畫） -->
+  <section class="inline-panel master" id="masterPanel">
+    <div class="subpanel-head">
+      <span class="subpanel-title">✨ 高手秒殺思維：底二頂一・手拖手直接變！</span>
+      <button class="action-pill close-btn" id="closeMasterBtn">收起 ✕</button>
+    </div>
+    <div class="master-stage">
+      <div class="master-svg-box">
+        <svg id="masterSVG" viewBox="0 0 560 275"></svg>
+      </div>
+      <div class="master-steps-box" id="masterStepBtns"></div>
+    </div>
+  </section>
+
+  <!-- 底部固定停靠：廣東話字幕、同色算式條、大圓形觸控掣 -->
+  <footer class="bottom-dock">
+    <div class="caption-formula-row">
+      <div class="subtitle-box" id="subtitleBox">點擊「▶」開始，一齊睇清楚三個天秤！</div>
+      <div class="formula-bar" id="formulaBar">
+        <span style="color:#94a3b8;font-size:16px;font-weight:700;">準備落筆…</span>
+      </div>
+    </div>
+    <div class="controls-row">
+      <div class="ctrl-group">
+        <button class="ctrl-btn" id="prevBtn" title="上一步">⏮</button>
+        <button class="ctrl-btn primary" id="playBtn" title="播放 / 暫停">▶</button>
+        <button class="ctrl-btn" id="nextBtn" title="下一步">⏭</button>
+        <button class="ctrl-btn" id="replayBtn" title="由頭重播">🔄</button>
+      </div>
+      <div class="ctrl-group">
+        <span class="step-counter" id="stepCounter">第 1 / 11 步</span>
+        <span class="kbd-hints">空白鍵：播放/暫停 ｜ ← →：上/下一步</span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* ============================================================================
+   集中 CONFIG 區：題目數據、分句高亮、安全符號、異讀聲調映射表、色板與步驟
+   ============================================================================ */
+const CONFIG = {
+  defaultRate: 0.75,
+  fastRate: 1.0,
+  colors: {
+    sq: '#0aa5c9',
+    sqFill: '#d8f5fc',
+    cir: '#f4711f',
+    cirFill: '#ffebd9',
+    tri: '#8d5bd6',
+    triFill: '#efe5ff',
+    groups: ['#f4711f', '#33b26a', '#e8467c', '#0aa5c9', '#8d5bd6', '#f0a500'],
+    groupsSoft: ['#fff0e3', '#e7f8ee', '#fdeaf1'],
+    pen: '#1d4ed8',
+    pencil: '#334155',
+    beam: '#475569'
+  },
+  // 廣東話異讀字與聲調精準校對映射表（畫面維持標準中文，TTS 自動替換無歧義同音同調字）
+  HETERO_MAP: [
+    ['一排', '一徘'],
+    ['底排', '底徘'],
+    ['兩排', '兩徘'],
+    ['三排', '三徘'],
+    ['畫出', '劃出'],
+    ['畫線', '劃線'],
+    ['畫低', '劃低'],
+    ['畫框', '劃框'],
+    ['唔畫', '唔劃'],
+    ['數一數', '嫂一嫂'],
+    ['數吓', '嫂吓'],
+    ['數出', '嫂出'],
+    ['點數', '點嫂'],
+    ['重頭', '從頭']
+  ],
+  phases: [
+    { id: 0, label: '1. 審題睇圖', startStep: 0 },
+    { id: 1, label: '2. 抄低線索', startStep: 3 },
+    { id: 2, label: '3. 過橋換圓', startStep: 5 },
+    { id: 3, label: '4. 分組寫答', startStep: 8 }
+  ],
+  steps: [
+    {
+      phase: 0,
+      dur: 1400,
+      hlSeg: -1,
+      trackASub: '忠實還原原題',
+      subtitle: '我哋先睇清楚原題文字同三個天秤，再一步步落筆計。',
+      tts: '我哋先睇清楚原題文字同三個天秤，再一步步落筆計。',
+      formulaHtml: '<span style="color:#94a3b8;font-size:16px;font-weight:700;">先睇清楚原圖</span>'
+    },
+    {
+      phase: 0,
+      dur: 1800,
+      hlSeg: 0,
+      trackASub: '鎖定題目目標',
+      subtitle: '題目問：<span class="q-quote">「需要多少個 △」</span>即係最後要搵出，總共有幾多個三角形。',
+      tts: '題目問：需要多少個三角形。即係最後要搵出，總共有幾多個三角形。',
+      formulaHtml: '<span style="color:#8d5bd6;">目標：? 個 △</span>'
+    },
+    {
+      phase: 0,
+      dur: 2500,
+      hlSeg: 1,
+      trackASub: '先望下面天秤',
+      subtitle: '題目指明：<span class="q-quote">「在下面天秤的右方使它平衡。」</span>左邊有兩個正方形，草稿先記低要換幾多個三角形。',
+      tts: '題目指明：在下面天秤的右方使它平衡。左邊有兩個正方形，草稿先記低要換幾多個三角形。',
+      formulaHtml: '<span style="color:#0aa5c9;">2 個 □</span> <span style="color:#64748b;">=</span> <span style="color:#8d5bd6;">? 個 △</span>'
+    },
+    {
+      phase: 1,
+      dur: 2700,
+      hlSeg: -1,
+      trackASub: '左上天秤線索 1',
+      subtitle: '睇左上天秤：一個正方形等於三個圓形。為免同數字零撈亂，草稿改用菱形記低三個圓形。',
+      tts: '睇左上天秤：一個正方形等於三個圓形。為免同數字零撈亂，草稿改用菱形記低三個圓形。',
+      formulaHtml: '<span style="color:#0aa5c9;">1 □</span> = <span style="color:#f4711f;">3 ○</span>'
+    },
+    {
+      phase: 1,
+      dur: 2600,
+      hlSeg: -1,
+      trackASub: '右上天秤線索 2',
+      subtitle: '再睇右上天秤：三個三角形等於兩個圓形。即係每兩個圓形，都可以換三個三角形。',
+      tts: '再睇右上天秤：三個三角形等於兩個圓形。即係每兩個圓形，都可以換三個三角形。',
+      formulaHtml: '<span style="color:#8d5bd6;">3 △</span> = <span style="color:#f4711f;">2 ○</span>'
+    },
+    {
+      phase: 2,
+      dur: 2700,
+      hlSeg: -1,
+      trackASub: '第 1 個正方形換圓形',
+      subtitle: '返去下面天秤，先由正方形過橋變圓形！第一個正方形，換成三個圓形。',
+      tts: '返去下面天秤，先由正方形過橋變圓形！第一個正方形，換成三個圓形。',
+      formulaHtml: '<span style="color:#f4711f;">3</span>'
+    },
+    {
+      phase: 2,
+      dur: 2100,
+      hlSeg: -1,
+      trackASub: '第 2 個正方形換圓形',
+      subtitle: '第二個正方形，一樣換成三個圓形！停一停估吓，加埋總共有幾多個圓形？',
+      tts: '第二個正方形，一樣換成三個圓形！停一停估吓，加埋總共有幾多個圓形？',
+      formulaHtml: '<span style="color:#f4711f;">3 + 3 = ?</span>',
+      quiz: {
+        question: '🤔 停一停，估一估！兩個正方形，總共換到幾多個圓形？',
+        options: [
+          { label: '5 個', ok: false, tip: '再數真啲呀！第一個換 3 個，第二個又換 3 個，3 加 3 係幾多呢？' },
+          { label: '6 個', ok: true,  tip: '答啱喇！3 加 3 等於 6，總共有 6 個圓形！' },
+          { label: '7 個', ok: false, tip: '多咗一個喇！左邊係 3 個，右邊又係 3 個，一齊數吓。' }
+        ]
+      }
+    },
+    {
+      phase: 2,
+      dur: 2000,
+      hlSeg: -1,
+      trackASub: '數清總共 6 個圓形',
+      subtitle: '冇錯！三加三等於六，兩個正方形同六個圓形一樣重。',
+      tts: '冇錯！三加三等於六，兩個正方形同六個圓形一樣重。',
+      formulaHtml: '<span style="color:#f4711f;">3 + 3 = 6</span>'
+    },
+    {
+      phase: 3,
+      dur: 2600,
+      hlSeg: -1,
+      trackASub: '每 2 個圓形圈做一組',
+      subtitle: '每兩個圓形換三個三角形，所以我哋將六個圓形兩個一組圈起！睇吓分成幾多組？',
+      tts: '每兩個圓形換三個三角形，所以我哋將六個圓形兩個一組圈起！睇吓分成幾多組？',
+      formulaHtml: '<span style="color:#f4711f;">6 個 ○</span> → <span style="color:#33b26a;">每 2 個一組</span>',
+      quiz: {
+        question: '🤔 停一停，睇圖數吓！六個圓形每兩個一組，總共分成幾多組？',
+        options: [
+          { label: '2 組', ok: false, tip: '未數晒呀！2 個、4 個，仲有最後 2 個未圈喎，再望真啲！' },
+          { label: '3 組', ok: true,  tip: '好醒目！橙框、綠框、桃紅框，啱啱好分成 3 組！' },
+          { label: '4 組', ok: false, tip: '4 組會需要 8 個圓形，我哋只有 6 個圓形，數吓有幾多個框。' }
+        ]
+      }
+    },
+    {
+      phase: 3,
+      dur: 3400,
+      hlSeg: -1,
+      trackASub: '逐組換成 3 個三角形',
+      subtitle: '第一組換三個三角形，記低三。第二組再換三個，第三組又換三個！三加三加三等於九！',
+      tts: '第一組換三個三角形，記低三。第二組再換三個，第三組又換三個！三加三加三等於九！',
+      formulaHtml: '<span style="color:#f4711f;">3</span> + <span style="color:#33b26a;">3</span> + <span style="color:#e8467c;">3</span> = <span style="color:#8d5bd6;">9</span>'
+    },
+    {
+      phase: 3,
+      dur: 2600,
+      hlSeg: -1,
+      trackASub: '寫入虛線框・天秤平衡！',
+      subtitle: '喺下面天秤右邊虛線框畫出九個三角形，天秤就平衡喇！口訣：先換圓，兩個圈，再換三角加埋完！',
+      tts: '喺下面天秤右邊虛線框畫出九個三角形，天秤就平衡喇！口訣：先換圓，兩個圈，再換三角加埋完！',
+      formulaHtml: '<span style="color:#8d5bd6;">3 + 3 + 3 = 9 個 △</span>',
+      isFinal: true
+    }
+  ],
+  // 類似題題庫（預設無彩色公仔，附極簡安全符號草稿提示，答對才顯示彩色驗證圖）
+  practices: [
+    {
+      title: '🎯 挑戰類似題（第 1 題）',
+      sqToCir: 4,     // 1 □ = 4 ○
+      cirPerGrp: 2,   // 2 ○ = 3 △
+      triPerGrp: 3,
+      askSq: 2,       // 2 □ = ? △ -> 8 ○ -> 4 groups -> 3+3+3+3 = 12
+      answer: 12,
+      options: [9, 12, 15],
+      qText: '如果 1 個 □ ＝ 4 個 ○，而 3 個 △ ＝ 2 個 ○。咁 2 個 □ 需要幾多個 △ 平衡？',
+      addExpr: '3 + 3 + 3 + 3 = 12'
+    },
+    {
+      title: '🎯 挑戰類似題（第 2 題）',
+      sqToCir: 2,     // 1 □ = 2 ○
+      cirPerGrp: 3,   // 3 ○ = 4 △
+      triPerGrp: 4,
+      askSq: 3,       // 3 □ = ? △ -> 6 ○ -> 2 groups of 3 -> 4+4 = 8
+      answer: 8,
+      options: [6, 8, 10],
+      qText: '如果 1 個 □ ＝ 2 個 ○，而 4 個 △ ＝ 3 個 ○。咁 3 個 □ 需要幾多個 △ 平衡？',
+      addExpr: '4 + 4 = 8'
+    }
+  ],
+  // 高手秒殺思維 3 步視覺動畫
+  masterSteps: [
+    {
+      title: '第 1 步：並排兩座「3 個圓形」金字塔',
+      text: '原圖 3 個圓形本身就係「底排 2 個＋頂部 1 個」！2 個正方形就即係並排兩座金字塔。'
+    },
+    {
+      title: '第 2 步：底排兩對直接變身 3 △ ＋ 3 △',
+      text: '唔使數到 6！兩座金字塔底排本身已經各有 2 個圓形，一眼直接變成兩組 3 個三角形！'
+    },
+    {
+      title: '第 3 步：頂部兩個「單丁圓形」飛埋手拖手！',
+      text: '頂部剩低嘅 1 個加 1 個飛埋一齊手拖手，又變成第 3 對圓形，再換多 3 個三角形！3 + 3 + 3 = 9 秒殺！'
+    }
+  ]
+};
+
+/* ============================================================================
+   全域狀態與 DOM 參照（動畫渲染 100% 由純函數 renderScene(step, p) 驅動）
+   ============================================================================ */
+const state = {
+  step: 0,
+  p: 1,
+  playing: false,
+  pausedForQuiz: false,
+  quizSolved: {},
+  rate: CONFIG.defaultRate,
+  muted: false,
+  rafId: null,
+  lastTs: 0,
+  ttsWatchdog: null,
+  activePracticeIdx: 0,
+  practiceSolved: false,
+  practiceHintOpen: false,
+  masterStep: 0,
+  masterP: 1,
+  masterRaf: null,
+  confettiFired: false
+};
+
+const $ = id => document.getElementById(id);
+const els = {
+  phasePills: $('phasePills'),
+  rateBtn: $('rateBtn'),
+  muteBtn: $('muteBtn'),
+  qSeg0: $('qSeg0'),
+  qSeg1: $('qSeg1'),
+  symbolKeyBox: $('symbolKeyBox'),
+  trackASub: $('trackASub'),
+  stageSVG: $('stageSVG'),
+  paperSVG: $('paperSVG'),
+  quizPanel: $('quizPanel'),
+  quizQuestion: $('quizQuestion'),
+  quizOptions: $('quizOptions'),
+  quizFeedback: $('quizFeedback'),
+  celebratePanel: $('celebratePanel'),
+  practicePanel: $('practicePanel'),
+  masterPanel: $('masterPanel'),
+  subtitleBox: $('subtitleBox'),
+  formulaBar: $('formulaBar'),
+  prevBtn: $('prevBtn'),
+  playBtn: $('playBtn'),
+  nextBtn: $('nextBtn'),
+  replayBtn: $('replayBtn'),
+  stepCounter: $('stepCounter')
+};
+
+/* ============================================================================
+   Web Audio 柔和音效合成（零外部音檔）
+   ============================================================================ */
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (Ctx) audioCtx = new Ctx();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playSfx(type) {
+  if (state.muted) return;
+  try {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    if (type === 'pop') {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(520, now);
+      o.frequency.exponentialRampToValueAtTime(760, now + 0.08);
+      g.gain.setValueAtTime(0.08, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.12);
+    } else if (type === 'whoosh') {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(280, now);
+      o.frequency.exponentialRampToValueAtTime(520, now + 0.14);
+      g.gain.setValueAtTime(0.05, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.17);
+    } else if (type === 'ding') {
+      [587.3, 880].forEach((freq, i) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(freq, now + i * 0.09);
+        g.gain.setValueAtTime(0.09, now + i * 0.09);
+        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.25);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now + i * 0.09); o.stop(now + i * 0.09 + 0.26);
+      });
+    } else if (type === 'chord') {
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(freq, now + i * 0.07);
+        g.gain.setValueAtTime(0.08, now + i * 0.07);
+        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.55);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now + i * 0.07); o.stop(now + i * 0.07 + 0.56);
+      });
+    }
+  } catch (e) {}
+}
+
+/* ============================================================================
+   廣東話語音引擎（預設 0.75x ＋ HETERO_MAP 異讀聲調校準 ＋ 安全推進）
+   ============================================================================ */
+let cachedHKVoice = null;
+function pickHKVoice() {
+  if (!window.speechSynthesis) return null;
+  const voices = window.speechSynthesis.getVoices() || [];
+  const hk = voices.find(v => /zh[-_]HK/i.test(v.lang))
+    || voices.find(v => /cantonese|hong\s*kong|sin-ji|sinji|粵/i.test(v.name))
+    || voices.find(v => /zh[-_]TW|zh[-_]Hant/i.test(v.lang))
+    || voices.find(v => /^zh/i.test(v.lang));
+  if (hk) cachedHKVoice = hk;
+  return cachedHKVoice;
+}
+if (window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = pickHKVoice;
+  pickHKVoice();
+}
+
+function cleanForTTS(raw) {
+  let s = String(raw || '').replace(/<[^>]+>/g, '');
+  s = s.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '');
+  s = s.replace(/[|｜\[\]【】「」]/g, ' ');
+  s = s.replace(/△/g, '三角形')
+       .replace(/□/g, '正方形')
+       .replace(/○/g, '圓形')
+       .replace(/◇/g, '圓形')
+       .replace(/−|-/g, '減')
+       .replace(/\+/g, '加')
+       .replace(/×/g, '乘')
+       .replace(/÷/g, '除')
+       .replace(/=/g, '等於')
+       .replace(/→/g, '變成');
+  for (const [from, to] of CONFIG.HETERO_MAP) {
+    s = s.split(from).join(to);
+  }
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+function stopSpeech() {
+  if (state.ttsWatchdog) {
+    clearTimeout(state.ttsWatchdog);
+    state.ttsWatchdog = null;
+  }
+  if (window.speechSynthesis) {
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
+}
+
+function speakText(text, onDone) {
+  stopSpeech();
+  const cleaned = cleanForTTS(text);
+  const estMs = Math.max(1500, Math.round((cleaned.length * 240) / state.rate) + 500);
+
+  if (state.muted || !window.speechSynthesis || !cleaned) {
+    if (onDone) state.ttsWatchdog = setTimeout(onDone, estMs);
+    return;
+  }
+
+  let finished = false;
+  const finishOnce = () => {
+    if (finished) return;
+    finished = true;
+    if (state.ttsWatchdog) { clearTimeout(state.ttsWatchdog); state.ttsWatchdog = null; }
+    if (onDone) onDone();
+  };
+
+  try {
+    const u = new SpeechSynthesisUtterance(cleaned);
+    const v = pickHKVoice();
+    if (v) u.voice = v;
+    u.lang = 'zh-HK';
+    u.rate = state.rate;
+    u.pitch = 1.02;
+    u.onend = finishOnce;
+    u.onerror = finishOnce;
+    window.speechSynthesis.speak(u);
+    state.ttsWatchdog = setTimeout(finishOnce, estMs + 3200);
+  } catch (e) {
+    state.ttsWatchdog = setTimeout(finishOnce, estMs);
+  }
+}
+
+/* ============================================================================
+   SVG 繪圖輔助工具（純函數補間、閃三下、筆觸、單層圓圈數字徽章）
+   ============================================================================ */
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const easeOut = t => 1 - Math.pow(1 - clamp01(t), 3);
+const easeInOut = t => {
+  t = clamp01(t);
+  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+};
+const lerp = (a, b, t) => a + (b - a) * clamp01(t);
+
+// 區域高亮三部曲：進度 t (0..1) 內精準閃 3 下，之後穩定定住淡色
+function flash3Alpha(t, baseAlpha = 0.22, peakAlpha = 0.72) {
+  const c = clamp01(t);
+  if (c <= 0) return 0;
+  if (c < 0.75) {
+    const wave = Math.abs(Math.sin((c / 0.75) * Math.PI * 3));
+    return baseAlpha + (peakAlpha - baseAlpha) * wave;
+  }
+  return baseAlpha;
+}
+
+function arcPos(x0, y0, x1, y1, lift, t) {
+  const e = easeInOut(t);
+  const x = lerp(x0, x1, e);
+  const y = lerp(y0, y1, e) - Math.sin(e * Math.PI) * lift;
+  return { x, y };
+}
+
+function svgSquare(cx, cy, s, opts = {}) {
+  const fill = opts.fill ?? '#ffffff';
+  const stroke = opts.stroke ?? '#334155';
+  const sw = opts.sw ?? 2.2;
+  const op = opts.opacity ?? 1;
+  const sc = opts.scale ?? 1;
+  const glow = opts.glow ? `filter="drop-shadow(0 0 6px ${stroke})"` : '';
+  return `<g transform="translate(${cx.toFixed(1)},${cy.toFixed(1)}) scale(${sc.toFixed(3)})" opacity="${op.toFixed(3)}" ${glow}>
+    <rect x="${(-s/2).toFixed(1)}" y="${(-s/2).toFixed(1)}" width="${s}" height="${s}" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>
+  </g>`;
+}
+
+function svgCircle(cx, cy, r, opts = {}) {
+  const fill = opts.fill ?? '#ffffff';
+  const stroke = opts.stroke ?? '#334155';
+  const sw = opts.sw ?? 2.2;
+  const op = opts.opacity ?? 1;
+  const sc = opts.scale ?? 1;
+  const glow = opts.glow ? `filter="drop-shadow(0 0 6px ${stroke})"` : '';
+  return `<g transform="translate(${cx.toFixed(1)},${cy.toFixed(1)}) scale(${sc.toFixed(3)})" opacity="${op.toFixed(3)}" ${glow}>
+    <circle cx="0" cy="0" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>
+  </g>`;
+}
+
+function svgTriangle(cx, cy, s, opts = {}) {
+  const fill = opts.fill ?? '#ffffff';
+  const stroke = opts.stroke ?? '#334155';
+  const sw = opts.sw ?? 2.2;
+  const op = opts.opacity ?? 1;
+  const sc = opts.scale ?? 1;
+  const h = s * 0.86;
+  const glow = opts.glow ? `filter="drop-shadow(0 0 6px ${stroke})"` : '';
+  const pts = `0,${(-h*0.58).toFixed(1)} ${(-s/2).toFixed(1)},${(h*0.42).toFixed(1)} ${(s/2).toFixed(1)},${(h*0.42).toFixed(1)}`;
+  return `<g transform="translate(${cx.toFixed(1)},${cy.toFixed(1)}) scale(${sc.toFixed(3)})" opacity="${op.toFixed(3)}" ${glow}>
+    <polygon points="${pts}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+  </g>`;
+}
+
+// 算草紙安全符號：◇（菱形，嚴禁畫 ○ 或 O 防同 0 混淆）
+function svgDiamond(cx, cy, r, opts = {}) {
+  const fill = opts.fill ?? 'none';
+  const stroke = opts.stroke ?? '#f4711f';
+  const sw = opts.sw ?? 2.4;
+  const op = opts.opacity ?? 1;
+  const sc = opts.scale ?? 1;
+  const pts = `0,${-r} ${r},0 0,${r} ${-r},0`;
+  return `<g transform="translate(${cx.toFixed(1)},${cy.toFixed(1)}) scale(${sc.toFixed(3)})" opacity="${op.toFixed(3)}">
+    <polygon points="${pts}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+  </g>`;
+}
+
+// 單層圓圈阿拉伯數字徽章（嚴禁圈中圈）
+function svgBadge(cx, cy, num, color, scale = 1, op = 1) {
+  if (op <= 0.01 || scale <= 0.01) return '';
+  return `<g transform="translate(${cx.toFixed(1)},${cy.toFixed(1)}) scale(${scale.toFixed(3)})" opacity="${op.toFixed(3)}">
+    <circle cx="0" cy="0" r="11" fill="${color}" stroke="#ffffff" stroke-width="2"/>
+    <text x="0" y="4.5" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900">${num}</text>
+  </g>`;
+}
+
+function svgScaleBase(cx, y, halfW, tiltDeg = 0, label = '', beamColor = '#475569') {
+  const fulY = y + 4;
+  const fulPts = `${cx},${fulY} ${cx - 12},${fulY + 18} ${cx + 12},${fulY + 18}`;
+  let out = '';
+  if (label) {
+    out += `<text x="${cx}" y="${fulY + 34}" text-anchor="middle" fill="#64748b" font-size="12" font-weight="800">${label}</text>`;
+  }
+  out += `<polygon points="${fulPts}" fill="#f1f5f9" stroke="${beamColor}" stroke-width="2" stroke-linejoin="round"/>`;
+  out += `<g transform="rotate(${tiltDeg.toFixed(2)}, ${cx}, ${y})">
+    <rect x="${cx - halfW}" y="${y - 4}" width="${halfW * 2}" height="7" rx="2.5" fill="#ffffff" stroke="${beamColor}" stroke-width="2"/>
+  </g>`;
+  return out;
+}
+
+// 唯一深藍色筆尖視線嚮導（軌道 A 與軌道 B 互斥顯示）
+function svgPenDot(x, y, visible = true) {
+  if (!visible || x == null || y == null) return '';
+  return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})">
+    <circle cx="0" cy="0" r="10" fill="rgba(29,78,216,0.22)"/>
+    <circle cx="0" cy="0" r="5.5" fill="#1d4ed8" stroke="#ffffff" stroke-width="2"/>
+  </g>`;
+}
+
+function svgDrawRect(x, y, w, h, stroke, fill, prog, dashed = false) {
+  const c = clamp01(prog);
+  if (c <= 0.01) return '';
+  const perim = 2 * (w + h);
+  const dashAttr = dashed
+    ? `stroke-dasharray="6 4"`
+    : `stroke-dasharray="${perim.toFixed(1)}" stroke-dashoffset="${(perim * (1 - c)).toFixed(1)}"`;
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${fill}" fill-opacity="${(c * 0.9).toFixed(2)}" stroke="${stroke}" stroke-width="2.2" ${dashAttr}/>`;
+}
+
+function svgDrawLine(x1, y1, x2, y2, stroke, sw, prog) {
+  const c = clamp01(prog);
+  if (c <= 0.01) return '';
+  const len = Math.hypot(x2 - x1, y2 - y1);
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${len.toFixed(1)}" stroke-dashoffset="${(len * (1 - c)).toFixed(1)}"/>`;
+}
+
+/* ============================================================================
+   純函數渲染引擎：renderScene(stepIndex, p)
+   100% 由 (stepIndex, p) 決定畫面，前進／後退／跳轉零殘影
+   ============================================================================ */
+function renderScene(s, p) {
+  const C = CONFIG.colors;
+  const colored = s >= 1; // Step 0 嚴格忠實黑線原圖
+
+  let aHtml = '';
+  let bHtml = '';
+  let penA = null;
+  let penB = null;
+
+  // --------------------------------------------------------------------------
+  // 軌道 A：具象理解舞台（600 x 410）
+  // --------------------------------------------------------------------------
+
+  // 1. 左上天秤：左 1□，右 3○（底二頂一）
+  const s1FillSq = colored ? C.sqFill : '#ffffff';
+  const s1StrSq  = colored ? C.sq : '#334155';
+  const s1FillCir = colored ? C.cirFill : '#ffffff';
+  const s1StrCir  = colored ? C.cir : '#334155';
+  const s1Glow = (s === 3) || (s === 5 && p < 0.45) || (s === 6 && p < 0.35);
+
+  if (s === 3) {
+    const fa = flash3Alpha(p, 0.14, 0.55);
+    aHtml += `<rect x="28" y="32" width="234" height="128" rx="14" fill="rgba(10,165,201,${fa.toFixed(3)})" stroke="${C.sq}" stroke-width="3"/>`;
+  }
+  aHtml += svgScaleBase(145, 132, 102, 0, s >= 3 ? '線索 1' : '');
+  aHtml += svgSquare(82, 108, 36, { fill: s1FillSq, stroke: s1StrSq, sw: s1Glow ? 3 : 2.2, glow: s1Glow });
+  const s1Cirs = [[178, 111], [216, 111], [197, 76]];
+  s1Cirs.forEach(([x, y], idx) => {
+    const pulse = (s === 3 && p > 0.55) ? 1 + 0.08 * Math.sin((p - 0.55) * 14) : 1;
+    aHtml += svgCircle(x, y, 16, { fill: s1FillCir, stroke: s1StrCir, sw: s1Glow ? 3 : 2.2, scale: pulse, glow: s1Glow });
+    if (s === 3 && p > 0.72) {
+      const bp = easeOut((p - 0.72 - idx * 0.06) / 0.14);
+      aHtml += svgBadge(x + 12, y - 14, idx + 1, C.cir, bp, bp);
+    }
+  });
+  if (s === 3 && p < 0.48) {
+    penA = { x: lerp(82, 200, p / 0.48), y: 100 };
+  }
+
+  // 2. 右上天秤：左 3△（底二頂一），右 2○（並排）
+  const s2FillTri = colored ? C.triFill : '#ffffff';
+  const s2StrTri  = colored ? C.tri : '#334155';
+  const s2Glow = (s === 4) || (s === 8 && p < 0.35) || (s === 9 && p < 0.2);
+
+  if (s === 4) {
+    const fa = flash3Alpha(p, 0.14, 0.55);
+    aHtml += `<rect x="335" y="32" width="234" height="128" rx="14" fill="rgba(141,91,214,${fa.toFixed(3)})" stroke="${C.tri}" stroke-width="3"/>`;
+  }
+  aHtml += svgScaleBase(452, 132, 102, 0, s >= 4 ? '線索 2' : '');
+  const s2Tris = [[386, 113], [424, 113], [405, 81]];
+  s2Tris.forEach(([x, y], idx) => {
+    const pulse = (s === 4 && p > 0.55) ? 1 + 0.08 * Math.sin((p - 0.55) * 14) : 1;
+    aHtml += svgTriangle(x, y, 34, { fill: s2FillTri, stroke: s2StrTri, sw: s2Glow ? 3 : 2.2, scale: pulse, glow: s2Glow });
+    if (s === 4 && p > 0.70) {
+      const bp = easeOut((p - 0.70 - idx * 0.05) / 0.12);
+      aHtml += svgBadge(x, y - 18, idx + 1, C.tri, bp, bp);
+    }
+  });
+  const s2Cirs = [[496, 111], [534, 111]];
+  s2Cirs.forEach(([x, y], idx) => {
+    aHtml += svgCircle(x, y, 16, { fill: s1FillCir, stroke: s1StrCir, sw: s2Glow ? 3 : 2.2, glow: s2Glow });
+    if (s === 4 && p > 0.78) {
+      const bp = easeOut((p - 0.78 - idx * 0.06) / 0.12);
+      aHtml += svgBadge(x + 12, y - 14, idx + 1, C.cir, bp, bp);
+    }
+  });
+  if (s === 4 && p < 0.48) {
+    penA = { x: lerp(405, 520, p / 0.48), y: 104 };
+  }
+
+  // 3. 下面天秤：左 2□（之後逐步轉換），右 虛線長方形空框
+  let botTilt = 0;
+  if (s === 9) {
+    botTilt = lerp(-5, 0, easeOut(clamp01((p - 0.75) / 0.25)));
+  } else if (s === 10) {
+    botTilt = Math.sin(p * Math.PI * 2) * 1.4 * (1 - p);
+  }
+
+  if (s === 2) {
+    const fa = flash3Alpha(p, 0.12, 0.5);
+    aHtml += `<rect x="118" y="210" width="352" height="165" rx="16" fill="rgba(10,165,201,${fa.toFixed(3)})" stroke="${C.sq}" stroke-width="2.5" stroke-dasharray="8 5"/>`;
+  }
+
+  aHtml += svgScaleBase(300, 354, 175, botTilt, s >= 2 ? '題目要求平衡嘅天秤' : '');
+
+  const dashBoxStroke = (s === 1 || s === 2 || s === 10) ? C.tri : '#475569';
+  const dashBoxFill = (s === 1) ? `rgba(141,91,214,${flash3Alpha(p, 0.08, 0.35).toFixed(3)})`
+                    : (s === 10) ? 'rgba(239,229,255,0.45)' : 'none';
+  aHtml += `<rect x="334" y="218" width="114" height="130" rx="6" fill="${dashBoxFill}" stroke="${dashBoxStroke}" stroke-width="${s===1||s===10?2.6:1.8}" stroke-dasharray="6 6"/>`;
+
+  // 第 1..8 步：虛線框內提示 ? 個 △（第 0 步嚴格忠實空白）
+  if (s >= 1 && s <= 8) {
+    const qOp = s === 1 ? easeOut(p) : 0.75;
+    aHtml += `<g opacity="${qOp.toFixed(2)}">
+      <text x="391" y="280" text-anchor="middle" fill="${C.tri}" font-size="28" font-weight="900">?</text>
+      <text x="391" y="305" text-anchor="middle" fill="${C.tri}" font-size="14" font-weight="800">幾多個 △</text>
+    </g>`;
+    if (s === 1) penA = { x: 391, y: 278 };
+  }
+
+  const leftSq1 = { x: 185, y: 330 };
+  const leftSq2 = { x: 233, y: 330 };
+  const sixCirs = [
+    { x: 148, y: 330, grp: 0 },
+    { x: 198, y: 330, grp: 1 },
+    { x: 248, y: 330, grp: 2 },
+    { x: 148, y: 288, grp: 0 },
+    { x: 198, y: 288, grp: 1 },
+    { x: 248, y: 288, grp: 2 }
+  ];
+
+  // Steps 0..4：顯示原本 2 個 □
+  if (s <= 4) {
+    aHtml += svgSquare(leftSq1.x, leftSq1.y, 38, { fill: s1FillSq, stroke: s1StrSq, sw: s===2 ? 3 : 2.2, glow: s===2 });
+    aHtml += svgSquare(leftSq2.x, leftSq2.y, 38, { fill: s1FillSq, stroke: s1StrSq, sw: s===2 ? 3 : 2.2, glow: s===2 });
+    if (s === 2 && p > 0.65) {
+      const b1 = easeOut((p - 0.65) / 0.16);
+      const b2 = easeOut((p - 0.77) / 0.16);
+      aHtml += svgBadge(leftSq1.x, leftSq1.y - 26, 1, C.sq, b1, b1);
+      aHtml += svgBadge(leftSq2.x, leftSq2.y - 26, 2, C.sq, b2, b2);
+    }
+    if (s === 2 && p < 0.55) {
+      penA = { x: lerp(leftSq1.x, leftSq2.x, p / 0.55), y: leftSq1.y };
+    }
+  }
+
+  // Step 5：第 1 個 □ 閃示 → 飛走消失 → 短停 → 3 個 ○ 沿弧線飛入下排
+  if (s === 5) {
+    aHtml += svgSquare(leftSq2.x, leftSq2.y, 38, { fill: C.sqFill, stroke: C.sq, sw: 2.2, opacity: 0.55 });
+    if (p < 0.40) {
+      if (p < 0.22) {
+        const sc = 1 + 0.12 * Math.sin((p / 0.22) * Math.PI * 3);
+        aHtml += svgSquare(leftSq1.x, leftSq1.y, 38, { fill: C.sqFill, stroke: C.sq, sw: 3.2, scale: sc, glow: true });
+        penA = { x: leftSq1.x, y: leftSq1.y };
+      } else {
+        const ft = (p - 0.22) / 0.18;
+        const pos = arcPos(leftSq1.x, leftSq1.y, leftSq1.x - 45, leftSq1.y - 75, 20, ft);
+        aHtml += svgSquare(pos.x, pos.y, 38, { fill: C.sqFill, stroke: C.sq, sw: 2.2, scale: 1 - ft * 0.7, opacity: 1 - ft });
+      }
+    }
+    if (p >= 0.48) {
+      for (let i = 0; i < 3; i++) {
+        const it = clamp01((p - 0.48 - i * 0.08) / 0.24);
+        if (it > 0) {
+          const target = sixCirs[i];
+          const src = s1Cirs[i];
+          const pos = arcPos(src[0], src[1], target.x, target.y, 35, it);
+          aHtml += svgCircle(pos.x, pos.y, 15, { fill: C.cirFill, stroke: C.cir, sw: 2.4, scale: lerp(0.65, 1, it) });
+          if (it > 0.92) {
+            const bp = easeOut((p - 0.78) / 0.18);
+            aHtml += svgBadge(target.x, target.y - 20, i + 1, C.cir, bp, bp);
+          }
+        }
+      }
+    }
+  }
+
+  // Step 6：第 2 個 □ 閃示 → 飛走 → 3 個 ○ 飛入上排
+  if (s === 6) {
+    for (let i = 0; i < 3; i++) {
+      aHtml += svgCircle(sixCirs[i].x, sixCirs[i].y, 15, { fill: C.cirFill, stroke: C.cir, sw: 2.2 });
+    }
+    if (p < 0.34) {
+      if (p < 0.16) {
+        const sc = 1 + 0.1 * Math.sin((p / 0.16) * Math.PI * 2);
+        aHtml += svgSquare(leftSq2.x, leftSq2.y - 42, 36, { fill: C.sqFill, stroke: C.sq, sw: 3, scale: sc, glow: true });
+        penA = { x: leftSq2.x, y: leftSq2.y - 42 };
+      } else {
+        const ft = (p - 0.16) / 0.18;
+        const pos = arcPos(leftSq2.x, leftSq2.y - 42, leftSq2.x + 40, leftSq2.y - 115, 20, ft);
+        aHtml += svgSquare(pos.x, pos.y, 36, { fill: C.sqFill, stroke: C.sq, sw: 2.2, scale: 1 - ft * 0.7, opacity: 1 - ft });
+      }
+    }
+    if (p >= 0.42) {
+      for (let i = 3; i < 6; i++) {
+        const it = clamp01((p - 0.42 - (i - 3) * 0.06) / 0.22);
+        if (it > 0) {
+          const target = sixCirs[i];
+          const src = s1Cirs[i - 3];
+          const pos = arcPos(src[0], src[1], target.x, target.y, 30, it);
+          aHtml += svgCircle(pos.x, pos.y, 15, { fill: C.cirFill, stroke: C.cir, sw: 2.4, scale: lerp(0.65, 1, it) });
+        }
+      }
+    }
+  }
+
+  // Step 7：6 個 ○ 全齊，依序點數 1..6
+  if (s === 7) {
+    sixCirs.forEach((c, idx) => {
+      const bp = easeOut(clamp01((p - idx * 0.09) / 0.20));
+      aHtml += svgCircle(c.x, c.y, 15, { fill: C.cirFill, stroke: C.cir, sw: 2.4, scale: 1 + 0.06 * Math.sin(bp * Math.PI) });
+      aHtml += svgBadge(c.x + 12, c.y - 13, idx + 1, C.cir, bp, bp);
+    });
+    if (p < 0.72) {
+      const idx = Math.min(5, Math.floor((p / 0.72) * 6));
+      penA = { x: sixCirs[idx].x, y: sixCirs[idx].y };
+    }
+  }
+
+  // Step 8：6 個 ○ 每 2 個一組，三組專屬高對比色框閃三下定住
+  if (s === 8) {
+    for (let g = 0; g < 3; g++) {
+      const gx = [125, 175, 225][g];
+      const gp = clamp01((p - g * 0.22) / 0.42);
+      if (gp > 0) {
+        const fa = flash3Alpha(gp, 0.16, 0.52);
+        const col = C.groups[g];
+        aHtml += `<rect x="${gx}" y="264" width="46" height="86" rx="14" fill="${col}" fill-opacity="${fa.toFixed(3)}" stroke="${col}" stroke-width="2.8"/>`;
+        if (gp > 0.72) {
+          const bp = easeOut((gp - 0.72) / 0.22);
+          aHtml += svgBadge(gx + 23, 254, g + 1, col, bp, bp);
+        }
+      }
+    }
+    sixCirs.forEach(c => {
+      aHtml += svgCircle(c.x, c.y, 15, { fill: C.cirFill, stroke: C.groups[c.grp], sw: 2.3 });
+    });
+    if (p < 0.65) {
+      penA = { x: lerp(148, 248, p / 0.65), y: 308 };
+    }
+  }
+
+  const nineTris = [];
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      nineTris.push({
+        x: 358 + col * 33,
+        y: 328 - row * 40,
+        grp: row
+      });
+    }
+  }
+
+  // Step 9：第 1 組放慢換 3△，第 2、3 組接力加快換 3△
+  if (s === 9) {
+    const windows = [[0.00, 0.44], [0.44, 0.72], [0.72, 0.98]];
+    for (let g = 0; g < 3; g++) {
+      const [t0, t1] = windows[g];
+      const gp = clamp01((p - t0) / (t1 - t0));
+      const gx = [125, 175, 225][g];
+      const col = C.groups[g];
+      const pair = [sixCirs[g], sixCirs[g + 3]];
+
+      if (p < t0) {
+        aHtml += `<rect x="${gx}" y="264" width="46" height="86" rx="14" fill="${col}" fill-opacity="0.16" stroke="${col}" stroke-width="2.4"/>`;
+        pair.forEach(c => { aHtml += svgCircle(c.x, c.y, 15, { fill: C.cirFill, stroke: col, sw: 2.2 }); });
+      } else if (gp < 0.44) {
+        if (gp < 0.24) {
+          const sc = 1 + 0.1 * Math.sin((gp / 0.24) * Math.PI * 2);
+          aHtml += `<rect x="${gx}" y="264" width="46" height="86" rx="14" fill="${col}" fill-opacity="0.35" stroke="${col}" stroke-width="3"/>`;
+          pair.forEach(c => { aHtml += svgCircle(c.x, c.y, 15, { fill: C.cirFill, stroke: col, sw: 2.6, scale: sc, glow: true }); });
+        } else {
+          const ft = (gp - 0.24) / 0.20;
+          pair.forEach(c => {
+            const pos = arcPos(c.x, c.y, c.x - 20, c.y - 70, 14, ft);
+            aHtml += svgCircle(pos.x, pos.y, 15, { fill: C.cirFill, stroke: col, sw: 2.2, scale: 1 - ft * 0.7, opacity: 1 - ft });
+          });
+        }
+      }
+
+      if (gp >= 0.52) {
+        const at = (gp - 0.52) / 0.48;
+        for (let k = 0; k < 3; k++) {
+          const kt = clamp01((at - k * 0.12) / 0.65);
+          if (kt > 0) {
+            const triTarget = nineTris[g * 3 + k];
+            const src = s2Tris[k];
+            const pos = arcPos(src[0], src[1], triTarget.x, triTarget.y, 26, kt);
+            aHtml += svgTriangle(pos.x, pos.y, 28, { fill: C.triFill, stroke: col, sw: 2.4, scale: lerp(0.6, 1, kt) });
+          }
+        }
+        if (at > 0.78) {
+          const sumVal = (g + 1) * 3;
+          const bp = easeOut((at - 0.78) / 0.22);
+          aHtml += `<g transform="translate(462, ${328 - g * 40}) scale(${bp.toFixed(2)})">
+            <rect x="-16" y="-12" width="38" height="24" rx="12" fill="${col}"/>
+            <text x="3" y="4.5" text-anchor="middle" fill="#fff" font-size="13" font-weight="900">+3</text>
+          </g>`;
+          if (g === 2) {
+            aHtml += `<text x="391" y="208" text-anchor="middle" fill="${C.tri}" font-size="16" font-weight="900" opacity="${bp.toFixed(2)}">累計 ${sumVal} 個 △</text>`;
+          }
+        }
+      }
+    }
+    aHtml += `<g opacity="0.28">
+      ${svgSquare(leftSq1.x, leftSq1.y, 38, { fill: C.sqFill, stroke: C.sq, sw: 2 })}
+      ${svgSquare(leftSq2.x, leftSq2.y, 38, { fill: C.sqFill, stroke: C.sq, sw: 2 })}
+    </g>`;
+  }
+
+  // Step 10：忠實作答！左邊回復 2□，右邊虛線框由筆尖描實 9△ ＋ 寫出「9 個 △」
+  if (s === 10) {
+    aHtml += svgSquare(leftSq1.x, leftSq1.y, 38, { fill: C.sqFill, stroke: C.sq, sw: 2.5 });
+    aHtml += svgSquare(leftSq2.x, leftSq2.y, 38, { fill: C.sqFill, stroke: C.sq, sw: 2.5 });
+
+    const badgeFadeOut = p > 0.82 ? 1 - clamp01((p - 0.82) / 0.14) : 1;
+    nineTris.forEach((t, idx) => {
+      const tp = easeOut(clamp01((p - idx * 0.06) / 0.14));
+      aHtml += svgTriangle(t.x, t.y, 28, {
+        fill: C.triFill,
+        stroke: C.tri,
+        sw: 2.5,
+        scale: lerp(0.5, 1, tp),
+        opacity: tp
+      });
+      if (tp > 0.5 && badgeFadeOut > 0.02) {
+        aHtml += svgBadge(t.x + 11, t.y - 12, idx + 1, C.tri, tp, tp * badgeFadeOut);
+      }
+    });
+    if (p < 0.62) {
+      const idx = Math.min(8, Math.floor((p / 0.62) * 9));
+      penA = { x: nineTris[idx].x, y: nineTris[idx].y };
+    }
+    if (p > 0.72) {
+      const ap = easeOut((p - 0.72) / 0.22);
+      aHtml += `<g transform="translate(522, 282) scale(${ap.toFixed(2)})" opacity="${ap.toFixed(2)}">
+        <rect x="-54" y="-26" width="108" height="52" rx="14" fill="#ecfdf5" stroke="#10b981" stroke-width="2.6"/>
+        <text x="0" y="-3" text-anchor="middle" fill="#047857" font-size="13" font-weight="800">天秤平衡 ✓</text>
+        <text x="0" y="18" text-anchor="middle" fill="#8d5bd6" font-size="19" font-weight="900">9 個 △</text>
+      </g>`;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 軌道 B：✏️ 實戰鉛筆算草紙（460 x 415）
+  // 嚴禁畫 ○ / O，統一用 ◇ 代表圓形；小數量重複簡圖加框上方標數，絕無代數！
+  // --------------------------------------------------------------------------
+  if (s === 0 || s === 1) {
+    bHtml += `<text x="230" y="198" text-anchor="middle" fill="#b4a882" font-size="17" font-weight="700">空白算草紙（準備拎起鉛筆落筆…）</text>`;
+  }
+
+  // 零迷失角落對照圖例（Step 3 引入 ◇ 起長駐草稿紙右上角）
+  if (s >= 3) {
+    const lp = s === 3 ? easeOut(clamp01(p / 0.35)) : 1;
+    bHtml += `<g opacity="${lp.toFixed(2)}">
+      <rect x="330" y="12" width="116" height="36" rx="10" fill="#fff7ed" stroke="#f59e0b" stroke-width="1.6" stroke-dasharray="4 3"/>
+      <text x="388" y="35" text-anchor="middle" fill="#c2410c" font-size="15" font-weight="900">記號：○ → ◇</text>
+    </g>`;
+  }
+
+  // 【線索 1】Step 3 起寫於上方第 1 行：框住 □(上寫1) = 框住 ◇ ◇ ◇(上寫3)
+  if (s >= 3) {
+    const c1 = s === 3 ? clamp01((p - 0.35) / 0.55) : 1;
+    const hl1 = (s === 3 || s === 5 || s === 6);
+    bHtml += `<g opacity="${easeOut(c1).toFixed(2)}">`;
+    bHtml += `<text x="16" y="48" fill="#64748b" font-size="14" font-weight="900">1.</text>`;
+    bHtml += svgDrawRect(40, 24, 48, 42, C.sq, hl1 ? '#e0f6fb' : 'rgba(224,246,251,0.45)', c1);
+    bHtml += `<text x="64" y="19" text-anchor="middle" fill="${C.sq}" font-size="15" font-weight="900">1</text>`;
+    bHtml += svgSquare(64, 45, 22, { fill: '#fff', stroke: C.sq, sw: 2.3 });
+    bHtml += `<text x="112" y="53" text-anchor="middle" fill="${C.pencil}" font-size="24" font-weight="900">=</text>`;
+    bHtml += svgDrawRect(136, 24, 134, 42, C.cir, hl1 ? '#fff1e6' : 'rgba(255,241,230,0.45)', clamp01((c1 - 0.2) / 0.8));
+    bHtml += `<text x="203" y="19" text-anchor="middle" fill="${C.cir}" font-size="15" font-weight="900">3</text>`;
+    [162, 203, 244].forEach((dx, i) => {
+      const dp = easeOut(clamp01((c1 - 0.35 - i * 0.14) / 0.25));
+      bHtml += svgDiamond(dx, 45, 11, { fill: '#fff', stroke: C.cir, sw: 2.4, scale: dp, opacity: dp });
+    });
+    bHtml += `</g>`;
+    if (s === 3 && p >= 0.48) {
+      penB = { x: lerp(64, 255, (p - 0.48) / 0.52), y: 45 };
+    }
+  }
+
+  // 【線索 2】Step 4 起寫於第 2 行：框住 △ △ △(上寫3) = 框住 ◇ ◇(上寫2)
+  if (s >= 4) {
+    const c2 = s === 4 ? clamp01((p - 0.35) / 0.55) : 1;
+    const hl2 = (s === 4 || s === 8 || s === 9);
+    bHtml += `<g opacity="${easeOut(c2).toFixed(2)}">`;
+    bHtml += `<text x="16" y="118" fill="#64748b" font-size="14" font-weight="900">2.</text>`;
+    bHtml += svgDrawRect(40, 94, 132, 42, C.tri, hl2 ? '#f3ecff' : 'rgba(243,236,255,0.45)', c2);
+    bHtml += `<text x="106" y="89" text-anchor="middle" fill="${C.tri}" font-size="15" font-weight="900">3</text>`;
+    [66, 106, 146].forEach((tx, i) => {
+      const tp = easeOut(clamp01((c2 - 0.1 - i * 0.12) / 0.25));
+      bHtml += svgTriangle(tx, 117, 22, { fill: '#fff', stroke: C.tri, sw: 2.3, scale: tp, opacity: tp });
+    });
+    bHtml += `<text x="194" y="123" text-anchor="middle" fill="${C.pencil}" font-size="24" font-weight="900">=</text>`;
+    bHtml += svgDrawRect(216, 94, 92, 42, C.cir, hl2 ? '#fff1e6' : 'rgba(255,241,230,0.45)', clamp01((c2 - 0.25) / 0.75));
+    bHtml += `<text x="262" y="89" text-anchor="middle" fill="${C.cir}" font-size="15" font-weight="900">2</text>`;
+    [242, 282].forEach((dx, i) => {
+      const dp = easeOut(clamp01((c2 - 0.45 - i * 0.15) / 0.25));
+      bHtml += svgDiamond(dx, 115, 11, { fill: '#fff', stroke: C.cir, sw: 2.4, scale: dp, opacity: dp });
+    });
+    bHtml += `</g>`;
+    if (s === 4 && p >= 0.48) {
+      penB = { x: lerp(66, 290, (p - 0.48) / 0.52), y: 115 };
+    }
+  }
+
+  // 分隔線（將線索區與下方推算區隔開）
+  if (s >= 3) {
+    bHtml += `<line x1="18" y1="150" x2="442" y2="150" stroke="#d6c89d" stroke-width="1.6" stroke-dasharray="6 4"/>`;
+  }
+
+  // 【先草擬目標・固定於 y=178】Step 2 先草擬「問：2 個 □ = ? 個 △」；Step 5 起接力換 ◇；Step 9 劃走 ? 填 9！
+  if (s >= 2) {
+    const tGoalY = 178;
+    const gp = s === 2 ? clamp01((p - 0.48) / 0.46) : 1;
+    bHtml += `<g opacity="${easeOut(gp).toFixed(2)}">`;
+    bHtml += `<text x="16" y="${tGoalY + 25}" fill="#0f172a" font-size="15" font-weight="900">問：</text>`;
+    bHtml += svgDrawRect(50, tGoalY, 84, 40, C.sq, 'rgba(224,246,251,0.55)', gp);
+    bHtml += `<text x="92" y="${tGoalY - 6}" text-anchor="middle" fill="${C.sq}" font-size="15" font-weight="900">2</text>`;
+    bHtml += svgSquare(72, tGoalY + 20, 20, { fill: '#fff', stroke: C.sq, sw: 2.3 });
+    bHtml += svgSquare(112, tGoalY + 20, 20, { fill: '#fff', stroke: C.sq, sw: 2.3 });
+
+    // Step 2..4 顯示待解嘅 = ? 個 △
+    if (s <= 4) {
+      bHtml += `<text x="158" y="${tGoalY + 28}" text-anchor="middle" fill="${C.pencil}" font-size="24" font-weight="900">=</text>`;
+      bHtml += `<text x="218" y="${tGoalY + 28}" text-anchor="middle" fill="${C.tri}" font-size="24" font-weight="900">? 個 △</text>`;
+      if (s === 2 && p >= 0.55) {
+        penB = { x: lerp(60, 238, (p - 0.55) / 0.45), y: tGoalY + 20 };
+      }
+    } else {
+      // Step 5 起右邊接力：先換出 3 個 ◇ ＋ 3 個 ◇
+      bHtml += `<text x="154" y="${tGoalY + 27}" text-anchor="middle" fill="${C.pencil}" font-size="22" font-weight="900">→</text>`;
+      const p5 = s === 5 ? clamp01((p - 0.58) / 0.38) : 1;
+      if (p5 > 0) {
+        bHtml += svgDrawRect(172, tGoalY, 114, 40, C.cir, 'rgba(255,241,230,0.65)', p5);
+        bHtml += `<text x="229" y="${tGoalY - 6}" text-anchor="middle" fill="${C.cir}" font-size="15" font-weight="900">3</text>`;
+        [194, 229, 264].forEach((dx, i) => {
+          const dp = easeOut(clamp01((p5 - i * 0.15) / 0.35));
+          bHtml += svgDiamond(dx, tGoalY + 20, 10, { fill: '#fff', stroke: C.cir, sw: 2.3, scale: dp, opacity: dp });
+        });
+        if (s === 5 && p >= 0.60) {
+          penB = { x: lerp(185, 278, (p - 0.60) / 0.38), y: tGoalY + 20 };
+        }
+      }
+      if (s >= 6) {
+        const p6 = s === 6 ? clamp01((p - 0.50) / 0.42) : 1;
+        if (p6 > 0) {
+          bHtml += `<text x="299" y="${tGoalY + 27}" text-anchor="middle" fill="${C.cir}" font-size="20" font-weight="900">+</text>`;
+          bHtml += svgDrawRect(312, tGoalY, 114, 40, C.cir, 'rgba(255,241,230,0.65)', p6);
+          bHtml += `<text x="369" y="${tGoalY - 6}" text-anchor="middle" fill="${C.cir}" font-size="15" font-weight="900">3</text>`;
+          [334, 369, 404].forEach((dx, i) => {
+            const dp = easeOut(clamp01((p6 - i * 0.14) / 0.35));
+            bHtml += svgDiamond(dx, tGoalY + 20, 10, { fill: '#fff', stroke: C.cir, sw: 2.3, scale: dp, opacity: dp });
+          });
+          if (s === 6 && p >= 0.55) {
+            penB = { x: lerp(322, 412, (p - 0.55) / 0.40), y: tGoalY + 20 };
+          }
+        }
+      }
+    }
+    bHtml += `</g>`;
+  }
+
+  // Step 7：寫出「3 + 3 = 6 個（◇）」
+  if (s >= 7) {
+    const p7 = s === 7 ? easeOut(clamp01((p - 0.45) / 0.45)) : 1;
+    bHtml += `<text x="298" y="244" text-anchor="middle" fill="${C.cir}" font-size="20" font-weight="900" opacity="${p7.toFixed(2)}">3 + 3 = 6 個（◇）</text>`;
+    if (s === 7 && p >= 0.72) {
+      penB = { x: lerp(230, 355, (p - 0.72) / 0.26), y: 240 };
+    }
+  }
+
+  // Step 8..10：三組專屬色括框（每組 2 個 ◇）→ 快斜線 `/` 抵銷 → 換成 3 組 △ △ △ → 3 + 3 + 3 = 9
+  if (s >= 8) {
+    const grpBoxes = [
+      { x: 24,  col: C.groups[0], soft: C.groupsSoft[0] },
+      { x: 146, col: C.groups[1], soft: C.groupsSoft[1] },
+      { x: 268, col: C.groups[2], soft: C.groupsSoft[2] }
+    ];
+    const rowY = 270;
+    grpBoxes.forEach((g, idx) => {
+      const gp = s === 8 ? clamp01((p - idx * 0.22) / 0.35) : 1;
+      if (gp > 0) {
+        bHtml += svgDrawRect(g.x, rowY, 92, 38, g.col, g.soft, gp);
+        bHtml += `<text x="${g.x + 46}" y="${rowY - 6}" text-anchor="middle" fill="${g.col}" font-size="13" font-weight="900">第 ${idx + 1} 組 (2)</text>`;
+        bHtml += svgDiamond(g.x + 28, rowY + 19, 9.5, { fill: '#fff', stroke: g.col, sw: 2.2, opacity: easeOut(gp) });
+        bHtml += svgDiamond(g.x + 64, rowY + 19, 9.5, { fill: '#fff', stroke: g.col, sw: 2.2, opacity: easeOut(gp) });
+      }
+      if (s >= 9) {
+        const wins = [[0.00, 0.44], [0.44, 0.72], [0.72, 0.98]];
+        const [t0, t1] = wins[idx];
+        const sp = s === 9 ? clamp01((p - t0) / (t1 - t0)) : 1;
+        if (sp > 0.20) {
+          const slashP = clamp01((sp - 0.20) / 0.22);
+          bHtml += svgDrawLine(g.x + 10, rowY + 34, g.x + 82, rowY + 4, g.col, 2.8, slashP);
+        }
+        if (sp > 0.48) {
+          const triP = easeOut(clamp01((sp - 0.48) / 0.42));
+          bHtml += `<text x="${g.x + 46}" y="${rowY + 55}" text-anchor="middle" fill="${g.col}" font-size="17" font-weight="900" opacity="${triP.toFixed(2)}">↓</text>`;
+          bHtml += svgDrawRect(g.x - 4, rowY + 62, 100, 34, C.tri, '#f3ecff', triP);
+          [g.x + 18, g.x + 46, g.x + 74].forEach(tx => {
+            bHtml += svgTriangle(tx, rowY + 80, 18, { fill: '#fff', stroke: g.col, sw: 2.2, scale: triP, opacity: triP });
+          });
+          bHtml += `<text x="${g.x + 46}" y="${rowY + 124}" text-anchor="middle" fill="${g.col}" font-size="24" font-weight="900" opacity="${triP.toFixed(2)}">3</text>`;
+          if (idx > 0) {
+            bHtml += `<text x="${g.x - 16}" y="${rowY + 124}" text-anchor="middle" fill="${C.pencil}" font-size="24" font-weight="900" opacity="${triP.toFixed(2)}">+</text>`;
+          }
+          if (s === 9 && sp >= 0.48 && sp < 0.95) {
+            penB = { x: g.x + 46, y: rowY + 82 };
+          }
+        }
+      }
+    });
+
+    if (s === 8 && p >= 0.65) {
+      penB = { x: lerp(40, 355, (p - 0.65) / 0.35), y: rowY + 19 };
+    }
+  }
+
+  // Step 9 結尾 & Step 10：= 9 雙底線強調
+  if ((s === 9 && p > 0.88) || s === 10) {
+    const ep = s === 9 ? easeOut((p - 0.88) / 0.12) : 1;
+    bHtml += `<g opacity="${ep.toFixed(2)}">
+      <text x="406" y="394" text-anchor="middle" fill="${C.tri}" font-size="26" font-weight="900">= 9</text>
+      <line x1="384" y1="401" x2="432" y2="401" stroke="${C.tri}" stroke-width="2.6"/>
+      <line x1="384" y1="407" x2="432" y2="407" stroke="${C.tri}" stroke-width="2.6"/>
+    </g>`;
+  }
+
+  // 唯一深藍筆尖圓點（軌道 B 與軌道 A 互斥接力）
+  if (penB) {
+    bHtml += svgPenDot(penB.x, penB.y, true);
+  } else if (penA) {
+    aHtml += svgPenDot(penA.x, penA.y, true);
+  }
+
+  els.stageSVG.innerHTML = aHtml;
+  els.paperSVG.innerHTML = bHtml;
+}
+
+/* ============================================================================
+   UI 同步：題目高亮、階段膠囊、字幕、算式條、互動停頓與慶祝列
+   ============================================================================ */
+function syncUIForStep(stepIdx) {
+  const cfg = CONFIG.steps[stepIdx];
+  els.qSeg0.classList.toggle('hl', cfg.hlSeg === 0);
+  els.qSeg1.classList.toggle('hl', cfg.hlSeg === 1);
+  els.symbolKeyBox.classList.toggle('visible', stepIdx >= 3);
+
+  els.trackASub.textContent = cfg.trackASub;
+  els.subtitleBox.innerHTML = cfg.subtitle;
+  els.formulaBar.innerHTML = cfg.formulaHtml;
+  els.stepCounter.textContent = `第 ${stepIdx + 1} / ${CONFIG.steps.length} 步`;
+
+  els.prevBtn.disabled = stepIdx === 0;
+  els.nextBtn.disabled = stepIdx === CONFIG.steps.length - 1;
+
+  document.querySelectorAll('.phase-pill').forEach((btn, idx) => {
+    btn.classList.toggle('active', idx === cfg.phase);
+    btn.classList.toggle('done', idx < cfg.phase);
+  });
+
+  if (!cfg.quiz || state.quizSolved[stepIdx]) {
+    els.quizPanel.classList.remove('open');
+  }
+  if (cfg.isFinal) {
+    els.celebratePanel.classList.add('open');
+  } else {
+    els.celebratePanel.classList.remove('open');
+    els.practicePanel.classList.remove('open');
+    els.masterPanel.classList.remove('open');
+  }
+}
+
+function showQuizForStep(stepIdx) {
+  const q = CONFIG.steps[stepIdx].quiz;
+  if (!q) return;
+  state.pausedForQuiz = true;
+  state.playing = false;
+  updatePlayBtn();
+
+  els.quizQuestion.textContent = q.question;
+  els.quizFeedback.textContent = '';
+  els.quizFeedback.className = 'quiz-feedback';
+  els.quizOptions.innerHTML = '';
+
+  q.options.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'opt-btn';
+    b.textContent = opt.label;
+    b.onclick = () => {
+      if (opt.ok) {
+        b.classList.add('correct');
+        playSfx('ding');
+        els.quizFeedback.textContent = '🎉 ' + opt.tip;
+        els.quizFeedback.className = 'quiz-feedback ok';
+        state.quizSolved[stepIdx] = true;
+        speakText(opt.tip, () => {
+          els.quizPanel.classList.remove('open');
+          state.pausedForQuiz = false;
+          goToStep(stepIdx + 1, true);
+        });
+      } else {
+        b.classList.add('wrong');
+        playSfx('pop');
+        els.quizFeedback.textContent = '💡 ' + opt.tip;
+        els.quizFeedback.className = 'quiz-feedback err';
+        speakText(opt.tip);
+      }
+    };
+    els.quizOptions.appendChild(b);
+  });
+
+  const skip = document.createElement('button');
+  skip.className = 'skip-btn';
+  skip.textContent = '跳過這題 →';
+  skip.onclick = () => {
+    state.quizSolved[stepIdx] = true;
+    state.pausedForQuiz = false;
+    els.quizPanel.classList.remove('open');
+    goToStep(stepIdx + 1, true);
+  };
+  els.quizOptions.appendChild(skip);
+
+  els.quizPanel.classList.add('open');
+}
+
+function updatePlayBtn() {
+  els.playBtn.textContent = state.playing ? '⏸' : '▶';
+  els.playBtn.title = state.playing ? '暫停' : '播放';
+}
+
+/* ============================================================================
+   純 requestAnimationFrame 動畫控制器（絕不用 setTimeout 控制動畫狀態）
+   ============================================================================ */
+function cancelAnim() {
+  if (state.rafId) {
+    cancelAnimationFrame(state.rafId);
+    state.rafId = null;
+  }
+}
+
+function goToStep(stepIdx, autoPlay = false) {
+  cancelAnim();
+  stopSpeech();
+  state.pausedForQuiz = false;
+
+  stepIdx = Math.max(0, Math.min(CONFIG.steps.length - 1, stepIdx));
+  state.step = stepIdx;
+  state.p = 0;
+  state.playing = autoPlay;
+  updatePlayBtn();
+  syncUIForStep(stepIdx);
+  renderScene(stepIdx, 0);
+
+  const cfg = CONFIG.steps[stepIdx];
+  playSfx(stepIdx >= 5 && stepIdx <= 9 ? 'whoosh' : 'pop');
+
+  let animDone = false;
+  let speechDone = false;
+
+  const tryAdvance = () => {
+    if (!animDone || !speechDone) return;
+    if (cfg.isFinal) {
+      if (!state.confettiFired) {
+        state.confettiFired = true;
+        playSfx('chord');
+        launchConfetti();
+      }
+      state.playing = false;
+      updatePlayBtn();
+      return;
+    }
+    if (cfg.quiz && !state.quizSolved[stepIdx]) {
+      showQuizForStep(stepIdx);
+      return;
+    }
+    if (state.playing && stepIdx < CONFIG.steps.length - 1) {
+      goToStep(stepIdx + 1, true);
+    } else if (!state.playing) {
+      updatePlayBtn();
+    }
+  };
+
+  speakText(cfg.tts || cfg.subtitle, () => {
+    speechDone = true;
+    tryAdvance();
+  });
+
+  const durMs = cfg.dur / (state.rate / CONFIG.defaultRate);
+  state.lastTs = performance.now();
+
+  function tick(now) {
+    const dt = now - state.lastTs;
+    state.lastTs = now;
+    state.p = clamp01(state.p + dt / durMs);
+    renderScene(state.step, state.p);
+    if (state.p < 1) {
+      state.rafId = requestAnimationFrame(tick);
+    } else {
+      state.rafId = null;
+      animDone = true;
+      tryAdvance();
+    }
+  }
+  state.rafId = requestAnimationFrame(tick);
+}
+
+/* ============================================================================
+   彩紙慶祝（pointer-events: none，絕不遮擋操作）
+   ============================================================================ */
+function launchConfetti() {
+  const cv = $('confettiCanvas');
+  const ctx = cv.getContext('2d');
+  cv.width = window.innerWidth;
+  cv.height = window.innerHeight;
+  const cols = ['#f4711f', '#0aa5c9', '#8d5bd6', '#33b26a', '#f0a500', '#e8467c'];
+  const pts = Array.from({ length: 72 }, () => ({
+    x: Math.random() * cv.width,
+    y: -20 - Math.random() * 140,
+    vx: (Math.random() - 0.5) * 3.2,
+    vy: 2.5 + Math.random() * 3.8,
+    size: 6 + Math.random() * 6,
+    rot: Math.random() * Math.PI * 2,
+    vr: (Math.random() - 0.5) * 0.2,
+    col: cols[Math.floor(Math.random() * cols.length)]
+  }));
+  let frames = 0;
+  function frame() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    frames++;
+    pts.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.col;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+      ctx.restore();
+    });
+    if (frames < 135) {
+      requestAnimationFrame(frame);
+    } else {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ============================================================================
+   片尾功能 1：🎯 挑戰類似題（預設無彩色公仔 → 草稿提示 → 答對才展開彩色實物驗證）
+   ============================================================================ */
+function renderPractice() {
+  const pr = CONFIG.practices[state.activePracticeIdx];
+  const C = CONFIG.colors;
+  $('practiceTitle').textContent = pr.title;
+  $('practiceQText').textContent = pr.qText;
+  $('practiceFeedback').textContent = '';
+  $('practiceFeedback').className = 'quiz-feedback';
+  $('practiceHintBox').classList.toggle('show', state.practiceHintOpen);
+
+  let svg = '';
+  const solved = state.practiceSolved;
+  const sqCol = solved ? C.sq : '#334155';
+  const sqFill = solved ? C.sqFill : '#ffffff';
+  const cirCol = solved ? C.cir : '#334155';
+  const cirFill = solved ? C.cirFill : '#ffffff';
+  const triCol = solved ? C.tri : '#334155';
+  const triFill = solved ? C.triFill : '#ffffff';
+
+  svg += svgScaleBase(130, 102, 95, 0, '天秤 1');
+  svg += svgSquare(74, 82, 30, { fill: sqFill, stroke: sqCol, sw: 2 });
+  for (let i = 0; i < pr.sqToCir; i++) {
+    const col = i % 2, row = Math.floor(i / 2);
+    svg += svgCircle(164 + col * 28, 86 - row * 28, 12, { fill: cirFill, stroke: cirCol, sw: 2 });
+  }
+
+  svg += svgScaleBase(405, 102, 95, 0, '天秤 2');
+  for (let i = 0; i < pr.triPerGrp; i++) {
+    const col = i % 2, row = Math.floor(i / 2);
+    svg += svgTriangle(345 + col * 28, 86 - row * 26, 24, { fill: triFill, stroke: triCol, sw: 2 });
+  }
+  for (let i = 0; i < pr.cirPerGrp; i++) {
+    const col = i % 2, row = Math.floor(i / 2);
+    svg += svgCircle(440 + col * 28, 86 - row * 28, 12, { fill: cirFill, stroke: cirCol, sw: 2 });
+  }
+
+  svg += svgScaleBase(270, 238, 155, 0, solved ? `驗證成功：${pr.addExpr}` : '要平衡嘅天秤');
+  for (let i = 0; i < pr.askSq; i++) {
+    svg += svgSquare(150 + i * 34, 218, 28, { fill: sqFill, stroke: sqCol, sw: 2 });
+  }
+  svg += `<rect x="305" y="160" width="110" height="72" rx="8" fill="${solved ? '#f3ecff' : 'none'}" stroke="${triCol}" stroke-width="2" stroke-dasharray="5 5"/>`;
+  if (!solved) {
+    svg += `<text x="360" y="204" text-anchor="middle" fill="#475569" font-size="22" font-weight="900">? 個 △</text>`;
+  } else {
+    const grps = (pr.askSq * pr.sqToCir) / pr.cirPerGrp;
+    for (let g = 0; g < grps; g++) {
+      const gCol = C.groups[g % C.groups.length];
+      for (let k = 0; k < pr.triPerGrp; k++) {
+        const idx = g * pr.triPerGrp + k;
+        const c = idx % 4, r = Math.floor(idx / 4);
+        svg += svgTriangle(322 + c * 25, 220 - r * 22, 19, { fill: '#fff', stroke: gCol, sw: 2.2 });
+      }
+    }
+    svg += `<text x="458" y="204" text-anchor="middle" fill="#047857" font-size="18" font-weight="900">${pr.answer} 個 △ ✓</text>`;
+  }
+  $('practiceSVG').innerHTML = svg;
+
+  // 草稿提示 SVG（只顯示極簡安全符號 □ / ◇ / △）
+  const totalCir = pr.askSq * pr.sqToCir;
+  const totalGrp = totalCir / pr.cirPerGrp;
+  let hSvg = '';
+  hSvg += `<text x="10" y="22" fill="#92400e" font-size="13" font-weight="800">✏️ 考場草稿提示（用 ◇ 代替 ○）：</text>`;
+  hSvg += `<text x="10" y="50" fill="#0aa5c9" font-size="16" font-weight="900">${pr.askSq} 個 □ → 總共 ${totalCir} 個 ◇</text>`;
+  let cx = 14;
+  for (let g = 0; g < totalGrp; g++) {
+    const col = C.groups[g % C.groups.length];
+    const bw = pr.cirPerGrp * 22 + 12;
+    hSvg += `<rect x="${cx}" y="62" width="${bw}" height="28" rx="6" fill="none" stroke="${col}" stroke-width="2"/>`;
+    for (let k = 0; k < pr.cirPerGrp; k++) {
+      hSvg += svgDiamond(cx + 16 + k * 22, 76, 7, { fill: '#fff', stroke: col, sw: 2 });
+    }
+    hSvg += `<text x="${cx + bw / 2}" y="110" text-anchor="middle" fill="${col}" font-size="14" font-weight="900">換 ${pr.triPerGrp} △</text>`;
+    cx += bw + 10;
+  }
+  $('practiceHintSVG').innerHTML = hSvg;
+
+  const optsWrap = $('practiceOpts');
+  optsWrap.innerHTML = '';
+  pr.options.forEach(val => {
+    const b = document.createElement('button');
+    b.className = 'opt-btn';
+    b.textContent = `${val} 個 △`;
+    if (solved && val === pr.answer) b.classList.add('correct');
+    b.onclick = () => {
+      if (val === pr.answer) {
+        state.practiceSolved = true;
+        playSfx('chord');
+        renderPractice();
+        $('practiceFeedback').textContent = `🎉 滿分！${pr.addExpr}，答啱 ${pr.answer} 個三角形！左邊已經展開彩色分組圖解驗證！`;
+        $('practiceFeedback').className = 'quiz-feedback ok';
+        speakText(`滿分！答啱 ${pr.answer} 個三角形！`);
+      } else {
+        b.classList.add('wrong');
+        playSfx('pop');
+        $('practiceFeedback').textContent = '💡 唔緊要！試吓撳「✏️ 睇草稿提示」，數吓分成幾多組再連加。';
+        $('practiceFeedback').className = 'quiz-feedback err';
+      }
+    };
+    optsWrap.appendChild(b);
+  });
+}
+
+/* ============================================================================
+   片尾功能 2：✨ 高手秒殺思維（純 SVG 視覺動畫：底二頂一・手拖手直接變！）
+   ============================================================================ */
+function renderMasterSVG(mStep, p) {
+  const C = CONFIG.colors;
+  let svg = '';
+  const e = easeInOut(p);
+
+  svg += `<text x="280" y="24" text-anchor="middle" fill="#6b21a8" font-size="16" font-weight="900">兩個正方形 ＝ 並排兩座「底二頂一」圓形金字塔</text>`;
+
+  const lBot = [[122, 130], [168, 130]];
+  const rBot = [[392, 130], [438, 130]];
+  const lTop = [145, 90];
+  const rTop = [415, 90];
+
+  svg += svgSquare(145, 198, 28, { fill: C.sqFill, stroke: C.sq, sw: 2.2 });
+  svg += `<text x="145" y="232" text-anchor="middle" fill="${C.sq}" font-size="13" font-weight="800">第 1 個 □</text>`;
+  svg += svgSquare(415, 198, 28, { fill: C.sqFill, stroke: C.sq, sw: 2.2 });
+  svg += `<text x="415" y="232" text-anchor="middle" fill="${C.sq}" font-size="13" font-weight="800">第 2 個 □</text>`;
+
+  if (mStep === 0) {
+    const sc = lerp(0.7, 1, e);
+    [...lBot, lTop, ...rBot, rTop].forEach(([x, y]) => {
+      svg += svgCircle(x, y, 17, { fill: C.cirFill, stroke: C.cir, sw: 2.4, scale: sc });
+    });
+    svg += `<text x="145" y="60" text-anchor="middle" fill="#9a3412" font-size="14" font-weight="800">底 2 ＋ 頂 1</text>`;
+    svg += `<text x="415" y="60" text-anchor="middle" fill="#9a3412" font-size="14" font-weight="800">底 2 ＋ 頂 1</text>`;
+  }
+
+  if (mStep >= 1) {
+    const bP = mStep === 1 ? e : 1;
+    svg += `<rect x="96" y="106" width="98" height="48" rx="14" fill="${C.groupsSoft[0]}" stroke="${C.groups[0]}" stroke-width="2.6" opacity="${bP.toFixed(2)}"/>`;
+    svg += `<rect x="366" y="106" width="98" height="48" rx="14" fill="${C.groupsSoft[1]}" stroke="${C.groups[1]}" stroke-width="2.6" opacity="${bP.toFixed(2)}"/>`;
+
+    if (mStep === 1 && p < 0.45) {
+      lBot.forEach(([x, y]) => { svg += svgCircle(x, y, 17, { fill: C.cirFill, stroke: C.groups[0], sw: 2.5 }); });
+      rBot.forEach(([x, y]) => { svg += svgCircle(x, y, 17, { fill: C.cirFill, stroke: C.groups[1], sw: 2.5 }); });
+    } else {
+      const tp = mStep === 1 ? easeOut((p - 0.45) / 0.55) : 1;
+      [115, 145, 175].forEach(x => {
+        svg += svgTriangle(x, 132, 24, { fill: C.triFill, stroke: C.groups[0], sw: 2.4, scale: tp });
+      });
+      [385, 415, 445].forEach(x => {
+        svg += svgTriangle(x, 132, 24, { fill: C.triFill, stroke: C.groups[1], sw: 2.4, scale: tp });
+      });
+      svg += `<text x="145" y="172" text-anchor="middle" fill="${C.groups[0]}" font-size="15" font-weight="900" opacity="${tp.toFixed(2)}">直接變 3 個 △！</text>`;
+      svg += `<text x="415" y="172" text-anchor="middle" fill="${C.groups[1]}" font-size="15" font-weight="900" opacity="${tp.toFixed(2)}">直接變 3 個 △！</text>`;
+    }
+
+    if (mStep === 1) {
+      svg += svgCircle(lTop[0], lTop[1], 17, { fill: C.cirFill, stroke: C.groups[2], sw: 2.4 });
+      svg += svgCircle(rTop[0], rTop[1], 17, { fill: C.cirFill, stroke: C.groups[2], sw: 2.4 });
+    }
+  }
+
+  if (mStep === 2) {
+    const flyP = clamp01(p / 0.50);
+    const lPos = arcPos(lTop[0], lTop[1], 257, 78, 28, flyP);
+    const rPos = arcPos(rTop[0], rTop[1], 303, 78, 28, flyP);
+
+    if (p < 0.62) {
+      svg += `<path d="M ${lTop[0]} ${lTop[1]} Q 200 32 257 78" fill="none" stroke="${C.groups[2]}" stroke-width="2" stroke-dasharray="5 4" opacity="0.6"/>`;
+      svg += `<path d="M ${rTop[0]} ${rTop[1]} Q 360 32 303 78" fill="none" stroke="${C.groups[2]}" stroke-width="2" stroke-dasharray="5 4" opacity="0.6"/>`;
+      if (flyP > 0.85) {
+        svg += `<rect x="231" y="54" width="98" height="48" rx="14" fill="${C.groupsSoft[2]}" stroke="${C.groups[2]}" stroke-width="2.6"/>`;
+      }
+      svg += svgCircle(lPos.x, lPos.y, 17, { fill: C.cirFill, stroke: C.groups[2], sw: 2.5 });
+      svg += svgCircle(rPos.x, rPos.y, 17, { fill: C.cirFill, stroke: C.groups[2], sw: 2.5 });
+    } else {
+      const tp = easeOut((p - 0.62) / 0.35);
+      svg += `<rect x="231" y="54" width="98" height="48" rx="14" fill="${C.groupsSoft[2]}" stroke="${C.groups[2]}" stroke-width="2.6"/>`;
+      [250, 280, 310].forEach(x => {
+        svg += svgTriangle(x, 80, 24, { fill: C.triFill, stroke: C.groups[2], sw: 2.4, scale: tp });
+      });
+      svg += `<text x="280" y="122" text-anchor="middle" fill="${C.groups[2]}" font-size="15" font-weight="900" opacity="${tp.toFixed(2)}">手拖手再變 3 個 △！</text>`;
+      svg += `<rect x="190" y="232" width="180" height="34" rx="17" fill="#7c3aed" opacity="${tp.toFixed(2)}"/>`;
+      svg += `<text x="280" y="255" text-anchor="middle" fill="#ffffff" font-size="17" font-weight="900" opacity="${tp.toFixed(2)}">3 + 3 + 3 = 9 秒殺！</text>`;
+    }
+  }
+
+  $('masterSVG').innerHTML = svg;
+}
+
+function playMasterStep(idx) {
+  if (state.masterRaf) cancelAnimationFrame(state.masterRaf);
+  state.masterStep = idx;
+  state.masterP = 0;
+
+  document.querySelectorAll('.master-step-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+
+  const info = CONFIG.masterSteps[idx];
+  playSfx(idx === 2 ? 'ding' : 'whoosh');
+  speakText(info.text);
+
+  let last = performance.now();
+  const dur = idx === 2 ? 1700 : 1200;
+  function tick(now) {
+    state.masterP = clamp01(state.masterP + (now - last) / dur);
+    last = now;
+    renderMasterSVG(idx, state.masterP);
+    if (state.masterP < 1) {
+      state.masterRaf = requestAnimationFrame(tick);
+    } else {
+      state.masterRaf = null;
+    }
+  }
+  state.masterRaf = requestAnimationFrame(tick);
+}
+
+/* ============================================================================
+   初始化控制元件與事件監聽
+   ============================================================================ */
+function init() {
+  CONFIG.phases.forEach((ph, idx) => {
+    const b = document.createElement('button');
+    b.className = 'phase-pill' + (idx === 0 ? ' active' : '');
+    b.textContent = ph.label;
+    b.onclick = () => goToStep(ph.startStep, true);
+    els.phasePills.appendChild(b);
+  });
+
+  els.rateBtn.onclick = () => {
+    if (state.rate === CONFIG.defaultRate) {
+      state.rate = CONFIG.fastRate;
+      els.rateBtn.textContent = '🚶 1.0x 較快';
+      els.rateBtn.classList.remove('active-toggle');
+    } else {
+      state.rate = CONFIG.defaultRate;
+      els.rateBtn.textContent = '🐢 0.75x 適中';
+      els.rateBtn.classList.add('active-toggle');
+    }
+    playSfx('pop');
+  };
+
+  els.muteBtn.onclick = () => {
+    state.muted = !state.muted;
+    els.muteBtn.textContent = state.muted ? '🔇 已靜音' : '🔊 開啟聲音';
+    els.muteBtn.classList.toggle('muted', state.muted);
+    if (state.muted) stopSpeech();
+  };
+
+  els.playBtn.onclick = () => {
+    if (state.pausedForQuiz) return;
+    if (state.playing) {
+      state.playing = false;
+      cancelAnim();
+      stopSpeech();
+      updatePlayBtn();
+    } else {
+      if (state.step === CONFIG.steps.length - 1 && state.p >= 1) {
+        state.quizSolved = {};
+        state.confettiFired = false;
+        goToStep(0, true);
+      } else {
+        goToStep(state.step === 0 && state.p >= 1 ? 1 : state.step, true);
+      }
+    }
+  };
+
+  els.prevBtn.onclick = () => {
+    if (state.step > 0) goToStep(state.step - 1, false);
+  };
+
+  els.nextBtn.onclick = () => {
+    if (state.step < CONFIG.steps.length - 1) goToStep(state.step + 1, false);
+  };
+
+  els.replayBtn.onclick = () => {
+    state.quizSolved = {};
+    state.confettiFired = false;
+    goToStep(0, true);
+  };
+
+  $('openPracticeBtn').onclick = () => {
+    els.masterPanel.classList.remove('open');
+    els.practicePanel.classList.add('open');
+    state.practiceSolved = false;
+    state.practiceHintOpen = false;
+    renderPractice();
+    els.practicePanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+  $('closePracticeBtn').onclick = () => els.practicePanel.classList.remove('open');
+  $('toggleHintBtn').onclick = () => {
+    state.practiceHintOpen = !state.practiceHintOpen;
+    $('practiceHintBox').classList.toggle('show', state.practiceHintOpen);
+    playSfx('pop');
+  };
+  $('nextPracticeBtn').onclick = () => {
+    state.activePracticeIdx = (state.activePracticeIdx + 1) % CONFIG.practices.length;
+    state.practiceSolved = false;
+    state.practiceHintOpen = false;
+    renderPractice();
+    playSfx('pop');
+  };
+
+  const mBtns = $('masterStepBtns');
+  CONFIG.masterSteps.forEach((ms, idx) => {
+    const b = document.createElement('button');
+    b.className = 'master-step-btn';
+    b.innerHTML = `<div style="margin-bottom:4px;">${ms.title}</div><div style="font-size:13px;font-weight:500;opacity:0.9;">${ms.text}</div>`;
+    b.onclick = () => playMasterStep(idx);
+    mBtns.appendChild(b);
+  });
+
+  $('openMasterBtn').onclick = () => {
+    els.practicePanel.classList.remove('open');
+    els.masterPanel.classList.add('open');
+    playMasterStep(0);
+    els.masterPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+  $('closeMasterBtn').onclick = () => {
+    if (state.masterRaf) cancelAnimationFrame(state.masterRaf);
+    stopSpeech();
+    els.masterPanel.classList.remove('open');
+  };
+
+  window.addEventListener('keydown', e => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      els.playBtn.click();
+    } else if (e.code === 'ArrowRight') {
+      els.nextBtn.click();
+    } else if (e.code === 'ArrowLeft') {
+      els.prevBtn.click();
+    }
+  });
+
+  syncUIForStep(0);
+  renderScene(0, 1);
+}
+
+init();
+</script>
+</body>
+</html>

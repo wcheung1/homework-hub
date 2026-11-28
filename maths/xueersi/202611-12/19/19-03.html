@@ -1,0 +1,2239 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>拓展練習 3：水果天平輕重・互動視覺解題教練</title>
+<style>
+  :root {
+    --bg: #f6f8fc;
+    --card: #ffffff;
+    --ink: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --accent: #2563eb;
+    --accent-soft: #dbeafe;
+    --pen: #1d4ed8;
+    --gold: #d98200;
+    --gold-soft: #fef3c7;
+    --green: #1e9c60;
+    --green-soft: #dcfce7;
+    --coral: #e85d22;
+    --coral-soft: #ffedd5;
+    --berry: #d93870;
+    --berry-soft: #fce7f3;
+    --paper: #fffdf5;
+    --paper-line: #ede6d3;
+    --shadow: 0 6px 20px rgba(15, 23, 42, 0.07);
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "PingFang TC", "Hiragino Sans TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 10px 12px 12px;
+    gap: 10px;
+  }
+
+  /* 1. Top Phase Progress Bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 8px 12px;
+    box-shadow: var(--shadow);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    font-size: 16px;
+    color: #0f172a;
+    white-space: nowrap;
+  }
+
+  .brand-badge {
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+
+  .phase-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .phase-pill {
+    border: 1.5px solid var(--border);
+    background: #f8fafc;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+
+  .phase-pill:hover {
+    border-color: #93c5fd;
+    color: var(--accent);
+    background: #eff6ff;
+  }
+
+  .phase-pill.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.28);
+  }
+
+  .phase-pill.done {
+    background: #ecfdf5;
+    border-color: #86efac;
+    color: #15803d;
+  }
+
+  .kbd-hint {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .kbd-hint kbd {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-family: inherit;
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .kbd-hint { display: none; }
+  }
+
+  /* 2. Question Card */
+  .question-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .q-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+
+  .q-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 3px 10px;
+    border-radius: 8px;
+  }
+
+  .code-legend-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .code-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1.5px solid transparent;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .code-chip.hidden { opacity: 0; pointer-events: none; transform: scale(0.85); }
+  .code-chip.gold { background: var(--gold-soft); color: #9a5b00; border-color: #f59e0b; }
+  .code-chip.green { background: var(--green-soft); color: #166534; border-color: #22c55e; }
+  .code-chip.coral { background: var(--coral-soft); color: #9a3412; border-color: #fb923c; }
+  .code-chip.berry { background: var(--berry-soft); color: #9d174d; border-color: #ec4899; }
+
+  .q-text-zh {
+    font-size: clamp(20px, 2.3vw, 23px);
+    font-weight: 800;
+    line-height: 1.55;
+    color: #0f172a;
+    margin: 2px 0;
+  }
+
+  .q-text-en {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 6px;
+    line-height: 1.35;
+  }
+
+  .q-seg {
+    display: inline;
+    padding: 2px 4px;
+    border-radius: 6px;
+    transition: background 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .q-seg.active {
+    background: #fef08a;
+    box-shadow: inset 0 -3px 0 #eab308;
+    color: #0f172a;
+  }
+
+  .q-conds {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+
+  .cond-pill {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1.5px solid var(--border);
+    color: #334155;
+    transition: all 0.25s ease;
+  }
+
+  .cond-pill.active {
+    background: #fef9c3;
+    border-color: #eab308;
+    color: #854d0e;
+    box-shadow: 0 2px 8px rgba(234, 179, 8, 0.25);
+    transform: translateY(-1px);
+  }
+
+  /* 3. Main Dual-Track Stage */
+  .stage-grid {
+    display: grid;
+    grid-template-columns: 1.28fr 1fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 360px;
+  }
+
+  @media (max-width: 860px) {
+    .stage-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .panel-draft {
+    background: var(--paper);
+    border-color: #e5d9be;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    font-weight: 800;
+    color: #334155;
+    background: #f8fafc;
+  }
+
+  .panel-draft .panel-head {
+    background: #faf3e0;
+    border-bottom-color: #e6dac0;
+    color: #713f12;
+  }
+
+  .panel-sub {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .svg-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    position: relative;
+  }
+
+  .svg-wrap svg {
+    width: 100%;
+    height: auto;
+    max-height: 410px;
+    display: block;
+    user-select: none;
+  }
+
+  /* 4. Zero-Occlusion Inline Quiz Bar */
+  .quiz-bar {
+    display: none;
+    background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+    border: 2px solid #60a5fa;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.14);
+    animation: slideIn 0.25s ease;
+  }
+
+  .quiz-bar.show { display: block; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .quiz-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .quiz-q {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1e3a8a;
+  }
+
+  .quiz-skip {
+    background: #fff;
+    border: 1.5px solid #cbd5e1;
+    color: #475569;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .quiz-opts {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .quiz-btn {
+    flex: 1;
+    min-width: 120px;
+    background: #ffffff;
+    border: 2px solid #93c5fd;
+    color: #1e293b;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 10px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+  }
+
+  .quiz-btn:hover { background: #dbeafe; border-color: #2563eb; transform: translateY(-1px); }
+  .quiz-btn.wrong { background: #fef2f2; border-color: #f87171; color: #b91c1c; }
+  .quiz-btn.right { background: #dcfce7; border-color: #22c55e; color: #15803d; }
+
+  .quiz-fb {
+    margin-top: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    min-height: 22px;
+  }
+  .quiz-fb.err { color: #b91c1c; }
+  .quiz-fb.ok { color: #15803d; }
+
+  /* 5. Celebration & Practice Bar (Inline, zero occlusion) */
+  .celebrate-bar {
+    display: none;
+    background: linear-gradient(135deg, #fefce8, #ecfdf5);
+    border: 2px solid #22c55e;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .celebrate-bar.show { display: block; animation: slideIn 0.3s ease; }
+
+  .mantra-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .mantra-text {
+    font-size: 18px;
+    font-weight: 800;
+    color: #14532d;
+  }
+
+  .mantra-pill {
+    display: inline-block;
+    background: #fde047;
+    color: #713f12;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 999px;
+    margin-right: 8px;
+  }
+
+  .btn-challenge {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+    font-family: inherit;
+    transition: transform 0.15s ease;
+  }
+  .btn-challenge:hover { transform: translateY(-1px); }
+
+  /* Practice Challenge Section */
+  .practice-box {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1.5px dashed #86efac;
+  }
+  .practice-box.show { display: block; }
+
+  .practice-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 8px;
+  }
+
+  .practice-conds {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.8;
+    color: #1e293b;
+    margin-bottom: 10px;
+  }
+
+  .practice-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .btn-hint {
+    background: #fffbeb;
+    border: 1.5px solid #f59e0b;
+    color: #92400e;
+    border-radius: 10px;
+    padding: 7px 13px;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .practice-draft-hint {
+    display: none;
+    background: var(--paper);
+    border: 1.5px dashed #d97706;
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+  }
+  .practice-draft-hint.show { display: block; }
+
+  .practice-verify {
+    display: none;
+    background: #f0fdf4;
+    border: 1.5px solid #4ade80;
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 10px;
+  }
+  .practice-verify.show { display: block; }
+
+  /* 6. Bottom Docked Control & Subtitle Panel */
+  .dock {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .subtitle-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .subtitle-box {
+    flex: 1;
+    min-width: 240px;
+    font-size: clamp(17px, 2vw, 19px);
+    line-height: 1.6;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .quote-chip {
+    background: #fef3c7;
+    color: #92400e;
+    border-bottom: 2px solid #f59e0b;
+    padding: 1px 6px;
+    border-radius: 6px;
+    margin-right: 4px;
+  }
+
+  .formula-strip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 6px 14px;
+    font-size: 24px;
+    font-weight: 900;
+    min-height: 46px;
+    white-space: nowrap;
+  }
+
+  .f-tok {
+    display: inline-block;
+    padding: 0 4px;
+    border-radius: 6px;
+  }
+  .f-green { color: var(--green); background: var(--green-soft); }
+  .f-coral { color: var(--coral); background: var(--coral-soft); }
+  .f-gold  { color: var(--gold);  background: var(--gold-soft); }
+  .f-berry { color: var(--berry); background: var(--berry-soft); }
+  .f-op    { color: #475569; }
+
+  .controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .step-counter {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--muted);
+    min-width: 90px;
+  }
+
+  .main-btns {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ctrl-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1.5px solid #cbd5e1;
+    background: #f8fafc;
+    color: #0f172a;
+    font-size: 19px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+  }
+
+  .ctrl-btn:hover:not(:disabled) { background: #e2e8f0; transform: scale(1.04); }
+  .ctrl-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .ctrl-btn.primary {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    border: none;
+    font-size: 22px;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  }
+  .ctrl-btn.primary:hover { filter: brightness(1.06); }
+
+  .aux-btns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .pill-btn {
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    border-radius: 999px;
+    padding: 8px 13px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+
+  .pill-btn:hover { background: #f1f5f9; }
+  .pill-btn.active { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
+  .pill-btn.muted { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+
+  #confetti-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 99;
+  }
+</style>
+</head>
+<body>
+<canvas id="confetti-canvas"></canvas>
+
+<div class="app">
+  <!-- Top Phase Progress Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-badge">小一至小二</span>
+      <span>水果天平實戰教練</span>
+    </div>
+    <nav class="phase-pills" id="phase-pills"></nav>
+    <div class="kbd-hint"><kbd>Space</kbd> 播放/暫停 · <kbd>←</kbd><kbd>→</kbd> 切換步驟</div>
+  </header>
+
+  <!-- Question Card -->
+  <section class="question-card">
+    <div class="q-header">
+      <span class="q-tag">📐 拓展練習 3</span>
+      <div class="code-legend-top" id="top-legend">
+        <span class="code-chip gold hidden" id="leg-pomelo">◇ 柚子</span>
+        <span class="code-chip green hidden" id="leg-apple">□ 蘋果</span>
+        <span class="code-chip coral hidden" id="leg-peach">△ 桃子</span>
+        <span class="code-chip berry hidden" id="leg-berry">V 草莓</span>
+      </div>
+    </div>
+    <div class="q-text-zh">
+      <span class="q-seg" id="qseg-0">已知水果的輕重情況如下所示，</span><span class="q-seg" id="qseg-1">請你據此填寫答案。</span>
+    </div>
+    <p class="q-text-en">The relative weights of the fruits are shown below. Please fill in the answer accordingly.</p>
+    <div class="q-conds">
+      <span class="cond-pill" id="cond-1">天平一：1 柚子 ＝ 1 蘋果 ＋ 1 桃子</span>
+      <span class="cond-pill" id="cond-2">天平二：2 蘋果 ＝ 6 草莓</span>
+      <span class="cond-pill" id="cond-3">天平三：1 桃子 ＋ 3 草莓 ＝ 2 桃子</span>
+      <span class="cond-pill" id="cond-q">問題：1 柚子 ＝ ( ？ ) 個草莓</span>
+    </div>
+  </section>
+
+  <!-- Dual-Track Main Stage -->
+  <main class="stage-grid">
+    <!-- Track A: Concrete Visual Stage -->
+    <section class="panel">
+      <div class="panel-head">
+        <span>⚖️ 具象動畫舞台（睇懂原理）</span>
+        <span class="panel-sub" id="stage-status">原題圖示</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="svg-stage" viewBox="0 0 680 410" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </section>
+
+    <!-- Track B: Exam Pencil Draft Paper -->
+    <section class="panel panel-draft">
+      <div class="panel-head">
+        <span>✏️ 實戰鉛筆算草紙（考試速記）</span>
+        <span class="panel-sub">無代數・極簡筆劃・零混淆</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="svg-draft" viewBox="0 0 500 410" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </section>
+  </main>
+
+  <!-- Inline Interactive Quiz Bar (Zero Occlusion) -->
+  <section class="quiz-bar" id="quiz-bar" aria-live="polite">
+    <div class="quiz-top">
+      <div class="quiz-q" id="quiz-q"></div>
+      <button class="quiz-skip" id="quiz-skip" type="button">跳過繼續 ▶</button>
+    </div>
+    <div class="quiz-opts" id="quiz-opts"></div>
+    <div class="quiz-fb" id="quiz-fb"></div>
+  </section>
+
+  <!-- Celebration & Practice Challenge Bar -->
+  <section class="celebrate-bar" id="celebrate-bar">
+    <div class="mantra-row">
+      <div class="mantra-text">
+        <span class="mantra-pill">🏆 考場實戰口訣</span>
+        兩個一樣平分半，兩邊都有齊劃走，逐個換晒再相加！
+      </div>
+      <button class="btn-challenge" id="btn-challenge" type="button">🎯 挑戰類似題</button>
+    </div>
+
+    <!-- Practice Challenge Box -->
+    <div class="practice-box" id="practice-box">
+      <div class="practice-title">🎯 考場實戰挑戰（試下用鉛筆草稿自己計！）</div>
+      <div class="practice-conds">
+        <div>天平一：1 個柚子 ＝ 1 個蘋果 ＋ 1 個桃子</div>
+        <div>天平二：2 個蘋果 ＝ 8 粒草莓</div>
+        <div>天平三：1 個桃子 ＋ 5 粒草莓 ＝ 2 個桃子</div>
+        <div style="color:#1d4ed8; margin-top:4px;">問：1 個柚子 ＝ ( &nbsp;&nbsp; ) 個草莓？</div>
+      </div>
+      <div class="practice-actions">
+        <button class="btn-hint" id="btn-hint" type="button">✏️ 睇草稿提示</button>
+        <div class="quiz-opts" id="practice-opts" style="flex:1;"></div>
+      </div>
+      <div class="practice-draft-hint" id="practice-draft-hint">
+        <svg viewBox="0 0 600 165" width="100%" style="max-height:165px; display:block;" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="600" height="165" rx="10" fill="#fffdf5" />
+          <g font-family="PingFang TC, Microsoft JhengHei, sans-serif" font-weight="800">
+            <!-- Row 1: ◇ = □ + △ -->
+            <polygon points="34,54 46,68 34,82 22,68" fill="#fef3c7" stroke="#d98200" stroke-width="2.5"/>
+            <text x="56" y="75" font-size="22" fill="#334155">=</text>
+            <rect x="78" y="57" width="21" height="21" rx="2.5" fill="#dcfce7" stroke="#1e9c60" stroke-width="2.5"/>
+            <text x="108" y="75" font-size="22" fill="#334155">+</text>
+            <polygon points="138,57 150,79 126,79" fill="#ffedd5" stroke="#e85d22" stroke-width="2.5"/>
+
+            <!-- Row 2: [□ □](2) = 8_ V (split half -> 4, 4) -->
+            <rect x="182" y="51" width="60" height="34" rx="6" fill="none" stroke="#1e9c60" stroke-width="1.8" stroke-dasharray="4 3"/>
+            <text x="212" y="46" text-anchor="middle" font-size="13" fill="#1e9c60">2</text>
+            <rect x="189" y="59" width="18" height="18" rx="2" fill="#dcfce7" stroke="#1e9c60" stroke-width="2.2"/>
+            <rect x="217" y="59" width="18" height="18" rx="2" fill="#dcfce7" stroke="#1e9c60" stroke-width="2.2"/>
+            <line x1="212" y1="47" x2="212" y2="90" stroke="#2563eb" stroke-width="2.2" stroke-dasharray="4 3"/>
+            <text x="250" y="75" font-size="22" fill="#334155">=</text>
+            <text x="274" y="75" font-size="24" fill="#d93870">8</text>
+            <line x1="271" y1="81" x2="292" y2="81" stroke="#d93870" stroke-width="2.5"/>
+            <polyline points="298,64 303,75 308,64" fill="none" stroke="#d93870" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="281" y1="84" x2="266" y2="100" stroke="#2563eb" stroke-width="2"/>
+            <line x1="281" y1="84" x2="296" y2="100" stroke="#2563eb" stroke-width="2"/>
+            <text x="262" y="117" text-anchor="middle" font-size="16" fill="#2563eb">4</text>
+            <text x="300" y="117" text-anchor="middle" font-size="16" fill="#2563eb">4</text>
+
+            <!-- Row 3: △ + [V V V V V](5) = [△ △](2) with slashes -->
+            <polygon points="354,57 365,79 343,79" fill="#ffedd5" stroke="#e85d22" stroke-width="2.4"/>
+            <line x1="341" y1="81" x2="367" y2="54" stroke="#dc2626" stroke-width="3"/>
+            <text x="372" y="75" font-size="20" fill="#334155">+</text>
+            <rect x="392" y="52" width="90" height="32" rx="6" fill="none" stroke="#d93870" stroke-width="1.8" stroke-dasharray="4 3"/>
+            <text x="437" y="47" text-anchor="middle" font-size="13" fill="#d93870">5</text>
+            <polyline points="400,62 405,74 410,62" fill="none" stroke="#d93870" stroke-width="2.1" stroke-linecap="round"/>
+            <polyline points="416,62 421,74 426,62" fill="none" stroke="#d93870" stroke-width="2.1" stroke-linecap="round"/>
+            <polyline points="432,62 437,74 442,62" fill="none" stroke="#d93870" stroke-width="2.1" stroke-linecap="round"/>
+            <polyline points="448,62 453,74 458,62" fill="none" stroke="#d93870" stroke-width="2.1" stroke-linecap="round"/>
+            <polyline points="464,62 469,74 474,62" fill="none" stroke="#d93870" stroke-width="2.1" stroke-linecap="round"/>
+            <text x="492" y="75" font-size="20" fill="#334155">=</text>
+            <rect x="512" y="52" width="66" height="32" rx="6" fill="none" stroke="#e85d22" stroke-width="1.8" stroke-dasharray="4 3"/>
+            <text x="545" y="47" text-anchor="middle" font-size="13" fill="#e85d22">2</text>
+            <polygon points="528,57 539,79 517,79" fill="#ffedd5" stroke="#e85d22" stroke-width="2.4"/>
+            <line x1="515" y1="81" x2="541" y2="54" stroke="#dc2626" stroke-width="3"/>
+            <polygon points="560,57 571,79 549,79" fill="#ffedd5" stroke="#e85d22" stroke-width="2.4"/>
+
+            <!-- Bottom summary guide (safe symbols only) -->
+            <text x="22" y="148" font-size="16" fill="#1e293b">提示：□ ＝ 4 ， △ ＝ 5 ，最後加埋一齊就係答案！</text>
+          </g>
+        </svg>
+      </div>
+      <div class="quiz-fb" id="practice-fb"></div>
+      <div class="practice-verify" id="practice-verify">
+        <div style="font-size:16px; font-weight:800; color:#15803d; margin-bottom:6px;">🎉 實物圖解驗證：4 ＋ 5 ＝ 9 粒草莓！</div>
+        <svg id="svg-practice-verify" viewBox="0 0 600 115" width="100%" style="max-height:115px; display:block;" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom Docked Subtitle, Formula & Controls -->
+  <footer class="dock">
+    <div class="subtitle-row">
+      <div class="subtitle-box" id="subtitle-box"></div>
+      <div class="formula-strip" id="formula-strip" aria-label="實時算式">
+        <span style="font-size:15px; color:#94a3b8; font-weight:700;">邊讀題・邊畫草稿</span>
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <div class="step-counter" id="step-counter">第 1 / 13 步</div>
+      <div class="main-btns">
+        <button class="ctrl-btn" id="btn-prev" type="button" title="上一步">⏮</button>
+        <button class="ctrl-btn primary" id="btn-play" type="button" title="播放 / 暫停">▶</button>
+        <button class="ctrl-btn" id="btn-next" type="button" title="下一步">⏭</button>
+        <button class="ctrl-btn" id="btn-replay" type="button" title="由頭重播">🔄</button>
+      </div>
+      <div class="aux-btns">
+        <button class="pill-btn active" id="btn-speed" type="button">🐢 0.75x 適中</button>
+        <button class="pill-btn" id="btn-mute" type="button">🔊 語音開</button>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* =========================================================
+   CONFIG: Centralized Data, Narration, Heteronym Map, Steps
+   ========================================================= */
+const CONFIG = {
+  defaultRate: 0.75,
+  fastRate: 1.0,
+  colors: {
+    pomelo: '#d98200',
+    apple: '#1e9c60',
+    peach: '#e85d22',
+    berry: '#d93870',
+    pen: '#1d4ed8',
+    region: ['#f4711f', '#0aa5c9', '#8d5bd6', '#f0a500', '#e8467c', '#33b26a']
+  },
+  /* Cantonese Heteronym & Tone Calibration Map (Subtitle stays 100% standard Chinese) */
+  HETERO_MAP: {
+    '一排': '一徘',
+    '畫條': '劃條',
+    '畫線': '劃線',
+    '畫低': '劃低',
+    '畫出': '劃出',
+    '畫個': '劃個',
+    '唔畫': '唔劃',
+    '數一數': '嫂一嫂',
+    '數吓': '嫂吓',
+    '逐粒數': '逐粒嫂',
+    '從左數': '從左嫂',
+    '從右數': '從右嫂',
+    '重係': '仲係'
+  },
+  phases: [
+    { id: 0, label: '0. 原題', startStep: 0 },
+    { id: 1, label: '1. 順讀記草稿', startStep: 1 },
+    { id: 2, label: '2. 蘋果拆半', startStep: 6 },
+    { id: 3, label: '3. 桃子抵銷', startStep: 8 },
+    { id: 4, label: '4. 代換寫答案', startStep: 10 }
+  ],
+  steps: [
+    {
+      id: 0, phase: 0, dur: 1100,
+      stageStatus: '原題圖示（未開始）',
+      quote: '',
+      thought: '準備好鉛筆同空白草稿紙，撳播放鍵，順住題目一步步拆解！',
+      highlightSegs: [], highlightConds: [],
+      formula: []
+    },
+    {
+      id: 1, phase: 1, dur: 2200,
+      stageStatus: '三個天平全部打平＝兩邊一樣重',
+      quote: '題目寫住：「已知水果的輕重情況如下所示，請你據此填寫答案。」',
+      thought: '三個天平全部打平，即係每個天平左邊同右邊一樣重。',
+      highlightSegs: ['qseg-0', 'qseg-1'], highlightConds: [],
+      formula: []
+    },
+    {
+      id: 2, phase: 1, dur: 2800,
+      stageStatus: '睇天平一・草擬第一條關係',
+      quote: '天平一話：「左邊有一個柚子，右邊有一個蘋果同一個桃子，兩邊一樣重。」',
+      thought: '唔好寫中文字！草稿即刻記低柚子等於蘋果加桃子，未知答案先留問號。',
+      highlightSegs: [], highlightConds: ['cond-1'],
+      formula: []
+    },
+    {
+      id: 3, phase: 1, dur: 3000,
+      stageStatus: '睇天平二・數清六粒草莓',
+      quote: '天平二話：「左邊有兩個蘋果，右邊有六粒草莓，兩邊一樣重。」',
+      thought: '逐粒數清楚係六粒，數量多就寫數字六加底線，快又唔會漏！',
+      highlightSegs: [], highlightConds: ['cond-2'],
+      formula: []
+    },
+    {
+      id: 4, phase: 1, dur: 2800,
+      stageStatus: '睇天平三・記低桃子同草莓',
+      quote: '天平三話：「左邊有一個桃子加三粒草莓，右邊有兩個桃子，兩邊一樣重。」',
+      thought: '得三粒草莓，直接畫出三個一組，同右邊兩個桃子一樣重。',
+      highlightSegs: [], highlightConds: ['cond-3'],
+      formula: []
+    },
+    {
+      id: 5, phase: 1, dur: 2400,
+      stageStatus: '鎖定目標・全部換成草莓',
+      quote: '題目問：「一個柚子，等於幾多個草莓？」',
+      thought: '目標好清楚：要搵出一個蘋果同一個桃子，各自等於幾多粒草莓！',
+      highlightSegs: [], highlightConds: ['cond-q'],
+      formula: [{ t: '1 柚子', c: 'f-gold' }, { t: '=', c: 'f-op' }, { t: '? 草莓', c: 'f-berry' }]
+    },
+    {
+      id: 6, phase: 2, dur: 2800,
+      stageStatus: '天平二：平分兩份睇真啲',
+      quote: '望實天平二：「兩個蘋果，等於六粒草莓。」',
+      thought: '左右兩邊一齊由中間平分做兩份，先停一停估吓一份有幾多粒！',
+      highlightSegs: [], highlightConds: ['cond-2'],
+      formula: [{ t: '2 蘋果', c: 'f-green' }, { t: '=', c: 'f-op' }, { t: '6 草莓', c: 'f-berry' }],
+      quiz: {
+        q: '⏸ 停一停，估一估：兩個蘋果等於六粒草莓，平分做兩份，一個蘋果等於幾多粒草莓？',
+        options: [
+          { label: '2 粒', ok: false, fb: '唔啱喎，2 加 2 得 4，未夠 6 粒，再數一數左邊嗰半！' },
+          { label: '3 粒', ok: true,  fb: '答啱晒！6 平分兩份係 3 同 3，所以 1 個蘋果等於 3 粒草莓！' },
+          { label: '4 粒', ok: false, fb: '太多啦，4 加 4 等於 8，超過咗 6 粒，再試吓！' }
+        ]
+      }
+    },
+    {
+      id: 7, phase: 2, dur: 2600,
+      stageStatus: '搵到第一個線索：1 蘋果 ＝ 3 草莓',
+      quote: '',
+      thought: '六平分兩份係三同三，所以一個蘋果等於三粒草莓！即刻記低。',
+      highlightSegs: [], highlightConds: ['cond-2'],
+      formula: [{ t: '1 蘋果', c: 'f-green' }, { t: '=', c: 'f-op' }, { t: '3 草莓', c: 'f-berry' }]
+    },
+    {
+      id: 8, phase: 3, dur: 2600,
+      stageStatus: '天平三：發現兩邊都有桃子',
+      quote: '再望天平三：「一個桃子加三粒草莓，等於兩個桃子。」',
+      thought: '留意！左右兩邊都有桃子，如果兩邊一齊拎走一個桃子會點呢？',
+      highlightSegs: [], highlightConds: ['cond-3'],
+      formula: [{ t: '1 桃 ＋ 3 草莓', c: 'f-coral' }, { t: '=', c: 'f-op' }, { t: '2 桃', c: 'f-coral' }],
+      quiz: {
+        q: '⏸ 停一停，估一估：左右兩邊一齊拎走 1 個桃子，個天平會點？',
+        options: [
+          { label: '仲係一樣平', ok: true,  fb: '好醒目！兩邊拎走一樣重嘅桃子，天平依然打平！' },
+          { label: '左邊跌落去', ok: false, fb: '兩邊減走相同重量，唔會一邊重咗㗎，再諗吓！' },
+          { label: '右邊跌落去', ok: false, fb: '兩邊一齊拎走一個相同桃子，重量仲係相等㗎，再試！' }
+        ]
+      }
+    },
+    {
+      id: 9, phase: 3, dur: 2900,
+      stageStatus: '兩邊齊劃走 1 個桃子：1 桃子 ＝ 3 草莓',
+      quote: '',
+      thought: '兩邊各飛走一個桃子，草稿一筆劃走！即刻睇到一個桃子等於三粒草莓。',
+      highlightSegs: [], highlightConds: ['cond-3'],
+      formula: [{ t: '1 桃子', c: 'f-coral' }, { t: '=', c: 'f-op' }, { t: '3 草莓', c: 'f-berry' }]
+    },
+    {
+      id: 10, phase: 4, dur: 3000,
+      stageStatus: '返去天平一：先換走蘋果',
+      quote: '返去天平一：「一個柚子，等於一個蘋果加一個桃子。」',
+      thought: '劃走問號！先拎走蘋果，換入三粒草莓，算式先寫三。',
+      highlightSegs: [], highlightConds: ['cond-1'],
+      formula: [{ t: '1 柚子', c: 'f-gold' }, { t: '=', c: 'f-op' }, { t: '3', c: 'f-green' }]
+    },
+    {
+      id: 11, phase: 4, dur: 2900,
+      stageStatus: '返去天平一：再換走桃子',
+      quote: '',
+      thought: '再拎走桃子，同樣換入三粒草莓，算式接住寫加三！',
+      highlightSegs: [], highlightConds: ['cond-1'],
+      formula: [{ t: '1 柚子', c: 'f-gold' }, { t: '=', c: 'f-op' }, { t: '3', c: 'f-green' }, { t: '+', c: 'f-op' }, { t: '3', c: 'f-coral' }]
+    },
+    {
+      id: 12, phase: 4, dur: 3200,
+      stageStatus: '計出總數・親手填寫答案 ( 6 )',
+      quote: '題目問：「一個柚子，等於幾多個草莓？」',
+      thought: '數一數總共六粒草莓！三加三等於六，喺括號入面工整寫上六，搞掂！',
+      highlightSegs: [], highlightConds: ['cond-q'],
+      formula: [{ t: '3', c: 'f-green' }, { t: '+', c: 'f-op' }, { t: '3', c: 'f-coral' }, { t: '=', c: 'f-op' }, { t: '6', c: 'f-berry' }],
+      celebrate: true
+    }
+  ]
+};
+
+/* =========================================================
+   State Machine & Pure Helpers
+   ========================================================= */
+let state = {
+  step: 0,
+  p: 1,
+  playing: false,
+  rate: CONFIG.defaultRate,
+  muted: false,
+  quizResolved: {},
+  waitingQuiz: false,
+  rafId: null,
+  lastTs: null,
+  speechDone: true,
+  animDone: true,
+  fallbackTimer: null,
+  celebrated: false
+};
+
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const seg = (p, start, end) => clamp((p - start) / Math.max(0.0001, end - start), 0, 1);
+const easeOut = t => 1 - Math.pow(1 - clamp(t), 3);
+const easeInOut = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const lerp = (a, b, t) => a + (b - a) * clamp(t);
+const pulseBump = t => (t > 0 && t < 1) ? Math.sin(t * Math.PI) : 0;
+
+/* Pure-function 3-flash trilogy: flashes 3 times on [0, 0.75], holds soft steady glow after */
+function flash3State(lp) {
+  if (lp <= 0) return { fillOp: 0, strokeOp: 0, badgeOp: 0 };
+  if (lp < 0.75) {
+    const pulse = Math.abs(Math.sin((lp / 0.75) * Math.PI * 3));
+    return { fillOp: 0.08 + 0.24 * pulse, strokeOp: 0.4 + 0.6 * pulse, badgeOp: 0 };
+  }
+  return { fillOp: 0.14, strokeOp: 0.85, badgeOp: easeOut(seg(lp, 0.75, 0.95)) };
+}
+
+/* =========================================================
+   Web Audio Gentle Sound Effects (Zero external files)
+   ========================================================= */
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playSFX(type) {
+  if (state.muted) return;
+  try {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (type === 'pop') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(780, now + 0.08);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+      osc.start(now); osc.stop(now + 0.12);
+    } else if (type === 'ding') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(660, now);
+      osc.frequency.setValueAtTime(880, now + 0.09);
+      gain.gain.setValueAtTime(0.11, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.start(now); osc.stop(now + 0.36);
+    } else if (type === 'oops') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.linearRampToValueAtTime(220, now + 0.18);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      osc.start(now); osc.stop(now + 0.23);
+    } else if (type === 'celebrate') {
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, idx) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.connect(g); g.connect(audioCtx.destination);
+        const t = now + idx * 0.09;
+        o.frequency.setValueAtTime(f, t);
+        g.gain.setValueAtTime(0.09, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+        o.start(t); o.stop(t + 0.45);
+      });
+    }
+  } catch (e) {}
+}
+
+/* =========================================================
+   Cantonese TTS with HETERO_MAP & Zero Overlap
+   ========================================================= */
+let zhHKVoice = null;
+function loadVoices() {
+  if (!('speechSynthesis' in window)) return;
+  const list = speechSynthesis.getVoices();
+  zhHKVoice = list.find(v => /zh[-_]HK/i.test(v.lang))
+           || list.find(v => /yue|cantonese|hong\s?kong/i.test(v.name + ' ' + v.lang))
+           || list.find(v => /zh[-_]TW/i.test(v.lang))
+           || list.find(v => /^zh/i.test(v.lang))
+           || null;
+}
+if ('speechSynthesis' in window) {
+  loadVoices();
+  speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function cleanForTTS(raw) {
+  let s = raw || '';
+  s = s.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '');
+  s = s.replace(/[「」『』【】\[\]|□△◇☆]/g, ' ');
+  s = s.replace(/\s*−\s*|\s*-\s*/g, '減');
+  s = s.replace(/\s*\+\s*/g, '加');
+  s = s.replace(/\s*×\s*/g, '乘');
+  s = s.replace(/\s*÷\s*/g, '除');
+  s = s.replace(/\s*=\s*/g, '等於');
+  for (const [k, v] of Object.entries(CONFIG.HETERO_MAP)) {
+    s = s.split(k).join(v);
+  }
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+function stopSpeech() {
+  clearTimeout(state.fallbackTimer);
+  state.fallbackTimer = null;
+  if ('speechSynthesis' in window) {
+    try { speechSynthesis.cancel(); } catch (e) {}
+  }
+}
+
+function speakStep(stepObj, onFinish) {
+  stopSpeech();
+  const fullText = (stepObj.quote ? stepObj.quote + ' ' : '') + stepObj.thought;
+  const cleaned = cleanForTTS(fullText);
+
+  if (state.muted || !('speechSynthesis' in window) || !cleaned) {
+    const estMs = Math.max(1400, (cleaned.length * 145) / state.rate);
+    state.fallbackTimer = setTimeout(onFinish, estMs);
+    return;
+  }
+
+  let settled = false;
+  const doneOnce = () => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(state.fallbackTimer);
+    onFinish();
+  };
+
+  try {
+    const utt = new SpeechSynthesisUtterance(cleaned);
+    utt.lang = 'zh-HK';
+    if (zhHKVoice) utt.voice = zhHKVoice;
+    utt.rate = state.rate;
+    utt.pitch = 1.04;
+    utt.onend = doneOnce;
+    utt.onerror = doneOnce;
+    const maxMs = Math.max(4500, (cleaned.length * 360) / state.rate + 2500);
+    state.fallbackTimer = setTimeout(doneOnce, maxMs);
+    speechSynthesis.speak(utt);
+  } catch (e) {
+    state.fallbackTimer = setTimeout(doneOnce, 2200);
+  }
+}
+
+/* =========================================================
+   SVG Fruit & Scale Drawing Primitives (Track A)
+   ========================================================= */
+function fruitPomelo(x, y, s = 1, op = 1, glow = 0) {
+  if (op <= 0.01) return '';
+  const sc = s * (1 + 0.08 * glow);
+  return `<g transform="translate(${x},${y}) scale(${sc.toFixed(3)})" opacity="${op}">
+    ${glow > 0 ? `<circle cx="0" cy="-22" r="${28 + glow * 6}" fill="#fde047" opacity="${(0.38 * glow).toFixed(2)}"/>` : ''}
+    <path d="M-21,-10 C-24,-26 -10,-36 -4,-44 C0,-48 2,-48 5,-44 C11,-36 24,-26 21,-10 C19,3 -19,3 -21,-10 Z"
+          fill="#fbbf24" stroke="#b45309" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M-8,-15 C-11,-24 -4,-30 -1,-34" fill="none" stroke="#fef3c7" stroke-width="2.4" stroke-linecap="round" opacity="0.8"/>
+    <path d="M0,-45 C0,-51 2,-54 4,-55" fill="none" stroke="#78350f" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M-1,-47 C-10,-53 -16,-50 -15,-45 C-11,-43 -5,-44 -1,-47 Z" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
+  </g>`;
+}
+
+function fruitApple(x, y, s = 1, op = 1, glow = 0) {
+  if (op <= 0.01) return '';
+  const sc = s * (1 + 0.09 * glow);
+  return `<g transform="translate(${x},${y}) scale(${sc.toFixed(3)})" opacity="${op}">
+    ${glow > 0 ? `<circle cx="0" cy="-16" r="${21 + glow * 6}" fill="#86efac" opacity="${(0.45 * glow).toFixed(2)}"/>` : ''}
+    <path d="M0,-28 C-7,-32 -18,-26 -17,-12 C-16,0 -6,2 0,-1 C6,2 16,0 17,-12 C18,-26 7,-32 0,-28 Z"
+          fill="#34d399" stroke="#166534" stroke-width="2.1" stroke-linejoin="round"/>
+    <path d="M-9,-21 C-11,-17 -11,-11 -9,-8" fill="none" stroke="#dcfce7" stroke-width="2.1" stroke-linecap="round"/>
+    <path d="M0,-28 C0,-34 1,-37 3,-39" fill="none" stroke="#78350f" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M1,-33 C7,-38 13,-35 11,-30 C8,-29 4,-30 1,-33 Z" fill="#16a34a" stroke="#14532d" stroke-width="1.4"/>
+  </g>`;
+}
+
+function fruitPeach(x, y, s = 1, op = 1, glow = 0) {
+  if (op <= 0.01) return '';
+  const sc = s * (1 + 0.09 * glow);
+  return `<g transform="translate(${x},${y}) scale(${sc.toFixed(3)})" opacity="${op}">
+    ${glow > 0 ? `<circle cx="0" cy="-15" r="${21 + glow * 6}" fill="#fdba74" opacity="${(0.45 * glow).toFixed(2)}"/>` : ''}
+    <path d="M-13,-3 C-17,-1 -20,-4 -18,-8 C-14,-8 -11,-6 -13,-3 Z" fill="#22c55e" stroke="#15803d" stroke-width="1.3"/>
+    <path d="M13,-3 C17,-1 20,-4 18,-8 C14,-8 11,-6 13,-3 Z" fill="#22c55e" stroke="#15803d" stroke-width="1.3"/>
+    <path d="M0,-33 C6,-27 16,-20 15,-9 C14,0 6,2 0,1 C-6,2 -14,0 -15,-9 C-16,-20 -6,-27 0,-33 Z"
+          fill="#fb923c" stroke="#c2410c" stroke-width="2.1" stroke-linejoin="round"/>
+    <path d="M0,-29 C-3,-20 -3,-10 0,-1" fill="none" stroke="#ea580c" stroke-width="1.6" opacity="0.65"/>
+    <path d="M-7,-18 C-9,-14 -9,-9 -7,-6" fill="none" stroke="#ffedd5" stroke-width="2" stroke-linecap="round"/>
+  </g>`;
+}
+
+function fruitBerry(x, y, s = 1, op = 1, glow = 0) {
+  if (op <= 0.01) return '';
+  const sc = s * (1 + 0.1 * glow);
+  return `<g transform="translate(${x},${y}) scale(${sc.toFixed(3)})" opacity="${op}">
+    ${glow > 0 ? `<circle cx="0" cy="-8" r="${12 + glow * 4}" fill="#f9a8d4" opacity="${(0.5 * glow).toFixed(2)}"/>` : ''}
+    <path d="M0,-16 C6,-16 9,-11 7,-4 C5,1 2,2 0,2 C-2,2 -5,1 -7,-4 C-9,-11 -6,-16 0,-16 Z"
+          fill="#f43f5e" stroke="#9f1239" stroke-width="1.6"/>
+    <path d="M-5,-15 L0,-18 L5,-15 L2,-13 L0,-15 L-2,-13 Z" fill="#22c55e" stroke="#15803d" stroke-width="1"/>
+    <circle cx="-2.5" cy="-9" r="0.9" fill="#ffe4e6"/>
+    <circle cx="2.5" cy="-9" r="0.9" fill="#ffe4e6"/>
+    <circle cx="0" cy="-5" r="0.9" fill="#ffe4e6"/>
+  </g>`;
+}
+
+function drawBalanceScale(cx, cy, label, beamHighlight = 0) {
+  return `<g transform="translate(${cx},${cy})">
+    <rect x="-66" y="42" width="132" height="16" rx="6" fill="#64748b"/>
+    <rect x="-56" y="34" width="112" height="10" rx="4" fill="#94a3b8"/>
+    <circle cx="-55" cy="58" r="4" fill="#475569"/>
+    <circle cx="55" cy="58" r="4" fill="#475569"/>
+    <rect x="-7" y="2" width="14" height="34" rx="3" fill="#64748b"/>
+    <rect x="-62" y="8" width="124" height="7" rx="3.5" fill="${beamHighlight > 0 ? '#2563eb' : '#475569'}"/>
+    <rect x="-52" y="-12" width="6" height="22" rx="2" fill="#64748b"/>
+    <rect x="46" y="-12" width="6" height="22" rx="2" fill="#64748b"/>
+    <path d="M-92,-12 L-8,-12 L-16,-5 L-84,-5 Z" fill="#475569"/>
+    <path d="M8,-12 L92,-12 L84,-5 L16,-5 Z" fill="#475569"/>
+    <circle cx="0" cy="11" r="10" fill="#e2e8f0" stroke="#475569" stroke-width="2.5"/>
+    <polygon points="0,-6 -4,3 4,3" fill="${beamHighlight > 0 ? '#2563eb' : '#475569'}"/>
+    <text x="0" y="79" text-anchor="middle" font-size="14" font-weight="800" fill="#475569">${label}</text>
+  </g>`;
+}
+
+function drawBadge(x, y, num, color, op = 1) {
+  if (op <= 0.02) return '';
+  const sc = 0.65 + 0.35 * op;
+  return `<g transform="translate(${x},${y}) scale(${sc.toFixed(3)})" opacity="${op.toFixed(3)}">
+    <circle cx="0" cy="0" r="10.5" fill="${color}" stroke="#ffffff" stroke-width="2"/>
+    <text x="0" y="4" text-anchor="middle" font-size="12" font-weight="900" fill="#ffffff">${num}</text>
+  </g>`;
+}
+
+function drawRegionBox(x, y, w, h, color, fs, dashed = false) {
+  if (fs.strokeOp <= 0.01 && fs.fillOp <= 0.01) return '';
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12"
+    fill="${color}" fill-opacity="${fs.fillOp.toFixed(3)}"
+    stroke="${color}" stroke-opacity="${fs.strokeOp.toFixed(3)}"
+    stroke-width="2.8" ${dashed ? 'stroke-dasharray="6 4"' : ''}/>`;
+}
+
+function drawPenTip(x, y, op = 1) {
+  if (op <= 0.01) return '';
+  return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})" opacity="${op}">
+    <circle cx="0" cy="0" r="13" fill="#2563eb" opacity="0.22"/>
+    <circle cx="0" cy="0" r="6.5" fill="#1d4ed8" stroke="#ffffff" stroke-width="2.2"/>
+  </g>`;
+}
+
+/* =========================================================
+   Pure-Function Renderer: Track A (Concrete Stage)
+   ========================================================= */
+function renderStage(step, p) {
+  const s1 = { cx: 118, cy: 162 };
+  const s2 = { cx: 340, cy: 162 };
+  const s3 = { cx: 562, cy: 162 };
+  const panY = 149;
+
+  const s2Berries = [
+    { x: s2.cx + 31, y: panY },
+    { x: s2.cx + 50, y: panY },
+    { x: s2.cx + 69, y: panY },
+    { x: s2.cx + 40, y: panY - 17 },
+    { x: s2.cx + 60, y: panY - 17 },
+    { x: s2.cx + 50, y: panY - 34 }
+  ];
+  const s2BerriesSplit = [
+    { x: s2.cx + 22, y: panY },
+    { x: s2.cx + 39, y: panY },
+    { x: s2.cx + 30, y: panY - 17 },
+    { x: s2.cx + 61, y: panY },
+    { x: s2.cx + 78, y: panY },
+    { x: s2.cx + 70, y: panY - 17 }
+  ];
+  const s3Berries = [
+    { x: s3.cx - 33, y: panY },
+    { x: s3.cx - 17, y: panY },
+    { x: s3.cx - 25, y: panY - 17 }
+  ];
+  const s1AppleBerries = [
+    { x: s1.cx + 19, y: panY },
+    { x: s1.cx + 36, y: panY },
+    { x: s1.cx + 27, y: panY - 17 }
+  ];
+  const s1PeachBerries = [
+    { x: s1.cx + 61, y: panY },
+    { x: s1.cx + 78, y: panY },
+    { x: s1.cx + 69, y: panY - 17 }
+  ];
+
+  let out = `<rect x="0" y="0" width="680" height="410" rx="12" fill="#fbfdff"/>`;
+
+  const op1 = (step === 6 || step === 7 || step === 8 || step === 9) ? 0.28 : 1;
+  const op2 = (step === 8 || step === 9 || step === 10 || step === 11 || step === 12) ? 0.28 : 1;
+  const op3 = (step === 6 || step === 7 || step === 10 || step === 11 || step === 12) ? 0.28 : 1;
+  const beamHi = (step === 1) ? Math.sin(p * Math.PI * 3) * 0.5 + 0.5 : 0;
+
+  /* Synced draft-stroke pulse helpers */
+  const r1p = step === 2 ? seg(p, 0.42, 0.95) : 0;
+  const r2p = step === 3 ? seg(p, 0.55, 0.98) : 0;
+  const r3p = step === 4 ? seg(p, 0.50, 0.98) : 0;
+
+  /* --- SCALE 1 --- */
+  out += `<g opacity="${op1}">`;
+  if (step === 2) {
+    out += drawRegionBox(14, 72, 208, 174, CONFIG.colors.region[3], flash3State(seg(p, 0, 0.44)));
+  } else if (step === 10 || step === 11 || step === 12) {
+    out += drawRegionBox(14, 72, 208, 174, CONFIG.colors.region[3], { fillOp: 0.08, strokeOp: 0.75 });
+  }
+  out += drawBalanceScale(s1.cx, s1.cy, '天平一', beamHi);
+
+  const pomGlow = (step === 2) ? pulseBump(seg(r1p, 0.05, 0.30)) : (step === 5 ? 0.8 : 0);
+  out += fruitPomelo(s1.cx - 48, panY, 1.02, 1, pomGlow);
+
+  /* Scale 1 Apple -> replaced in Step 10 */
+  let s1AppleOp = 1, s1AppleX = s1.cx + 28, s1AppleY = panY, s1AppleSc = 0.92;
+  let s1AppleGlow = (step === 2) ? pulseBump(seg(r1p, 0.45, 0.65)) : 0;
+  let s1AppleBerriesOp = 0, s1AppleBerriesSc = 1;
+  if (step === 10) {
+    if (p < 0.25) {
+      s1AppleGlow = Math.abs(Math.sin(seg(p, 0, 0.25) * Math.PI * 3));
+    } else if (p < 0.52) {
+      const t = easeInOut(seg(p, 0.25, 0.52));
+      s1AppleX = lerp(s1.cx + 28, s1.cx + 3, t);
+      s1AppleY = lerp(panY, panY - 75, t);
+      s1AppleSc = lerp(0.92, 0.3, t);
+      s1AppleOp = 1 - t;
+    } else {
+      s1AppleOp = 0;
+      if (p >= 0.60) {
+        const t = easeOut(seg(p, 0.60, 0.85));
+        s1AppleBerriesOp = t;
+        s1AppleBerriesSc = 0.5 + 0.5 * t;
+      }
+    }
+  } else if (step > 10) {
+    s1AppleOp = 0;
+    s1AppleBerriesOp = 1;
+  }
+  out += fruitApple(s1AppleX, s1AppleY, s1AppleSc, s1AppleOp, s1AppleGlow);
+  if (s1AppleBerriesOp > 0.01) {
+    s1AppleBerries.forEach(b => { out += fruitBerry(b.x, b.y, s1AppleBerriesSc, s1AppleBerriesOp, step === 10 ? 0.6 : 0); });
+  }
+
+  /* Scale 1 Peach -> replaced in Step 11 */
+  let s1PeachOp = 1, s1PeachX = s1.cx + 68, s1PeachY = panY, s1PeachSc = 0.92;
+  let s1PeachGlow = (step === 2) ? pulseBump(seg(r1p, 0.78, 0.98)) : 0;
+  let s1PeachBerriesOp = 0, s1PeachBerriesSc = 1;
+  if (step === 11) {
+    if (p < 0.25) {
+      s1PeachGlow = Math.abs(Math.sin(seg(p, 0, 0.25) * Math.PI * 3));
+    } else if (p < 0.52) {
+      const t = easeInOut(seg(p, 0.25, 0.52));
+      s1PeachX = lerp(s1.cx + 68, s1.cx + 95, t);
+      s1PeachY = lerp(panY, panY - 75, t);
+      s1PeachSc = lerp(0.92, 0.3, t);
+      s1PeachOp = 1 - t;
+    } else {
+      s1PeachOp = 0;
+      if (p >= 0.60) {
+        const t = easeOut(seg(p, 0.60, 0.85));
+        s1PeachBerriesOp = t;
+        s1PeachBerriesSc = 0.5 + 0.5 * t;
+      }
+    }
+  } else if (step > 11) {
+    s1PeachOp = 0;
+    s1PeachBerriesOp = 1;
+  }
+  out += fruitPeach(s1PeachX, s1PeachY, s1PeachSc, s1PeachOp, s1PeachGlow);
+  if (s1PeachBerriesOp > 0.01) {
+    s1PeachBerries.forEach(b => { out += fruitBerry(b.x, b.y, s1PeachBerriesSc, s1PeachBerriesOp, step === 11 ? 0.6 : 0); });
+  }
+
+  /* Step 12: Count 1..6 single-layer badges then fade out together */
+  if (step === 12) {
+    const all6 = [...s1AppleBerries, ...s1PeachBerries];
+    const fadeAll = p > 0.62 ? 1 - seg(p, 0.62, 0.72) : 1;
+    all6.forEach((b, idx) => {
+      const appear = easeOut(seg(p, 0.04 + idx * 0.075, 0.12 + idx * 0.075));
+      out += drawBadge(b.x, b.y - 22, idx + 1, CONFIG.colors.berry, appear * fadeAll);
+    });
+  }
+
+  if (step >= 2) {
+    const tagOp = step === 2 ? easeOut(seg(p, 0.35, 0.55)) : 0.88;
+    out += `<g opacity="${tagOp}" font-size="13" font-weight="900" text-anchor="middle">
+      <text x="${s1.cx - 48}" y="86" fill="${CONFIG.colors.pomelo}">◇</text>
+      ${s1AppleOp > 0.5 ? `<text x="${s1.cx + 28}" y="106" fill="${CONFIG.colors.apple}">□</text>` : ''}
+      ${s1PeachOp > 0.5 ? `<text x="${s1.cx + 68}" y="106" fill="${CONFIG.colors.peach}">△</text>` : ''}
+    </g>`;
+  }
+  out += `</g>`;
+
+  /* --- SCALE 2 --- */
+  out += `<g opacity="${op2}">`;
+  if (step === 3) {
+    out += drawRegionBox(236, 72, 208, 174, CONFIG.colors.region[5], flash3State(seg(p, 0, 0.38)));
+  } else if (step === 6) {
+    out += drawRegionBox(242, 95, 96, 62, CONFIG.colors.apple, flash3State(seg(p, 0, 0.38)));
+    out += drawRegionBox(344, 95, 96, 62, CONFIG.colors.berry, flash3State(seg(p, 0.18, 0.55)));
+  } else if (step === 7) {
+    out += drawRegionBox(246, 98, 44, 58, CONFIG.colors.apple, { fillOp: 0.16, strokeOp: 0.9 });
+    out += drawRegionBox(350, 98, 44, 58, CONFIG.colors.berry, { fillOp: 0.16, strokeOp: 0.9 });
+  }
+  out += drawBalanceScale(s2.cx, s2.cy, '天平二', beamHi);
+
+  const splitT = (step === 6) ? easeInOut(seg(p, 0.52, 0.85)) : (step >= 7 ? 1 : 0);
+  const keepRightHalfOp = (step === 7) ? lerp(1, 0.22, easeOut(seg(p, 0.05, 0.45))) : 1;
+  const s2AppGlow = (step === 3) ? pulseBump(seg(r2p, 0.05, 0.40)) : (step === 7 ? 0.7 : 0);
+  out += fruitApple(lerp(s2.cx - 67, s2.cx - 72, splitT), panY, 0.92, 1, s2AppGlow);
+  out += fruitApple(lerp(s2.cx - 31, s2.cx - 26, splitT), panY, 0.92, keepRightHalfOp, step === 3 ? s2AppGlow : 0);
+
+  const s2BerSyncGlow = (step === 3) ? pulseBump(seg(r2p, 0.62, 0.98)) : 0;
+  s2Berries.forEach((b, idx) => {
+    const target = s2BerriesSplit[idx];
+    const bx = lerp(b.x, target.x, splitT);
+    const by = lerp(b.y, target.y, splitT);
+    const isRightHalf = idx >= 3;
+    const bop = isRightHalf ? keepRightHalfOp : 1;
+    const g = (step === 7 && !isRightHalf) ? 0.65 : s2BerSyncGlow;
+    out += fruitBerry(bx, by, 0.98, bop, g);
+  });
+
+  if (step === 6 || step === 7) {
+    const lineOp = step === 6 ? easeOut(seg(p, 0.60, 0.90)) : 0.85;
+    out += `<g opacity="${lineOp}">
+      <line x1="${s2.cx - 49}" y1="94" x2="${s2.cx - 49}" y2="156" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="5 4"/>
+      <line x1="${s2.cx + 50}" y1="94" x2="${s2.cx + 50}" y2="156" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="5 4"/>
+      ${step === 7 ? `<text x="${s2.cx - 72}" y="92" text-anchor="middle" font-size="13" font-weight="900" fill="${CONFIG.colors.apple}">1個</text>
+      <text x="${s2.cx + 30}" y="92" text-anchor="middle" font-size="13" font-weight="900" fill="${CONFIG.colors.berry}">3粒</text>` : ''}
+    </g>`;
+  }
+
+  if (step === 3) {
+    const fadeGroup = p > 0.82 ? 1 - seg(p, 0.82, 0.93) : 1;
+    s2Berries.forEach((b, idx) => {
+      const bp = easeOut(seg(p, 0.34 + idx * 0.06, 0.41 + idx * 0.06));
+      out += drawBadge(b.x, b.y - 21, idx + 1, CONFIG.colors.berry, bp * fadeGroup);
+    });
+  }
+  out += `</g>`;
+
+  /* --- SCALE 3 --- */
+  out += `<g opacity="${op3}">`;
+  if (step === 4) {
+    out += drawRegionBox(458, 72, 208, 174, CONFIG.colors.region[0], flash3State(seg(p, 0, 0.40)));
+  } else if (step === 8) {
+    out += drawRegionBox(468, 96, 40, 58, CONFIG.colors.coral, flash3State(seg(p, 0.25, 0.85)));
+    out += drawRegionBox(574, 96, 40, 58, CONFIG.colors.coral, flash3State(seg(p, 0.25, 0.85)));
+  } else if (step === 9 && p > 0.65) {
+    const kOp = easeOut(seg(p, 0.65, 0.9));
+    out += drawRegionBox(520, 102, 34, 52, CONFIG.colors.berry, { fillOp: 0.14 * kOp, strokeOp: 0.85 * kOp });
+    out += drawRegionBox(612, 98, 40, 56, CONFIG.colors.peach, { fillOp: 0.14 * kOp, strokeOp: 0.85 * kOp });
+  }
+  out += drawBalanceScale(s3.cx, s3.cy, '天平三', beamHi);
+
+  let p3FlyOp = 1, p3FlyDy = 0, p3FlySc = 0.92;
+  let p3LeftGlow = (step === 4) ? pulseBump(seg(r3p, 0.05, 0.25)) : 0;
+  let p3RightGlow = (step === 4) ? pulseBump(seg(r3p, 0.72, 0.96)) : 0;
+  if (step === 8) {
+    const g = Math.abs(Math.sin(seg(p, 0.3, 0.95) * Math.PI * 3));
+    p3LeftGlow = g; p3RightGlow = g;
+  } else if (step === 9) {
+    if (p < 0.24) {
+      const g = Math.abs(Math.sin(seg(p, 0, 0.24) * Math.PI * 3));
+      p3LeftGlow = g; p3RightGlow = g;
+    } else if (p < 0.60) {
+      const t = easeInOut(seg(p, 0.24, 0.60));
+      p3FlyDy = -78 * t;
+      p3FlySc = lerp(0.92, 0.28, t);
+      p3FlyOp = 1 - t;
+    } else {
+      p3FlyOp = 0;
+    }
+  } else if (step > 9) {
+    p3FlyOp = 0;
+  }
+
+  out += fruitPeach(s3.cx - 72, panY + p3FlyDy, p3FlySc, p3FlyOp, p3LeftGlow);
+  const s3BerGlow = (step === 4) ? pulseBump(seg(r3p, 0.34, 0.62)) : ((step === 9 && p > 0.65) ? 0.65 : 0);
+  s3Berries.forEach((b, idx) => {
+    out += fruitBerry(b.x, b.y, 0.98, 1, s3BerGlow);
+    if (step === 4) {
+      const fadeGroup = p > 0.80 ? 1 - seg(p, 0.80, 0.92) : 1;
+      const bp = easeOut(seg(p, 0.36 + idx * 0.09, 0.45 + idx * 0.09));
+      out += drawBadge(b.x, b.y - 21, idx + 1, CONFIG.colors.berry, bp * fadeGroup);
+    }
+  });
+
+  out += fruitPeach(s3.cx + 31, panY + p3FlyDy, p3FlySc, p3FlyOp, p3RightGlow);
+  out += fruitPeach(s3.cx + 69, panY, 0.92, 1, (step === 9 && p > 0.65) ? 0.7 : (step === 4 ? p3RightGlow : 0));
+  out += `</g>`;
+
+  /* --- BOTTOM ORIGINAL QUESTION AREA --- */
+  const qBoxHi = (step === 5 || step === 12);
+  out += `<g transform="translate(155, 286)">
+    <rect x="0" y="0" width="370" height="96" rx="16"
+      fill="${qBoxHi ? '#fefce8' : '#f8fafc'}"
+      stroke="${qBoxHi ? '#eab308' : '#cbd5e1'}"
+      stroke-width="${qBoxHi ? 2.8 : 1.8}"/>
+    ${fruitPomelo(68, 72, 1.05, 1, step === 5 ? 0.6 : 0)}
+    <text x="118" y="61" font-size="34" font-weight="900" fill="#1e293b">=</text>
+    <text x="160" y="61" font-size="36" font-weight="800" fill="#1e293b">(</text>
+    <text x="236" y="61" font-size="36" font-weight="800" fill="#1e293b">)</text>
+    <text x="266" y="61" font-size="30" font-weight="800" fill="#1e293b">個</text>
+    ${fruitBerry(325, 60, 1.25, 1, step === 5 ? 0.6 : 0)}
+  </g>`;
+
+  /* Hand-written Answer "6" inside parentheses at Step 12 */
+  if (step === 12 && p > 0.68) {
+    const drawT = easeOut(seg(p, 0.68, 0.94));
+    const dashLen = 140;
+    const offset = dashLen * (1 - drawT);
+    out += `<path d="M372,320 C354,320 344,333 344,347 C344,358 353,365 363,365 C373,365 380,357 380,348 C380,339 372,334 362,335 C353,336 347,341 345,347"
+      fill="none" stroke="#1d4ed8" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"
+      stroke-dasharray="${dashLen}" stroke-dashoffset="${offset.toFixed(1)}"/>`;
+  }
+
+  /* --- SINGLE PEN-TIP GUIDE (Track A active only, mutually exclusive with Track B) --- */
+  let penA = null;
+  if (step === 1) {
+    penA = { x: lerp(118, 562, easeInOut(p)), y: 173 };
+  } else if (step === 2 && p < 0.42) {
+    penA = { x: lerp(70, 186, easeInOut(seg(p, 0, 0.42))), y: 132 };
+  } else if (step === 3 && p < 0.55) {
+    penA = { x: lerp(280, 400, easeInOut(seg(p, 0, 0.55))), y: 132 };
+  } else if (step === 4 && p < 0.50) {
+    penA = { x: lerp(495, 625, easeInOut(seg(p, 0, 0.50))), y: 132 };
+  } else if (step === 5 && p < 0.55) {
+    penA = { x: lerp(215, 480, easeInOut(seg(p, 0, 0.55))), y: 342 };
+  } else if (step === 6 && p < 0.58) {
+    penA = { x: lerp(291, 390, easeInOut(seg(p, 0, 0.58))), y: 126 };
+  } else if (step === 8) {
+    penA = { x: lerp(490, 594, easeInOut(seg(p, 0.15, 0.75))), y: 126 };
+  } else if (step === 9 && p < 0.55) {
+    penA = { x: lerp(490, 594, easeInOut(seg(p, 0, 0.55))), y: 120 };
+  } else if (step === 10 && p < 0.62) {
+    penA = { x: s1.cx + 28, y: 126 };
+  } else if (step === 11 && p < 0.62) {
+    penA = { x: s1.cx + 68, y: 126 };
+  } else if (step === 12) {
+    if (p < 0.62) {
+      penA = { x: lerp(137, 196, easeInOut(seg(p, 0.05, 0.58))), y: 135 };
+    } else {
+      const wt = easeOut(seg(p, 0.68, 0.94));
+      penA = { x: lerp(372, 362, wt), y: lerp(320, 348, wt) };
+    }
+  }
+  if (penA) out += drawPenTip(penA.x, penA.y, 1);
+
+  return out;
+}
+
+/* =========================================================
+   Pure-Function Renderer: Track B (✏️ Exam Pencil Draft)
+   - ZERO multi-stroke Chinese words
+   - ZERO algebra (no × / ÷ / 3a=2b)
+   - Safe ultra-minimal shapes: ◇ □ △ V
+   ========================================================= */
+function strokeAttr(len, progress) {
+  const t = clamp(progress);
+  return `stroke-dasharray="${len}" stroke-dashoffset="${(len * (1 - t)).toFixed(1)}"`;
+}
+
+function draftDiamond(x, y, prog = 1, col = CONFIG.colors.pomelo) {
+  if (prog <= 0.01) return '';
+  return `<polygon points="${x},${y - 13} ${x + 13},${y} ${x},${y + 13} ${x - 13},${y}"
+    fill="${col}" fill-opacity="${(0.16 * prog).toFixed(2)}"
+    stroke="${col}" stroke-width="2.8" stroke-linejoin="round" ${strokeAttr(80, prog)}/>`;
+}
+
+function draftSquare(x, y, prog = 1, col = CONFIG.colors.apple) {
+  if (prog <= 0.01) return '';
+  return `<rect x="${x - 11}" y="${y - 11}" width="22" height="22" rx="2.5"
+    fill="${col}" fill-opacity="${(0.16 * prog).toFixed(2)}"
+    stroke="${col}" stroke-width="2.8" ${strokeAttr(92, prog)}/>`;
+}
+
+function draftTriangle(x, y, prog = 1, col = CONFIG.colors.peach) {
+  if (prog <= 0.01) return '';
+  return `<polygon points="${x},${y - 12} ${x + 12},${y + 11} ${x - 12},${y + 11}"
+    fill="${col}" fill-opacity="${(0.16 * prog).toFixed(2)}"
+    stroke="${col}" stroke-width="2.8" stroke-linejoin="round" ${strokeAttr(84, prog)}/>`;
+}
+
+function draftV(x, y, prog = 1, col = CONFIG.colors.berry, sc = 1) {
+  if (prog <= 0.01) return '';
+  const w = 7 * sc, h = 9 * sc;
+  return `<polyline points="${x - w},${y - h} ${x},${y + h} ${x + w},${y - h}"
+    fill="none" stroke="${col}" stroke-width="${2.6 * sc}" stroke-linecap="round" stroke-linejoin="round" ${strokeAttr(44, prog)}/>`;
+}
+
+function draftBoxWithNum(x, y, w, h, num, col, prog = 1) {
+  if (prog <= 0.01) return '';
+  return `<g>
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="7"
+      fill="none" stroke="${col}" stroke-width="2" stroke-dasharray="5 3" opacity="${prog.toFixed(2)}"/>
+    <text x="${x + w / 2}" y="${y - 5}" text-anchor="middle" font-size="14" font-weight="900" fill="${col}" opacity="${prog.toFixed(2)}">${num}</text>
+  </g>`;
+}
+
+function renderDraft(step, p) {
+  let out = `<rect x="0" y="0" width="500" height="410" rx="10" fill="#fffdf5"/>`;
+  out += `<g stroke="#ede6d3" stroke-width="1">`;
+  for (let gx = 25; gx < 500; gx += 25) out += `<line x1="${gx}" y1="0" x2="${gx}" y2="410"/>`;
+  for (let gy = 25; gy < 410; gy += 25) out += `<line x1="0" y1="${gy}" x2="500" y2="${gy}"/>`;
+  out += `</g>`;
+
+  /* Step 0 & Step 1: Completely blank paper */
+  if (step <= 1) {
+    out += `<text x="250" y="210" text-anchor="middle" font-size="16" font-weight="700" fill="#a8a29e" opacity="${step === 0 ? 0.9 : 0.45}">（空白算草紙・邊讀邊記）</text>`;
+    return out;
+  }
+
+  /* Corner Color-Matched Visual Key (Zero multi-stroke Chinese words on draft paper!) */
+  const leg2 = step === 2 ? easeOut(seg(p, 0.42, 0.65)) : 1;
+  const leg3 = step === 3 ? easeOut(seg(p, 0.55, 0.72)) : (step > 3 ? 1 : 0);
+  out += `<g opacity="${leg2}">
+    <rect x="14" y="8" width="472" height="36" rx="9" fill="#fef9e7" stroke="#e5d5b0" stroke-width="1.4"/>
+    ${fruitPomelo(42, 36, 0.42, 1, 0)}
+    <text x="58" y="31" font-size="15" font-weight="900" fill="#94a3b8">=</text>
+    ${draftDiamond(84, 26, 1, CONFIG.colors.pomelo)}
+
+    ${fruitApple(154, 34, 0.48, 1, 0)}
+    <text x="171" y="31" font-size="15" font-weight="900" fill="#94a3b8">=</text>
+    ${draftSquare(196, 26, 1, CONFIG.colors.apple)}
+
+    ${fruitPeach(266, 35, 0.48, 1, 0)}
+    <text x="283" y="31" font-size="15" font-weight="900" fill="#94a3b8">=</text>
+    ${draftTriangle(308, 26, 1, CONFIG.colors.peach)}
+
+    ${leg3 > 0.01 ? `<g opacity="${leg3}">
+      ${fruitBerry(378, 33, 0.82, 1, 0)}
+      <text x="394" y="31" font-size="15" font-weight="900" fill="#94a3b8">=</text>
+      ${draftV(418, 26, 1, CONFIG.colors.berry, 0.95)}
+    </g>` : ''}
+  </g>`;
+
+  /* --- ROW 1 (Scale 1): ◇ = □ + △ --- */
+  const r1p = step === 2 ? seg(p, 0.42, 0.95) : 1;
+  out += `<g>
+    <text x="20" y="92" font-size="14" font-weight="800" fill="#94a3b8" opacity="${easeOut(seg(r1p, 0, 0.2))}">(1)</text>
+    ${draftDiamond(68, 86, easeOut(seg(r1p, 0.05, 0.30)))}
+    <text x="102" y="95" font-size="28" font-weight="900" fill="#334155" opacity="${easeOut(seg(r1p, 0.30, 0.45))}">=</text>
+    ${draftSquare(148, 86, easeOut(seg(r1p, 0.45, 0.65)))}
+    <text x="182" y="95" font-size="28" font-weight="900" fill="#334155" opacity="${easeOut(seg(r1p, 0.65, 0.78))}">+</text>
+    ${draftTriangle(226, 86, easeOut(seg(r1p, 0.78, 0.98)))}
+  </g>`;
+
+  /* Initial '?' under Row 1 (Steps 2..9, slashed in Step 10) */
+  const qMarkOp = step === 2 ? easeOut(seg(p, 0.85, 1)) : (step < 10 ? 0.9 : (step === 10 ? lerp(0.9, 0.25, seg(p, 0.1, 0.35)) : 0));
+  if (qMarkOp > 0.02) {
+    out += `<text x="187" y="124" text-anchor="middle" font-size="20" font-weight="900" fill="#94a3b8" opacity="${qMarkOp}">?</text>`;
+    if (step === 10) {
+      out += `<line x1="176" y1="125" x2="198" y2="107" stroke="#dc2626" stroke-width="3" stroke-linecap="round" ${strokeAttr(32, easeOut(seg(p, 0.05, 0.28)))}/>`;
+    }
+  }
+
+  /* --- ROW 2 (Scale 2): [□ □](2) = 6_ V --- */
+  if (step >= 3) {
+    const r2p = step === 3 ? seg(p, 0.55, 0.98) : 1;
+    out += `<g>
+      <text x="20" y="182" font-size="14" font-weight="800" fill="#94a3b8" opacity="${easeOut(seg(r2p, 0, 0.2))}">(2)</text>
+      ${draftBoxWithNum(48, 158, 76, 36, '2', CONFIG.colors.apple, easeOut(seg(r2p, 0.32, 0.52)))}
+      ${draftSquare(68, 176, easeOut(seg(r2p, 0.05, 0.25)))}
+      ${draftSquare(104, 176, easeOut(seg(r2p, 0.20, 0.40)))}
+      <text x="142" y="185" font-size="28" font-weight="900" fill="#334155" opacity="${easeOut(seg(r2p, 0.48, 0.62))}">=</text>
+      <text x="176" y="185" font-size="28" font-weight="900" fill="${CONFIG.colors.berry}" opacity="${easeOut(seg(r2p, 0.62, 0.80))}">6</text>
+      <line x1="171" y1="191" x2="197" y2="191" stroke="${CONFIG.colors.berry}" stroke-width="3" stroke-linecap="round" ${strokeAttr(28, easeOut(seg(r2p, 0.76, 0.92)))}/>
+      ${draftV(210, 178, easeOut(seg(r2p, 0.84, 1)), CONFIG.colors.berry, 0.8)}
+    </g>`;
+  }
+
+  /* Steps 6 & 7: Split Line & Halving Result */
+  if (step >= 6) {
+    const sp6 = step === 6 ? seg(p, 0.58, 0.95) : 1;
+    out += `<line x1="86" y1="150" x2="86" y2="202" stroke="#2563eb" stroke-width="2.5" stroke-dasharray="5 3" opacity="${easeOut(sp6)}"/>`;
+    out += `<g stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" opacity="${easeOut(sp6)}">
+      <line x1="184" y1="195" x2="165" y2="213" ${strokeAttr(30, sp6)}/>
+      <line x1="184" y1="195" x2="203" y2="213" ${strokeAttr(30, sp6)}/>
+    </g>`;
+    if (step === 6) {
+      out += `<text x="160" y="232" text-anchor="middle" font-size="18" font-weight="900" fill="#2563eb" opacity="${easeOut(seg(p, 0.72, 0.95))}">?</text>
+              <text x="208" y="232" text-anchor="middle" font-size="18" font-weight="900" fill="#2563eb" opacity="${easeOut(seg(p, 0.72, 0.95))}">?</text>`;
+    } else {
+      const sp7 = step === 7 ? seg(p, 0.08, 0.92) : 1;
+      out += `<text x="160" y="232" text-anchor="middle" font-size="18" font-weight="900" fill="${CONFIG.colors.berry}" opacity="${easeOut(seg(sp7, 0, 0.25))}">3</text>
+              <text x="208" y="232" text-anchor="middle" font-size="18" font-weight="900" fill="${CONFIG.colors.berry}" opacity="${easeOut(seg(sp7, 0, 0.25))}">3</text>`;
+      out += `<g opacity="${easeOut(seg(sp7, 0.25, 0.45))}">
+        <line x1="234" y1="176" x2="262" y2="176" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+        <polyline points="255,169 264,176 255,183" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>`;
+      out += draftSquare(286, 176, easeOut(seg(sp7, 0.38, 0.58)));
+      out += `<text x="314" y="185" font-size="26" font-weight="900" fill="#334155" opacity="${easeOut(seg(sp7, 0.52, 0.66))}">=</text>`;
+      out += draftBoxWithNum(340, 158, 76, 36, '3', CONFIG.colors.berry, easeOut(seg(sp7, 0.75, 0.98)));
+      out += draftV(356, 176, easeOut(seg(sp7, 0.62, 0.76)), CONFIG.colors.berry, 0.9);
+      out += draftV(378, 176, easeOut(seg(sp7, 0.70, 0.84)), CONFIG.colors.berry, 0.9);
+      out += draftV(400, 176, easeOut(seg(sp7, 0.78, 0.92)), CONFIG.colors.berry, 0.9);
+    }
+  }
+
+  /* --- ROW 3 (Scale 3): △ + [V V V](3) = [△ △](2) --- */
+  if (step >= 4) {
+    const r3p = step === 4 ? seg(p, 0.50, 0.98) : 1;
+    out += `<g>
+      <text x="20" y="286" font-size="14" font-weight="800" fill="#94a3b8" opacity="${easeOut(seg(r3p, 0, 0.18))}">(3)</text>
+      ${draftTriangle(62, 280, easeOut(seg(r3p, 0.05, 0.25)))}
+      <text x="86" y="288" font-size="24" font-weight="900" fill="#334155" opacity="${easeOut(seg(r3p, 0.22, 0.34))}">+</text>
+      ${draftBoxWithNum(106, 262, 74, 36, '3', CONFIG.colors.berry, easeOut(seg(r3p, 0.50, 0.68)))}
+      ${draftV(122, 280, easeOut(seg(r3p, 0.34, 0.46)), CONFIG.colors.berry, 0.88)}
+      ${draftV(143, 280, easeOut(seg(r3p, 0.42, 0.54)), CONFIG.colors.berry, 0.88)}
+      ${draftV(164, 280, easeOut(seg(r3p, 0.50, 0.62)), CONFIG.colors.berry, 0.88)}
+      <text x="192" y="289" font-size="26" font-weight="900" fill="#334155" opacity="${easeOut(seg(r3p, 0.64, 0.76))}">=</text>
+      ${draftBoxWithNum(212, 262, 72, 36, '2', CONFIG.colors.peach, easeOut(seg(r3p, 0.84, 1)))}
+      ${draftTriangle(232, 280, easeOut(seg(r3p, 0.72, 0.86)))}
+      ${draftTriangle(264, 280, easeOut(seg(r3p, 0.82, 0.96)))}
+    </g>`;
+  }
+
+  if (step === 8) {
+    const fs = flash3State(seg(p, 0.25, 0.85));
+    out += drawRegionBox(44, 262, 36, 36, CONFIG.colors.peach, fs);
+    out += drawRegionBox(214, 262, 36, 36, CONFIG.colors.peach, fs);
+  }
+  if (step >= 9) {
+    const s9 = step === 9 ? seg(p, 0.55, 0.98) : 1;
+    out += `<line x1="48" y1="295" x2="76" y2="265" stroke="#dc2626" stroke-width="3.4" stroke-linecap="round" ${strokeAttr(45, easeOut(seg(s9, 0, 0.30)))}/>`;
+    out += `<line x1="218" y1="295" x2="246" y2="265" stroke="#dc2626" stroke-width="3.4" stroke-linecap="round" ${strokeAttr(45, easeOut(seg(s9, 0.16, 0.44)))}/>`;
+    out += `<g opacity="${easeOut(seg(s9, 0.40, 0.56))}">
+      <line x1="292" y1="280" x2="318" y2="280" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+      <polyline points="311,273 320,280 311,287" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>`;
+    out += draftTriangle(342, 280, easeOut(seg(s9, 0.52, 0.68)));
+    out += `<text x="368" y="289" font-size="26" font-weight="900" fill="#334155" opacity="${easeOut(seg(s9, 0.62, 0.74))}">=</text>`;
+    out += draftBoxWithNum(392, 262, 76, 36, '3', CONFIG.colors.berry, easeOut(seg(s9, 0.80, 1)));
+    out += draftV(408, 280, easeOut(seg(s9, 0.70, 0.82)), CONFIG.colors.berry, 0.9);
+    out += draftV(430, 280, easeOut(seg(s9, 0.76, 0.88)), CONFIG.colors.berry, 0.9);
+    out += draftV(452, 280, easeOut(seg(s9, 0.82, 0.94)), CONFIG.colors.berry, 0.9);
+  }
+
+  /* --- TARGET LINE & INCREMENTAL CALCULATION --- */
+  if (step >= 5) {
+    const t5 = step === 5 ? seg(p, 0.55, 0.95) : 1;
+    out += `<rect x="18" y="330" width="464" height="62" rx="12" fill="#eff6ff" stroke="#93c5fd" stroke-width="2" opacity="${easeOut(t5)}"/>`;
+    out += draftDiamond(56, 362, easeOut(seg(t5, 0.1, 0.45)));
+    out += `<text x="86" y="371" font-size="28" font-weight="900" fill="#1e3a8a" opacity="${easeOut(seg(t5, 0.35, 0.6))}">=</text>`;
+
+    if (step < 10) {
+      out += `<text x="122" y="371" font-size="26" font-weight="900" fill="#2563eb" opacity="${easeOut(seg(t5, 0.55, 0.85))}">?</text>`;
+      out += draftV(152, 361, easeOut(seg(t5, 0.70, 1)), CONFIG.colors.berry, 1.05);
+    }
+  }
+
+  if (step >= 10) {
+    const s10 = step === 10 ? seg(p, 0.62, 0.98) : 1;
+    out += `<g opacity="${easeOut(seg(s10, 0, 0.45))}">
+      <line x1="148" y1="102" x2="148" y2="119" stroke="${CONFIG.colors.apple}" stroke-width="2.6" stroke-linecap="round"/>
+      <polyline points="143,114 148,120 153,114" fill="none" stroke="${CONFIG.colors.apple}" stroke-width="2.4"/>
+      <text x="148" y="138" text-anchor="middle" font-size="20" font-weight="900" fill="${CONFIG.colors.apple}">3</text>
+    </g>`;
+    out += `<text x="126" y="372" text-anchor="middle" font-size="30" font-weight="900" fill="${CONFIG.colors.apple}" opacity="${easeOut(seg(s10, 0.45, 0.95))}">3</text>`;
+  }
+
+  if (step >= 11) {
+    const s11 = step === 11 ? seg(p, 0.62, 0.98) : 1;
+    out += `<g opacity="${easeOut(seg(s11, 0, 0.45))}">
+      <line x1="226" y1="102" x2="226" y2="119" stroke="${CONFIG.colors.peach}" stroke-width="2.6" stroke-linecap="round"/>
+      <polyline points="221,114 226,120 231,114" fill="none" stroke="${CONFIG.colors.peach}" stroke-width="2.4"/>
+      <text x="226" y="138" text-anchor="middle" font-size="20" font-weight="900" fill="${CONFIG.colors.peach}">3</text>
+    </g>`;
+    out += `<text x="166" y="372" text-anchor="middle" font-size="28" font-weight="900" fill="#334155" opacity="${easeOut(seg(s11, 0.35, 0.65))}">+</text>`;
+    out += `<text x="204" y="372" text-anchor="middle" font-size="30" font-weight="900" fill="${CONFIG.colors.peach}" opacity="${easeOut(seg(s11, 0.55, 0.95))}">3</text>`;
+  }
+
+  if (step === 12) {
+    const s12 = seg(p, 0.35, 0.68);
+    out += `<text x="246" y="372" text-anchor="middle" font-size="28" font-weight="900" fill="#334155" opacity="${easeOut(seg(s12, 0, 0.35))}">=</text>`;
+    out += `<text x="292" y="373" text-anchor="middle" font-size="32" font-weight="900" fill="${CONFIG.colors.berry}" opacity="${easeOut(seg(s12, 0.3, 0.65))}">6</text>`;
+    out += `<ellipse cx="292" cy="362" rx="22" ry="20" fill="none" stroke="#1d4ed8" stroke-width="3" ${strokeAttr(140, easeOut(seg(s12, 0.55, 1)))}/>`;
+    out += draftV(336, 362, easeOut(seg(s12, 0.65, 1)), CONFIG.colors.berry, 1.05);
+  }
+
+  /* --- SINGLE PEN-TIP GUIDE (Track B active only, mutually exclusive with Track A) --- */
+  let penB = null;
+  if (step === 2 && p >= 0.42) {
+    penB = { x: lerp(68, 226, easeInOut(seg(p, 0.42, 0.95))), y: 86 };
+  } else if (step === 3 && p >= 0.55) {
+    penB = { x: lerp(68, 210, easeInOut(seg(p, 0.55, 0.98))), y: 178 };
+  } else if (step === 4 && p >= 0.50) {
+    penB = { x: lerp(62, 264, easeInOut(seg(p, 0.50, 0.98))), y: 280 };
+  } else if (step === 5 && p >= 0.55) {
+    penB = { x: lerp(56, 152, easeInOut(seg(p, 0.55, 0.95))), y: 362 };
+  } else if (step === 6 && p >= 0.58) {
+    penB = { x: lerp(86, 184, easeInOut(seg(p, 0.58, 0.95))), y: lerp(155, 213, seg(p, 0.58, 0.95)) };
+  } else if (step === 7) {
+    penB = { x: lerp(160, 400, easeInOut(seg(p, 0.1, 0.92))), y: 176 };
+  } else if (step === 9 && p >= 0.55) {
+    penB = { x: lerp(62, 452, easeInOut(seg(p, 0.55, 0.98))), y: 280 };
+  } else if (step === 10 && p >= 0.62) {
+    penB = { x: lerp(148, 126, easeInOut(seg(p, 0.62, 0.95))), y: lerp(130, 368, easeInOut(seg(p, 0.62, 0.95))) };
+  } else if (step === 11 && p >= 0.62) {
+    penB = { x: lerp(226, 204, easeInOut(seg(p, 0.62, 0.95))), y: lerp(130, 368, easeInOut(seg(p, 0.62, 0.95))) };
+  }
+  if (penB) out += drawPenTip(penB.x, penB.y, 1);
+
+  return out;
+}
+
+/* =========================================================
+   UI Sync (Pure from Step & Progress)
+   ========================================================= */
+const elStage = document.getElementById('svg-stage');
+const elDraft = document.getElementById('svg-draft');
+const elStatus = document.getElementById('stage-status');
+const elSub = document.getElementById('subtitle-box');
+const elFormula = document.getElementById('formula-strip');
+const elCounter = document.getElementById('step-counter');
+const elPills = document.getElementById('phase-pills');
+const elQuizBar = document.getElementById('quiz-bar');
+const elCelebrateBar = document.getElementById('celebrate-bar');
+
+function buildPhasePills() {
+  elPills.innerHTML = '';
+  CONFIG.phases.forEach(ph => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'phase-pill';
+    btn.textContent = ph.label;
+    btn.dataset.phase = ph.id;
+    btn.addEventListener('click', () => jumpToStep(ph.startStep, true));
+    elPills.appendChild(btn);
+  });
+}
+
+function renderAll(stepIdx, p) {
+  const s = CONFIG.steps[stepIdx];
+  elStage.innerHTML = renderStage(stepIdx, p);
+  elDraft.innerHTML = renderDraft(stepIdx, p);
+  elStatus.textContent = s.stageStatus;
+  elCounter.textContent = `第 ${stepIdx + 1} / ${CONFIG.steps.length} 步`;
+
+  document.getElementById('leg-pomelo').classList.toggle('hidden', stepIdx < 2);
+  document.getElementById('leg-apple').classList.toggle('hidden', stepIdx < 2);
+  document.getElementById('leg-peach').classList.toggle('hidden', stepIdx < 2);
+  document.getElementById('leg-berry').classList.toggle('hidden', stepIdx < 3);
+
+  ['qseg-0', 'qseg-1'].forEach(id => {
+    document.getElementById(id).classList.toggle('active', s.highlightSegs.includes(id));
+  });
+  ['cond-1', 'cond-2', 'cond-3', 'cond-q'].forEach(id => {
+    document.getElementById(id).classList.toggle('active', s.highlightConds.includes(id));
+  });
+
+  document.querySelectorAll('.phase-pill').forEach(btn => {
+    const pid = Number(btn.dataset.phase);
+    btn.classList.toggle('active', pid === s.phase);
+    btn.classList.toggle('done', pid < s.phase);
+  });
+
+  elSub.innerHTML = (s.quote ? `<span class="quote-chip">${s.quote}</span>` : '') + `<span>${s.thought}</span>`;
+
+  if (!s.formula || s.formula.length === 0) {
+    elFormula.innerHTML = `<span style="font-size:15px; color:#94a3b8; font-weight:700;">邊讀題・邊畫草稿</span>`;
+  } else {
+    elFormula.innerHTML = s.formula.map(tok => `<span class="f-tok ${tok.c}">${tok.t}</span>`).join('');
+  }
+
+  document.getElementById('btn-prev').disabled = (stepIdx === 0);
+  document.getElementById('btn-next').disabled = (stepIdx === CONFIG.steps.length - 1);
+  document.getElementById('btn-play').textContent = state.playing ? '⏸' : '▶';
+
+  const showCel = Boolean(s.celebrate && p >= 0.94);
+  elCelebrateBar.classList.toggle('show', showCel);
+  if (showCel && !state.celebrated) {
+    state.celebrated = true;
+    playSFX('celebrate');
+    launchConfetti();
+  } else if (!showCel && stepIdx < CONFIG.steps.length - 1) {
+    state.celebrated = false;
+  }
+}
+
+/* =========================================================
+   Inline Zero-Occlusion Quiz Controller
+   ========================================================= */
+function showQuizForStep(stepObj) {
+  state.waitingQuiz = true;
+  state.playing = false;
+  document.getElementById('btn-play').textContent = '▶';
+  document.getElementById('quiz-q').textContent = stepObj.quiz.q;
+  const optsWrap = document.getElementById('quiz-opts');
+  const fb = document.getElementById('quiz-fb');
+  optsWrap.innerHTML = '';
+  fb.textContent = '';
+  fb.className = 'quiz-fb';
+
+  stepObj.quiz.options.forEach(opt => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'quiz-btn';
+    b.textContent = opt.label;
+    b.addEventListener('click', () => {
+      if (opt.ok) {
+        b.classList.add('right');
+        fb.textContent = '✅ ' + opt.fb;
+        fb.className = 'quiz-fb ok';
+        playSFX('ding');
+        state.quizResolved[stepObj.id] = true;
+        setTimeout(() => {
+          hideQuiz();
+          if (state.step === stepObj.id && stepObj.id < CONFIG.steps.length - 1) {
+            jumpToStep(stepObj.id + 1, true);
+          }
+        }, 1250);
+      } else {
+        b.classList.add('wrong');
+        fb.textContent = '💡 ' + opt.fb;
+        fb.className = 'quiz-fb err';
+        playSFX('oops');
+      }
+    });
+    optsWrap.appendChild(b);
+  });
+
+  elQuizBar.classList.add('show');
+}
+
+function hideQuiz() {
+  state.waitingQuiz = false;
+  elQuizBar.classList.remove('show');
+}
+
+document.getElementById('quiz-skip').addEventListener('click', () => {
+  state.quizResolved[state.step] = true;
+  hideQuiz();
+  if (state.step < CONFIG.steps.length - 1) {
+    jumpToStep(state.step + 1, true);
+  }
+});
+
+/* =========================================================
+   Playback Loop (Pure rAF driven, speech-synced)
+   ========================================================= */
+function cancelLoop() {
+  if (state.rafId) {
+    cancelAnimationFrame(state.rafId);
+    state.rafId = null;
+  }
+  state.lastTs = null;
+}
+
+function checkAutoAdvance() {
+  if (!state.playing || !state.animDone || !state.speechDone) return;
+  const curr = CONFIG.steps[state.step];
+  if (curr.quiz && !state.quizResolved[curr.id]) {
+    showQuizForStep(curr);
+    return;
+  }
+  if (state.step < CONFIG.steps.length - 1) {
+    startStep(state.step + 1, true);
+  } else {
+    state.playing = false;
+    document.getElementById('btn-play').textContent = '▶';
+  }
+}
+
+function animTick(ts) {
+  if (!state.lastTs) state.lastTs = ts;
+  const dt = ts - state.lastTs;
+  state.lastTs = ts;
+
+  const curr = CONFIG.steps[state.step];
+  const effectiveDur = curr.dur * (CONFIG.defaultRate / state.rate);
+  state.p = clamp(state.p + dt / effectiveDur, 0, 1);
+  renderAll(state.step, state.p);
+
+  if (state.p < 1) {
+    state.rafId = requestAnimationFrame(animTick);
+  } else {
+    state.rafId = null;
+    state.animDone = true;
+    checkAutoAdvance();
+  }
+}
+
+function startStep(idx, autoPlay) {
+  cancelLoop();
+  stopSpeech();
+  hideQuiz();
+
+  state.step = clamp(idx, 0, CONFIG.steps.length - 1);
+  state.p = 0;
+  state.playing = Boolean(autoPlay);
+  state.animDone = false;
+  state.speechDone = false;
+
+  const curr = CONFIG.steps[state.step];
+  playSFX('pop');
+  renderAll(state.step, 0);
+
+  state.lastTs = null;
+  state.rafId = requestAnimationFrame(animTick);
+
+  speakStep(curr, () => {
+    state.speechDone = true;
+    checkAutoAdvance();
+  });
+}
+
+function jumpToStep(idx, autoPlay = true) {
+  startStep(idx, autoPlay);
+}
+
+/* =========================================================
+   Controls Wiring
+   ========================================================= */
+document.getElementById('btn-play').addEventListener('click', () => {
+  if (state.waitingQuiz) return;
+  if (state.playing) {
+    state.playing = false;
+    cancelLoop();
+    stopSpeech();
+    renderAll(state.step, state.p);
+  } else {
+    if (state.step === 0 && state.p >= 0.99) {
+      startStep(1, true);
+    } else if (state.step === CONFIG.steps.length - 1 && state.p >= 0.99) {
+      state.quizResolved = {};
+      startStep(1, true);
+    } else {
+      startStep(state.step, true);
+    }
+  }
+});
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (state.step > 0) jumpToStep(state.step - 1, false);
+});
+
+document.getElementById('btn-next').addEventListener('click', () => {
+  if (state.step < CONFIG.steps.length - 1) jumpToStep(state.step + 1, false);
+});
+
+document.getElementById('btn-replay').addEventListener('click', () => {
+  state.quizResolved = {};
+  state.celebrated = false;
+  document.getElementById('practice-box').classList.remove('show');
+  jumpToStep(0, false);
+  setTimeout(() => startStep(1, true), 260);
+});
+
+document.getElementById('btn-speed').addEventListener('click', (e) => {
+  if (state.rate === CONFIG.defaultRate) {
+    state.rate = CONFIG.fastRate;
+    e.currentTarget.textContent = '🚶 1.0x 較快';
+  } else {
+    state.rate = CONFIG.defaultRate;
+    e.currentTarget.textContent = '🐢 0.75x 適中';
+  }
+});
+
+document.getElementById('btn-mute').addEventListener('click', (e) => {
+  state.muted = !state.muted;
+  if (state.muted) {
+    stopSpeech();
+    e.currentTarget.textContent = '🔇 靜音中';
+    e.currentTarget.classList.add('muted');
+  } else {
+    e.currentTarget.textContent = '🔊 語音開';
+    e.currentTarget.classList.remove('muted');
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'BUTTON') return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    document.getElementById('btn-play').click();
+  } else if (e.code === 'ArrowRight') {
+    document.getElementById('btn-next').click();
+  } else if (e.code === 'ArrowLeft') {
+    document.getElementById('btn-prev').click();
+  }
+});
+
+/* =========================================================
+   Practice Challenge Logic (New numbers: 4 + 5 = 9)
+   ========================================================= */
+function initPractice() {
+  const btnChallenge = document.getElementById('btn-challenge');
+  const box = document.getElementById('practice-box');
+  const btnHint = document.getElementById('btn-hint');
+  const hintBox = document.getElementById('practice-draft-hint');
+  const optsWrap = document.getElementById('practice-opts');
+  const fb = document.getElementById('practice-fb');
+  const verifyBox = document.getElementById('practice-verify');
+  const svgVerify = document.getElementById('svg-practice-verify');
+
+  btnChallenge.addEventListener('click', () => {
+    box.classList.toggle('show');
+    if (box.classList.contains('show')) {
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+
+  btnHint.addEventListener('click', () => {
+    hintBox.classList.toggle('show');
+  });
+
+  const choices = [
+    { val: 7, ok: false, msg: '差少少！再檢查吓：8 粒平分兩份係 4 粒，加上 5 粒等於幾多？' },
+    { val: 8, ok: false, msg: '再數真啲！1 個蘋果＝4 粒，1 個桃子＝5 粒，4 加 5 唔係 8 喎。' },
+    { val: 9, ok: true,  msg: '太叻啦！2 蘋果＝8 粒 → 1 蘋果＝4 粒；抵銷桃子 → 1 桃子＝5 粒；4 ＋ 5 ＝ 9 粒！' },
+    { val: 10, ok: false, msg: '多咗 1 粒啦！4 加 5 等於 9，再試吓！' }
+  ];
+
+  optsWrap.innerHTML = '';
+  choices.forEach(c => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'quiz-btn';
+    b.style.minWidth = '86px';
+    b.textContent = `${c.val} 個`;
+    b.addEventListener('click', () => {
+      if (c.ok) {
+        b.classList.add('right');
+        fb.textContent = '🎉 ' + c.msg;
+        fb.className = 'quiz-fb ok';
+        playSFX('celebrate');
+        launchConfetti();
+        renderPracticeVerify(svgVerify);
+        verifyBox.classList.add('show');
+      } else {
+        b.classList.add('wrong');
+        fb.textContent = '💡 ' + c.msg;
+        fb.className = 'quiz-fb err';
+        playSFX('oops');
+      }
+    });
+    optsWrap.appendChild(b);
+  });
+}
+
+function renderPracticeVerify(svgEl) {
+  let s = `<rect x="0" y="0" width="600" height="115" rx="10" fill="#ffffff"/>`;
+  s += fruitPomelo(62, 86, 1.0, 1, 0);
+  s += `<text x="115" y="72" font-size="30" font-weight="900" fill="#1e293b">=</text>`;
+  s += `<rect x="148" y="24" width="142" height="68" rx="12" fill="#dcfce7" stroke="#1e9c60" stroke-width="2"/>`;
+  s += `<text x="219" y="18" text-anchor="middle" font-size="13" font-weight="800" fill="#166534">1 蘋果 ＝ 4 粒</text>`;
+  [172, 203, 234, 265].forEach(bx => { s += fruitBerry(bx, 72, 1.1, 1, 0); });
+  s += `<text x="306" y="72" font-size="28" font-weight="900" fill="#1e293b">+</text>`;
+  s += `<rect x="334" y="24" width="174" height="68" rx="12" fill="#ffedd5" stroke="#e85d22" stroke-width="2"/>`;
+  s += `<text x="421" y="18" text-anchor="middle" font-size="13" font-weight="800" fill="#9a3412">1 桃子 ＝ 5 粒</text>`;
+  [358, 389, 420, 451, 482].forEach(bx => { s += fruitBerry(bx, 72, 1.1, 1, 0); });
+  s += `<text x="548" y="74" text-anchor="middle" font-size="30" font-weight="900" fill="#d93870">= 9</text>`;
+  svgEl.innerHTML = s;
+}
+
+/* =========================================================
+   Lightweight Confetti Celebration
+   ========================================================= */
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const cols = ['#f59e0b', '#22c55e', '#3b82f6', '#ec4899', '#f97316', '#8b5cf6'];
+  const parts = Array.from({ length: 75 }, () => ({
+    x: Math.random() * canvas.width,
+    y: -20 - Math.random() * 140,
+    w: 7 + Math.random() * 6,
+    h: 5 + Math.random() * 5,
+    vy: 2.5 + Math.random() * 3.5,
+    vx: (Math.random() - 0.5) * 3,
+    rot: Math.random() * Math.PI * 2,
+    vrot: (Math.random() - 0.5) * 0.16,
+    c: cols[Math.floor(Math.random() * cols.length)]
+  }));
+  let frames = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    parts.forEach(pt => {
+      pt.x += pt.vx; pt.y += pt.vy; pt.rot += pt.vrot;
+      ctx.save();
+      ctx.translate(pt.x, pt.y);
+      ctx.rotate(pt.rot);
+      ctx.fillStyle = pt.c;
+      ctx.fillRect(-pt.w / 2, -pt.h / 2, pt.w, pt.h);
+      ctx.restore();
+    });
+    frames++;
+    if (frames < 130) requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  requestAnimationFrame(draw);
+}
+
+/* =========================================================
+   Init
+   ========================================================= */
+buildPhasePills();
+initPractice();
+renderAll(0, 1);
+</script>
+</body>
+</html>

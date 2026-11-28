@@ -1,0 +1,2728 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>拓展練習 8｜果汁與咖啡（視覺化教學動畫＋實戰算草）</title>
+<style>
+  :root {
+    --bg: #f6f8fc;
+    --card: #ffffff;
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --juice: #f4711f;
+    --juice-bg: #fff3e8;
+    --coffee: #8c4a1c;
+    --coffee-bg: #fdf4eb;
+    --cyan: #0aa5c9;
+    --purple: #8d5bd6;
+    --gold: #f0a500;
+    --pink: #e8467c;
+    --green: #22a06b;
+    --pen: #1d4ed8;
+    --paper: #fffdf4;
+    --paper-grid: #f1ead3;
+    --radius: 16px;
+    --shadow: 0 6px 20px rgba(15, 23, 42, 0.07);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "PingFang TC", "Hiragino Sans CNS", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 10px 12px 12px;
+    gap: 10px;
+  }
+
+  /* ===== Top Phase Bar ===== */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--card);
+    padding: 8px 12px;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+  }
+
+  .phases {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .phase-pill {
+    border: 1.5px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 6px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .phase-pill:hover { border-color: var(--pen); color: var(--pen); background: #eff6ff; }
+  .phase-pill.done { background: #ecfdf5; border-color: #6ee7b7; color: #047857; }
+  .phase-pill.active {
+    background: var(--pen);
+    border-color: var(--pen);
+    color: #ffffff;
+    box-shadow: 0 3px 10px rgba(29, 78, 216, 0.28);
+  }
+
+  .top-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tool-btn {
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .tool-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+  .tool-btn.active { background: #eff6ff; border-color: var(--pen); color: var(--pen); }
+  .tool-btn.muted { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+
+  .kbd-hint {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+  @media (hover: none) and (pointer: coarse) {
+    .kbd-hint { display: none; }
+  }
+
+  /* ===== Question Card ===== */
+  .q-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 14px 18px 12px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+    position: relative;
+  }
+
+  .q-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .q-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 4px 11px;
+    border-radius: 8px;
+  }
+
+  .q-grade {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #0f766e;
+    background: #ccfbf1;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  .q-zh {
+    font-size: clamp(20px, 2.3vw, 24px);
+    font-weight: 700;
+    line-height: 1.75;
+    color: #0f172a;
+    letter-spacing: 0.3px;
+  }
+
+  .clause {
+    display: inline;
+    padding: 2px 3px;
+    border-radius: 7px;
+    transition: background-color 0.25s, color 0.25s;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  .clause.hl {
+    background: #fef08a;
+    color: #0f172a;
+    border-bottom: 3px solid #f59e0b;
+  }
+
+  .clause.read {
+    background: transparent;
+  }
+
+  .sym-anchor {
+    position: relative;
+    display: inline-block;
+  }
+
+  .sym-tag {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.7);
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    white-space: nowrap;
+  }
+
+  .sym-tag.show {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  .sym-tag.juice { color: var(--juice); background: var(--juice-bg); border: 1.5px solid var(--juice); }
+  .sym-tag.coffee { color: var(--coffee); background: var(--coffee-bg); border: 1.5px solid var(--coffee); }
+
+  .ans-bracket {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 64px;
+    height: 36px;
+    vertical-align: middle;
+    margin-left: 4px;
+    font-weight: 700;
+    color: #334155;
+  }
+
+  .ans-bracket svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .q-en {
+    font-size: 13.5px;
+    color: #64748b;
+    margin-top: 4px;
+    line-height: 1.45;
+  }
+
+  .q-options {
+    display: flex;
+    align-items: center;
+    gap: clamp(24px, 6vw, 72px);
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed #e2e8f0;
+    flex-wrap: wrap;
+  }
+
+  .opt-item {
+    position: relative;
+    font-size: 21px;
+    font-weight: 800;
+    color: #1e293b;
+    padding: 4px 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .opt-ring-svg {
+    position: absolute;
+    inset: -7px -12px;
+    width: calc(100% + 24px);
+    height: calc(100% + 14px);
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* ===== Dual-Track Stage ===== */
+  .stage-grid {
+    display: grid;
+    grid-template-columns: 1.24fr 0.96fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 360px;
+  }
+
+  @media (max-width: 860px) {
+    .stage-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .panel {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1.5px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .panel.sketch {
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(to right, var(--paper-grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--paper-grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+    border-color: #e6dbb8;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(255, 255, 255, 0.72);
+    font-size: 14px;
+    font-weight: 800;
+    color: #334155;
+  }
+
+  .panel.sketch .panel-head {
+    background: rgba(255, 250, 232, 0.85);
+    color: #78551f;
+    border-bottom-color: #eadcb5;
+  }
+
+  .panel-tip {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+  }
+
+  .svg-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    min-height: 320px;
+  }
+
+  .svg-wrap svg {
+    width: 100%;
+    height: 100%;
+    max-height: 390px;
+    display: block;
+    user-select: none;
+  }
+
+  /* ===== Inline Quiz & Celebration Bars (ZERO overlay, ZERO blur!) ===== */
+  .inline-bar {
+    display: none;
+    background: #ffffff;
+    border: 2.5px solid var(--pen);
+    border-radius: 15px;
+    padding: 12px 16px;
+    box-shadow: 0 6px 18px rgba(29, 78, 216, 0.13);
+    animation: slideIn 0.25s ease;
+  }
+  .inline-bar.show { display: block; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .quiz-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .quiz-q {
+    font-size: 17px;
+    font-weight: 800;
+    color: #1e3a8a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .quiz-btns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .q-choice {
+    border: 2px solid #93c5fd;
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-size: 16px;
+    font-weight: 800;
+    padding: 8px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.16s;
+  }
+  .q-choice:hover { background: #dbeafe; transform: translateY(-1px); }
+  .q-choice.wrong { background: #fef2f2; border-color: #f87171; color: #b91c1c; }
+  .q-choice.right { background: #ecfdf5; border-color: #10b981; color: #047857; }
+
+  .q-skip {
+    border: 1.5px solid #cbd5e1;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .q-skip:hover { background: #e2e8f0; color: #334155; }
+
+  .quiz-fb {
+    margin-top: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    min-height: 22px;
+  }
+  .quiz-fb.err { color: #dc2626; }
+  .quiz-fb.ok { color: #059669; }
+
+  /* Celebration Bar */
+  .celeb-bar {
+    display: none;
+    background: linear-gradient(135deg, #ecfdf5 0%, #eff6ff 100%);
+    border: 2px solid #34d399;
+    border-radius: 15px;
+    padding: 12px 16px;
+    box-shadow: var(--shadow);
+  }
+  .celeb-bar.show { display: block; animation: slideIn 0.3s ease; }
+
+  .celeb-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .mantra-box {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .mantra-label { font-size: 13px; font-weight: 800; color: #047857; }
+  .mantra-text { font-size: 18px; font-weight: 900; color: #0f172a; }
+
+  .celeb-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .cta-btn {
+    border: none;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cta-btn:hover { transform: translateY(-1px); }
+  .cta-practice { background: #f4711f; color: #fff; box-shadow: 0 4px 12px rgba(244, 113, 31, 0.28); }
+  .cta-master { background: #8d5bd6; color: #fff; box-shadow: 0 4px 12px rgba(141, 91, 214, 0.28); }
+
+  /* ===== Expandable Practice & Master Cards (Inline, zero stage blur) ===== */
+  .extra-panel {
+    display: none;
+    background: #ffffff;
+    border-radius: var(--radius);
+    border: 2px solid #cbd5e1;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .extra-panel.show { display: block; animation: slideIn 0.25s ease; }
+  .extra-panel.practice-panel { border-color: #fdba74; background: #fffbf5; }
+  .extra-panel.master-panel { border-color: #c4b5fd; background: #faf5ff; }
+
+  .extra-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .extra-title { font-size: 18px; font-weight: 900; color: #1e293b; }
+
+  .close-extra {
+    border: 1.5px solid #cbd5e1;
+    background: #fff;
+    color: #475569;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 9px;
+    cursor: pointer;
+  }
+
+  .prac-q {
+    font-size: 19px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  .prac-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .prac-hint-box {
+    display: none;
+    background: var(--paper);
+    border: 1.5px dashed #d4b878;
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin: 10px 0;
+  }
+  .prac-hint-box.show { display: block; }
+
+  .prac-verify-box {
+    display: none;
+    background: #ffffff;
+    border: 2px solid #34d399;
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-top: 10px;
+  }
+  .prac-verify-box.show { display: block; }
+
+  .master-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .master-stage {
+    background: #ffffff;
+    border: 1.5px solid #ddd6fe;
+    border-radius: 14px;
+    padding: 10px;
+  }
+
+  .master-caption {
+    margin-top: 10px;
+    font-size: 17px;
+    font-weight: 800;
+    color: #4c1d95;
+    background: #f3e8ff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    line-height: 1.5;
+  }
+
+  /* ===== Bottom Dock ===== */
+  .dock {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: 0 -2px 16px rgba(15, 23, 42, 0.06);
+    border: 1px solid var(--line);
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: sticky;
+    bottom: 8px;
+    z-index: 20;
+  }
+
+  .subtitle-box {
+    font-size: clamp(17px, 2vw, 19px);
+    line-height: 1.55;
+    color: #0f172a;
+    min-height: 30px;
+    font-weight: 600;
+  }
+
+  .sub-prefix {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 800;
+    color: #b45309;
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    padding: 1px 7px;
+    border-radius: 6px;
+    margin-right: 4px;
+    vertical-align: 1px;
+  }
+
+  .sub-quote {
+    background: #fef9c3;
+    color: #713f12;
+    padding: 1px 5px;
+    border-radius: 6px;
+    font-weight: 800;
+    margin-right: 6px;
+  }
+
+  .sub-thought {
+    color: #0f172a;
+    font-weight: 700;
+  }
+
+  .dock-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .formula-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 7px 12px;
+    flex: 1;
+    min-width: 240px;
+    font-size: clamp(18px, 2.2vw, 22px);
+    font-weight: 900;
+    min-height: 46px;
+  }
+
+  .f-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+  }
+  .f-chip.juice { color: var(--juice); border-color: #fdba74; background: #fff7ed; }
+  .f-chip.coffee { color: var(--coffee); border-color: #d6a276; background: #fdf4eb; }
+  .f-chip.calc { color: #0369a1; border-color: #7dd3fc; background: #f0f9ff; }
+  .f-chip.ans { color: #047857; border-color: #34d399; background: #ecfdf5; }
+
+  .ctrl-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .step-counter {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #64748b;
+    min-width: 56px;
+    text-align: center;
+  }
+
+  .ctrl-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    background: #ffffff;
+    color: #1e293b;
+    font-size: 19px;
+    font-weight: 900;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.16s;
+  }
+  .ctrl-btn:hover { background: #f1f5f9; border-color: var(--pen); color: var(--pen); }
+  .ctrl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ctrl-btn.play {
+    width: 56px;
+    height: 56px;
+    background: var(--pen);
+    border-color: var(--pen);
+    color: #ffffff;
+    font-size: 22px;
+    box-shadow: 0 5px 14px rgba(29, 78, 216, 0.32);
+  }
+  .ctrl-btn.play:hover { background: #1e40af; }
+
+  /* Confetti Canvas */
+  #confettiCanvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 99;
+  }
+</style>
+</head>
+<body>
+<canvas id="confettiCanvas"></canvas>
+
+<div class="app">
+  <!-- Top Phase Portal Bar -->
+  <header class="topbar">
+    <nav class="phases" id="phaseBar" aria-label="解題階段"></nav>
+    <div class="top-tools">
+      <button class="tool-btn active" id="speedBtn" title="切換語速">🐢 0.75x 適中</button>
+      <button class="tool-btn" id="muteBtn" title="開關語音與音效">🔊 有聲</button>
+      <span class="kbd-hint">空白鍵 播放 · ←/→ 換步</span>
+    </div>
+  </header>
+
+  <!-- Question Card -->
+  <section class="q-card" aria-label="題目">
+    <div class="q-header">
+      <div class="q-badge">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+          <polygon points="3,21 21,21 21,3" fill="#64748b"/>
+          <polygon points="9,18 18,18 18,9" fill="#f1f5f9"/>
+        </svg>
+        拓展練習 8
+      </div>
+      <div class="q-grade">小一至小二程度・零代數・平均分</div>
+    </div>
+
+    <div class="q-zh" id="qZh">
+      <span class="clause" id="c0">3 罐<span class="sym-anchor">果汁<span class="sym-tag juice" id="tagJ">△</span></span>和 4 罐<span class="sym-anchor">咖啡<span class="sym-tag coffee" id="tagC">□</span></span>共值 60 元，</span><span class="clause" id="c1">相同的 3 罐果汁和 1 罐咖啡共值 33 元，</span><span class="clause" id="c2">那麼 1 罐咖啡值多少元？</span>
+      <span class="ans-bracket" aria-label="作答括號">
+        <svg viewBox="0 0 64 36">
+          <path d="M12,5 C5,12 5,24 12,31" fill="none" stroke="#334155" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M52,5 C59,12 59,24 52,31" fill="none" stroke="#334155" stroke-width="2.4" stroke-linecap="round"/>
+          <!-- Handwritten 'A' strokes -->
+          <path id="ansA1" d="M32,7 L23,29" fill="none" stroke="#1d4ed8" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="26" stroke-dashoffset="26"/>
+          <path id="ansA2" d="M32,7 L41,29" fill="none" stroke="#1d4ed8" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="26" stroke-dashoffset="26"/>
+          <path id="ansA3" d="M26,21 L38,21" fill="none" stroke="#1d4ed8" stroke-width="3.0" stroke-linecap="round" stroke-dasharray="14" stroke-dashoffset="14"/>
+          <circle id="ansPenDot" cx="32" cy="7" r="4.5" fill="#1d4ed8" opacity="0"/>
+        </svg>
+      </span>
+    </div>
+
+    <div class="q-en">
+      3 cans of juice and 4 cans of coffee cost 60 dollars. The same 3 cans of juice and 1 can of coffee together cost 33 dollars. How much is the value of 1 can of coffee?
+    </div>
+
+    <div class="q-options">
+      <div class="opt-item" id="optA">
+        A. 9
+        <svg class="opt-ring-svg" viewBox="0 0 110 52" aria-hidden="true">
+          <path id="optARing" d="M55,5 C86,5 104,13 104,26 C104,39 86,47 55,47 C24,47 6,39 6,26 C6,13 24,5 55,5"
+                fill="none" stroke="#1d4ed8" stroke-width="3.4" stroke-linecap="round"
+                stroke-dasharray="265" stroke-dashoffset="265"/>
+          <circle id="optAPenDot" cx="55" cy="5" r="4.5" fill="#1d4ed8" opacity="0"/>
+        </svg>
+      </div>
+      <div class="opt-item">B. 6</div>
+      <div class="opt-item">C. 3</div>
+    </div>
+  </section>
+
+  <!-- Dual-Track Visual Stage -->
+  <main class="stage-grid">
+    <!-- Track A: Concrete Stage -->
+    <section class="panel" aria-label="具象動畫舞台">
+      <div class="panel-head">
+        <span>🧃 具象動畫舞台</span>
+        <span class="panel-tip" id="stageHint">跟住題目擺出實物睇清原理</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="stageSvg" viewBox="0 0 600 370" role="img" aria-label="果汁與咖啡實物圖解">
+          <defs>
+            <filter id="softGlow" x="-25%" y="-25%" width="150%" height="150%">
+              <feDropShadow dx="0" dy="0" stdDeviation="4.5" flood-color="#f59e0b" flood-opacity="0.75"/>
+            </filter>
+            <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.1"/>
+            </filter>
+            <!-- Reusable Juice Can -->
+            <g id="canJuice">
+              <rect x="-17" y="-27" width="34" height="54" rx="7" fill="#f4711f" stroke="#b84808" stroke-width="2"/>
+              <ellipse cx="0" cy="-27" rx="17" ry="4.5" fill="#fed7aa" stroke="#b84808" stroke-width="1.6"/>
+              <ellipse cx="0" cy="-27" rx="8" ry="2" fill="#fdba74"/>
+              <rect x="-15" y="-12" width="30" height="24" rx="3" fill="#fff7ed" opacity="0.92"/>
+              <circle cx="0" cy="0" r="8.5" fill="#fb923c"/>
+              <path d="M0,-8 C3,-12 7,-11 6,-7" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round"/>
+            </g>
+            <!-- Reusable Coffee Can -->
+            <g id="canCoffee">
+              <rect x="-17" y="-27" width="34" height="54" rx="7" fill="#8c4a1c" stroke="#4d260b" stroke-width="2"/>
+              <ellipse cx="0" cy="-27" rx="17" ry="4.5" fill="#e7ccb5" stroke="#4d260b" stroke-width="1.6"/>
+              <ellipse cx="0" cy="-27" rx="8" ry="2" fill="#c79e7c"/>
+              <rect x="-15" y="-12" width="30" height="24" rx="3" fill="#fef3e6" opacity="0.94"/>
+              <ellipse cx="0" cy="0" rx="6.5" ry="9" transform="rotate(-18)" fill="#6b3410"/>
+              <path d="M-2,-7 C2,-2 -2,3 2,7" fill="none" stroke="#fef3e6" stroke-width="1.6" stroke-linecap="round"/>
+            </g>
+          </defs>
+
+          <!-- Empty State Prompt (Step 0) -->
+          <g id="stageEmpty">
+            <rect x="70" y="105" width="460" height="150" rx="18" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8 6"/>
+            <text x="300" y="168" text-anchor="middle" font-size="22" font-weight="800" fill="#475569">準備好啦！撳 ▶ 開始一齊讀題</text>
+            <text x="300" y="204" text-anchor="middle" font-size="16" font-weight="600" fill="#94a3b8">睇下點樣邊讀題、邊用鉛筆畫出最快捷算草</text>
+          </g>
+
+          <!-- ===== Comparison View (Steps 1-4) ===== -->
+          <g id="compareLayer" opacity="0">
+            <!-- Row 1 Box -->
+            <g id="row1Group" opacity="0">
+              <rect id="row1Bg" x="18" y="26" width="564" height="114" rx="16" fill="#fffaf5" stroke="#fdba74" stroke-width="2"/>
+              <rect x="26" y="34" width="66" height="24" rx="8" fill="#ffedd5"/>
+              <text x="59" y="51" text-anchor="middle" font-size="13.5" font-weight="800" fill="#c2410c">第一組</text>
+
+              <!-- 3 Juice Cans -->
+              <g id="r1j0" transform="translate(56, 98)"><use href="#canJuice"/></g>
+              <g id="r1j1" transform="translate(102, 98)"><use href="#canJuice"/></g>
+              <g id="r1j2" transform="translate(148, 98)"><use href="#canJuice"/></g>
+
+              <text id="r1plus" x="182" y="106" text-anchor="middle" font-size="26" font-weight="900" fill="#64748b">+</text>
+
+              <!-- 4 Coffee Cans -->
+              <g id="r1c0" transform="translate(216, 98)"><use href="#canCoffee"/></g>
+              <g id="r1c1" transform="translate(268, 98)"><use href="#canCoffee"/></g>
+              <g id="r1c2" transform="translate(314, 98)"><use href="#canCoffee"/></g>
+              <g id="r1c3" transform="translate(360, 98)"><use href="#canCoffee"/></g>
+
+              <text id="r1eq" x="408" y="106" text-anchor="middle" font-size="26" font-weight="900" fill="#64748b">=</text>
+              <g id="r1price" transform="translate(492, 96)">
+                <rect x="-56" y="-26" width="112" height="52" rx="12" fill="#fffbeb" stroke="#f59e0b" stroke-width="2.4" filter="url(#cardShadow)"/>
+                <text x="0" y="9" text-anchor="middle" font-size="26" font-weight="900" fill="#b45309">60 元</text>
+              </g>
+            </g>
+
+            <!-- Row 2 Box -->
+            <g id="row2Group" opacity="0">
+              <rect id="row2Bg" x="18" y="156" width="564" height="114" rx="16" fill="#f0f9ff" stroke="#7dd3fc" stroke-width="2"/>
+              <rect x="26" y="164" width="66" height="24" rx="8" fill="#e0f2fe"/>
+              <text x="59" y="181" text-anchor="middle" font-size="13.5" font-weight="800" fill="#0369a1">第二組</text>
+
+              <!-- Aligned 3 Juice Cans -->
+              <g id="r2j0" transform="translate(56, 228)"><use href="#canJuice"/></g>
+              <g id="r2j1" transform="translate(102, 228)"><use href="#canJuice"/></g>
+              <g id="r2j2" transform="translate(148, 228)"><use href="#canJuice"/></g>
+
+              <text id="r2plus" x="182" y="236" text-anchor="middle" font-size="26" font-weight="900" fill="#64748b">+</text>
+
+              <!-- Aligned 1 Coffee Can -->
+              <g id="r2c0" transform="translate(216, 228)"><use href="#canCoffee"/></g>
+
+              <!-- Empty space indicator -->
+              <rect id="r2emptyHint" x="246" y="198" width="136" height="60" rx="10" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 5" opacity="0"/>
+
+              <text id="r2eq" x="408" y="236" text-anchor="middle" font-size="26" font-weight="900" fill="#64748b">=</text>
+              <g id="r2price" transform="translate(492, 226)">
+                <rect x="-56" y="-26" width="112" height="52" rx="12" fill="#f0fdfa" stroke="#0aa5c9" stroke-width="2.4" filter="url(#cardShadow)"/>
+                <text x="0" y="9" text-anchor="middle" font-size="26" font-weight="900" fill="#0e7490">33 元</text>
+              </g>
+            </g>
+
+            <!-- Highlight Trilogy Overlay: Identical Parts -->
+            <g id="hlSameGroup" opacity="0">
+              <rect id="hlSameBox" x="30" y="62" width="212" height="202" rx="14" fill="#0aa5c9" fill-opacity="0.14" stroke="#0aa5c9" stroke-width="3.5"/>
+              <g id="hlSameBadge" transform="translate(136, 48)">
+                <rect x="-66" y="-14" width="132" height="28" rx="14" fill="#0aa5c9"/>
+                <text x="0" y="5" text-anchor="middle" font-size="14" font-weight="800" fill="#fff">完全相同・抵銷！</text>
+              </g>
+            </g>
+
+            <!-- Highlight Trilogy Overlay: Extra 3 Coffees -->
+            <g id="hlExtraGroup" opacity="0">
+              <rect id="hlExtraBox" x="244" y="62" width="142" height="72" rx="14" fill="#8d5bd6" fill-opacity="0.16" stroke="#8d5bd6" stroke-width="3.5"/>
+              <g id="hlExtraBadge" transform="translate(315, 48)">
+                <rect x="-58" y="-14" width="116" height="28" rx="14" fill="#8d5bd6"/>
+                <text x="0" y="5" text-anchor="middle" font-size="14" font-weight="800" fill="#fff">多出 3 罐咖啡</text>
+              </g>
+            </g>
+
+            <!-- Slash Lines on Identical Items -->
+            <g id="stageSlashGroup" opacity="0">
+              <line id="sSlash1" x1="36" y1="126" x2="238" y2="70" stroke="#e8467c" stroke-width="5" stroke-linecap="round" stroke-dasharray="220" stroke-dashoffset="220"/>
+              <line id="sSlash2" x1="36" y1="256" x2="238" y2="200" stroke="#e8467c" stroke-width="5" stroke-linecap="round" stroke-dasharray="220" stroke-dashoffset="220"/>
+            </g>
+
+            <!-- Difference Result Banner -->
+            <g id="diffBanner" opacity="0" transform="translate(300, 322)">
+              <rect x="-252" y="-30" width="504" height="58" rx="14" fill="#f5f3ff" stroke="#8d5bd6" stroke-width="2.5" filter="url(#cardShadow)"/>
+              <text x="0" y="8" text-anchor="middle" font-size="22" font-weight="900" fill="#5b21b6">
+                多出 3 罐咖啡 ＝ 60 − 33 ＝ 27 元
+              </text>
+            </g>
+          </g>
+
+          <!-- ===== Equal Sharing View (Steps 5-9) ===== -->
+          <g id="shareLayer" opacity="0">
+            <!-- Top Money Pool -->
+            <g id="moneyPool" transform="translate(300, 48)">
+              <rect x="-220" y="-32" width="440" height="62" rx="15" fill="#ecfdf5" stroke="#22a06b" stroke-width="2.4" filter="url(#cardShadow)"/>
+              <text id="poolLabel" x="0" y="7" text-anchor="middle" font-size="22" font-weight="900" fill="#047857">共要平均分：27 元</text>
+            </g>
+
+            <!-- 3 Target Coffee Cans with Boxes -->
+            <g id="shareCan0" transform="translate(120, 172)">
+              <rect x="-68" y="-58" width="136" height="176" rx="16" fill="#fdf4eb" stroke="#c79e7c" stroke-width="2.2"/>
+              <use href="#canCoffee" transform="translate(0, -18) scale(1.06)"/>
+              <circle cx="-46" cy="-38" r="14" fill="#8c4a1c"/>
+              <text x="-46" y="-33" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">1</text>
+              <g id="sumBadge0" opacity="0" transform="translate(0, 96)">
+                <rect x="-46" y="-16" width="92" height="32" rx="10" fill="#22a06b"/>
+                <text x="0" y="6" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">共 9 元</text>
+              </g>
+            </g>
+
+            <g id="shareCan1" transform="translate(300, 172)">
+              <rect x="-68" y="-58" width="136" height="176" rx="16" fill="#fdf4eb" stroke="#c79e7c" stroke-width="2.2"/>
+              <use href="#canCoffee" transform="translate(0, -18) scale(1.06)"/>
+              <circle cx="-46" cy="-38" r="14" fill="#8c4a1c"/>
+              <text x="-46" y="-33" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">2</text>
+              <g id="sumBadge1" opacity="0" transform="translate(0, 96)">
+                <rect x="-46" y="-16" width="92" height="32" rx="10" fill="#22a06b"/>
+                <text x="0" y="6" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">共 9 元</text>
+              </g>
+            </g>
+
+            <g id="shareCan2" transform="translate(480, 172)">
+              <rect x="-68" y="-58" width="136" height="176" rx="16" fill="#fdf4eb" stroke="#c79e7c" stroke-width="2.2"/>
+              <use href="#canCoffee" transform="translate(0, -18) scale(1.06)"/>
+              <circle cx="-46" cy="-38" r="14" fill="#8c4a1c"/>
+              <text x="-46" y="-33" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">3</text>
+              <g id="sumBadge2" opacity="0" transform="translate(0, 96)">
+                <rect x="-46" y="-16" width="92" height="32" rx="10" fill="#22a06b"/>
+                <text x="0" y="6" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">共 9 元</text>
+              </g>
+            </g>
+
+            <!-- Round 1: Three $5 Tokens -->
+            <g id="tok5_0" opacity="0">
+              <rect x="-34" y="-17" width="68" height="34" rx="9" fill="#d1fae5" stroke="#059669" stroke-width="2.2"/>
+              <text x="0" y="6" text-anchor="middle" font-size="18" font-weight="900" fill="#065f46">$5</text>
+            </g>
+            <g id="tok5_1" opacity="0">
+              <rect x="-34" y="-17" width="68" height="34" rx="9" fill="#d1fae5" stroke="#059669" stroke-width="2.2"/>
+              <text x="0" y="6" text-anchor="middle" font-size="18" font-weight="900" fill="#065f46">$5</text>
+            </g>
+            <g id="tok5_2" opacity="0">
+              <rect x="-34" y="-17" width="68" height="34" rx="9" fill="#d1fae5" stroke="#059669" stroke-width="2.2"/>
+              <text x="0" y="6" text-anchor="middle" font-size="18" font-weight="900" fill="#065f46">$5</text>
+            </g>
+
+            <!-- Round 2: Three $4 Tokens -->
+            <g id="tok4_0" opacity="0">
+              <rect x="-34" y="-17" width="68" height="34" rx="9" fill="#fef3c7" stroke="#d97706" stroke-width="2.2"/>
+              <text x="0" y="6" text-anchor="middle" font-size="18" font-weight="900" fill="#92400e">+$4</text>
+            </g>
+            <g id="tok4_1" opacity="0">
+              <rect x="-34" y="-17" width="68" height="34" rx="9" fill="#fef3c7" stroke="#d97706" stroke-width="2.2"/>
+              <text x="0" y="6" text-anchor="middle" font-size="18" font-weight="900" fill="#92400e">+$4</text>
+            </g>
+            <g id="tok4_2" opacity="0">
+              <rect x="-34" y="-17" width="68" height="34" rx="9" fill="#fef3c7" stroke="#d97706" stroke-width="2.2"/>
+              <text x="0" y="6" text-anchor="middle" font-size="18" font-weight="900" fill="#92400e">+$4</text>
+            </g>
+
+            <!-- Bottom Verification Strip -->
+            <g id="verifyBanner" opacity="0" transform="translate(300, 334)">
+              <rect x="-250" y="-24" width="500" height="48" rx="13" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2.2"/>
+              <text id="verifyText" x="0" y="7" text-anchor="middle" font-size="20" font-weight="900" fill="#1e3a8a">
+                驗算：9 ＋ 9 ＋ 9 ＝ 27 元 ✓　所以 1 罐咖啡 ＝ 9 元！
+              </text>
+            </g>
+          </g>
+
+          <!-- Track A Single Pen Guide Dot -->
+          <g id="penDotA" opacity="0">
+            <circle r="11" fill="#1d4ed8" fill-opacity="0.22"/>
+            <circle r="5.5" fill="#1d4ed8" stroke="#ffffff" stroke-width="2"/>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Track B: Practical Pencil Sketchpad -->
+    <section class="panel sketch" aria-label="實戰鉛筆算草紙">
+      <div class="panel-head">
+        <span>✏️ 實戰鉛筆算草紙</span>
+        <span class="panel-tip">只用鉛筆・絕不寫代數與難字</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="sketchSvg" viewBox="0 0 460 370" role="img" aria-label="考場鉛筆算草紙示範">
+          <!-- Blank Paper Watermark (Step 0) -->
+          <g id="skEmpty">
+            <text x="230" y="175" text-anchor="middle" font-size="19" font-weight="700" fill="#c2b28a">空白算草紙</text>
+            <text x="230" y="205" text-anchor="middle" font-size="14" font-weight="600" fill="#d0c3a0">考試時邊讀題、邊落筆畫最簡記號</text>
+          </g>
+
+          <!-- Top-Right Safe Minimal Legend (Icon + Symbol, NO complex Chinese chars) -->
+          <g id="skLegend" opacity="0" transform="translate(316, 12)">
+            <rect x="0" y="0" width="132" height="36" rx="9" fill="#ffffff" fill-opacity="0.88" stroke="#e2d4ae" stroke-width="1.5"/>
+            <!-- Mini orange can + triangle -->
+            <rect x="10" y="9" width="12" height="18" rx="3" fill="#f4711f" stroke="#b84808" stroke-width="1.2"/>
+            <text x="28" y="24" font-size="16" font-weight="900" fill="#f4711f">= △</text>
+            <!-- Mini coffee can + square -->
+            <rect x="74" y="9" width="12" height="18" rx="3" fill="#8c4a1c" stroke="#4d260b" stroke-width="1.2"/>
+            <text x="92" y="24" font-size="16" font-weight="900" fill="#8c4a1c">= □</text>
+          </g>
+
+          <!-- ===== Line 1: [△ △ △](3) + [□ □ □ □](4) = 60 ===== -->
+          <g id="skLine1" opacity="0">
+            <!-- Group Juice 3 -->
+            <rect id="skL1JBox" x="20" y="72" width="106" height="40" rx="8" fill="#fff7ed" stroke="#f4711f" stroke-width="2" stroke-dasharray="300" stroke-dashoffset="300"/>
+            <text id="skL1JNum" x="73" y="65" text-anchor="middle" font-size="16" font-weight="900" fill="#f4711f" opacity="0">3</text>
+            <text id="skL1J0" x="40" y="100" text-anchor="middle" font-size="25" font-weight="900" fill="#f4711f" opacity="0">△</text>
+            <text id="skL1J1" x="73" y="100" text-anchor="middle" font-size="25" font-weight="900" fill="#f4711f" opacity="0">△</text>
+            <text id="skL1J2" x="106" y="100" text-anchor="middle" font-size="25" font-weight="900" fill="#f4711f" opacity="0">△</text>
+
+            <text id="skL1Plus" x="142" y="100" text-anchor="middle" font-size="24" font-weight="900" fill="#475569" opacity="0">+</text>
+
+            <!-- Group Coffee 4 -->
+            <rect id="skL1CBox" x="158" y="72" width="146" height="40" rx="8" fill="#fdf4eb" stroke="#8c4a1c" stroke-width="2" stroke-dasharray="380" stroke-dashoffset="380"/>
+            <text id="skL1CNum" x="231" y="65" text-anchor="middle" font-size="16" font-weight="900" fill="#8c4a1c" opacity="0">4</text>
+            <text id="skL1C0" x="179" y="100" text-anchor="middle" font-size="25" font-weight="900" fill="#8c4a1c" opacity="0">□</text>
+            <text id="skL1C1" x="214" y="100" text-anchor="middle" font-size="25" font-weight="900" fill="#8c4a1c" opacity="0">□</text>
+            <text id="skL1C2" x="249" y="100" text-anchor="middle" font-size="25" font-weight="900" fill="#8c4a1c" opacity="0">□</text>
+            <text id="skL1C3" x="284" y="100" text-anchor="middle" font-size="25" font-weight="900" fill="#8c4a1c" opacity="0">□</text>
+
+            <text id="skL1Eq" x="358" y="101" text-anchor="middle" font-size="26" font-weight="900" fill="#334155" opacity="0">= 60</text>
+          </g>
+
+          <!-- ===== Line 2: [△ △ △](3) + [□](1) = 33 (Strictly Aligned!) ===== -->
+          <g id="skLine2" opacity="0">
+            <!-- Group Juice 3 -->
+            <rect id="skL2JBox" x="20" y="140" width="106" height="40" rx="8" fill="#fff7ed" stroke="#f4711f" stroke-width="2" stroke-dasharray="300" stroke-dashoffset="300"/>
+            <text id="skL2JNum" x="73" y="133" text-anchor="middle" font-size="16" font-weight="900" fill="#f4711f" opacity="0">3</text>
+            <text id="skL2J0" x="40" y="168" text-anchor="middle" font-size="25" font-weight="900" fill="#f4711f" opacity="0">△</text>
+            <text id="skL2J1" x="73" y="168" text-anchor="middle" font-size="25" font-weight="900" fill="#f4711f" opacity="0">△</text>
+            <text id="skL2J2" x="106" y="168" text-anchor="middle" font-size="25" font-weight="900" fill="#f4711f" opacity="0">△</text>
+
+            <text id="skL2Plus" x="142" y="168" text-anchor="middle" font-size="24" font-weight="900" fill="#475569" opacity="0">+</text>
+
+            <!-- Group Coffee 1 (Aligned directly below C0!) -->
+            <rect id="skL2CBox" x="158" y="140" width="42" height="40" rx="8" fill="#fdf4eb" stroke="#8c4a1c" stroke-width="2" stroke-dasharray="180" stroke-dashoffset="180"/>
+            <text id="skL2CNum" x="179" y="133" text-anchor="middle" font-size="16" font-weight="900" fill="#8c4a1c" opacity="0">1</text>
+            <text id="skL2C0" x="179" y="168" text-anchor="middle" font-size="25" font-weight="900" fill="#8c4a1c" opacity="0">□</text>
+
+            <text id="skL2Eq" x="358" y="169" text-anchor="middle" font-size="26" font-weight="900" fill="#334155" opacity="0">= 33</text>
+          </g>
+
+          <!-- Highlight Identical & Extra on Sketchpad -->
+          <rect id="skHlSame" x="14" y="64" width="190" height="122" rx="12" fill="#0aa5c9" fill-opacity="0.12" stroke="#0aa5c9" stroke-width="2.6" stroke-dasharray="6 4" opacity="0"/>
+          <rect id="skHlExtra" x="200" y="67" width="108" height="50" rx="10" fill="#8d5bd6" fill-opacity="0.14" stroke="#8d5bd6" stroke-width="2.8" opacity="0"/>
+
+          <!-- Fast Cancel Slashes '/' -->
+          <g id="skSlashGroup">
+            <line id="skSlashJ1" x1="26" y1="112" x2="122" y2="74" stroke="#e8467c" stroke-width="4" stroke-linecap="round" stroke-dasharray="110" stroke-dashoffset="110"/>
+            <line id="skSlashJ2" x1="26" y1="180" x2="122" y2="142" stroke="#e8467c" stroke-width="4" stroke-linecap="round" stroke-dasharray="110" stroke-dashoffset="110"/>
+            <line id="skSlashC1" x1="164" y1="110" x2="194" y2="74" stroke="#e8467c" stroke-width="4" stroke-linecap="round" stroke-dasharray="55" stroke-dashoffset="55"/>
+            <line id="skSlashC2" x1="164" y1="178" x2="194" y2="142" stroke="#e8467c" stroke-width="4" stroke-linecap="round" stroke-dasharray="55" stroke-dashoffset="55"/>
+          </g>
+
+          <!-- ===== Line 3: → [□ □ □](3) = 60 - 33 = 27 ===== -->
+          <g id="skLine3" opacity="0">
+            <line x1="22" y1="196" x2="438" y2="196" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5 4"/>
+            <text x="34" y="238" font-size="24" font-weight="900" fill="#8d5bd6">→</text>
+            <rect id="skL3Box" x="58" y="212" width="112" height="38" rx="8" fill="#f5f3ff" stroke="#8d5bd6" stroke-width="2.2" stroke-dasharray="310" stroke-dashoffset="310"/>
+            <text x="114" y="206" text-anchor="middle" font-size="15" font-weight="900" fill="#8d5bd6">3</text>
+            <text x="79" y="239" text-anchor="middle" font-size="25" font-weight="900" fill="#8c4a1c">□</text>
+            <text x="114" y="239" text-anchor="middle" font-size="25" font-weight="900" fill="#8c4a1c">□</text>
+            <text x="149" y="239" text-anchor="middle" font-size="25" font-weight="900" fill="#8c4a1c">□</text>
+            <text id="skL3Sub" x="180" y="240" font-size="23" font-weight="900" fill="#334155">= 60 − 33 =</text>
+            <text id="skL3Res" x="322" y="240" font-size="26" font-weight="900" fill="#8d5bd6">27</text>
+          </g>
+
+          <!-- ===== Line 4: Sharing Marks Under □ □ □ ===== -->
+          <g id="skShare" opacity="0">
+            <!-- Three vertical drop ticks -->
+            <line x1="79" y1="252" x2="79" y2="266" stroke="#22a06b" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="114" y1="252" x2="114" y2="266" stroke="#22a06b" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="149" y1="252" x2="149" y2="266" stroke="#22a06b" stroke-width="2.5" stroke-linecap="round"/>
+
+            <!-- Round 1: 5, 5, 5 -->
+            <text id="skS5_0" x="79" y="287" text-anchor="middle" font-size="21" font-weight="900" fill="#059669" opacity="0">5</text>
+            <text id="skS5_1" x="114" y="287" text-anchor="middle" font-size="21" font-weight="900" fill="#059669" opacity="0">5</text>
+            <text id="skS5_2" x="149" y="287" text-anchor="middle" font-size="21" font-weight="900" fill="#059669" opacity="0">5</text>
+            <text id="skS5Note" x="180" y="286" font-size="18" font-weight="800" fill="#059669" opacity="0">(剩 12)</text>
+
+            <!-- Round 2: +4, +4, +4 -->
+            <text id="skS4_0" x="79" y="313" text-anchor="middle" font-size="19" font-weight="900" fill="#d97706" opacity="0">+4</text>
+            <text id="skS4_1" x="114" y="313" text-anchor="middle" font-size="19" font-weight="900" fill="#d97706" opacity="0">+4</text>
+            <text id="skS4_2" x="149" y="313" text-anchor="middle" font-size="19" font-weight="900" fill="#d97706" opacity="0">+4</text>
+            <text id="skS4Note" x="180" y="312" font-size="18" font-weight="800" fill="#d97706" opacity="0">(分完!)</text>
+          </g>
+
+          <!-- ===== Line 5: Final Verification & Answer ===== -->
+          <g id="skFinal" opacity="0">
+            <rect x="24" y="324" width="412" height="38" rx="10" fill="#ecfdf5" stroke="#22a06b" stroke-width="2.2"/>
+            <text x="230" y="350" text-anchor="middle" font-size="20" font-weight="900" fill="#065f46">
+              9 + 9 + 9 = 27 ✓　→　□ = 9 (A)
+            </text>
+          </g>
+
+          <!-- Track B Single Pen Guide Dot -->
+          <g id="penDotB" opacity="0">
+            <circle r="11" fill="#1d4ed8" fill-opacity="0.22"/>
+            <circle r="5.5" fill="#1d4ed8" stroke="#ffffff" stroke-width="2"/>
+          </g>
+        </svg>
+      </div>
+    </section>
+  </main>
+
+  <!-- Inline Interactive Pause Bar (Zero Overlay / Zero Blur!) -->
+  <section class="inline-bar" id="quizBar" aria-live="polite">
+    <div class="quiz-row">
+      <div class="quiz-q" id="quizQuestion">🤔 停一停，估一估：</div>
+      <div class="quiz-btns" id="quizBtns"></div>
+    </div>
+    <div class="quiz-fb" id="quizFb"></div>
+  </section>
+
+  <!-- Celebration & Extension Action Bar -->
+  <section class="celeb-bar" id="celebBar" aria-live="polite">
+    <div class="celeb-inner">
+      <div class="mantra-box">
+        <span class="mantra-label">🏆 完成作答！考場實戰口訣：</span>
+        <span class="mantra-text">「上下對齊畫簡圖，相同劃走睇多出，剩錢平分連加驗！」</span>
+      </div>
+      <div class="celeb-actions">
+        <button class="cta-btn cta-practice" id="openPracticeBtn">🎯 挑戰類似題</button>
+        <button class="cta-btn cta-master" id="openMasterBtn">✨ 高手秒殺思維</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Similar Practice Panel (Inline, Expandable) -->
+  <section class="extra-panel practice-panel" id="practicePanel">
+    <div class="extra-head">
+      <div class="extra-title">🎯 實戰類似題（試下自己用算草紙計！）</div>
+      <div style="display:flex;gap:8px;">
+        <button class="tool-btn" id="nextPracBtn">🔀 換一題</button>
+        <button class="close-extra" id="closePracBtn">收起</button>
+      </div>
+    </div>
+    <div class="prac-q" id="pracQ"></div>
+    <div class="prac-tools">
+      <button class="tool-btn" id="togglePracHintBtn">✏️ 睇草稿提示</button>
+      <div class="quiz-btns" id="pracChoices"></div>
+    </div>
+    <div class="quiz-fb" id="pracFb"></div>
+    <div class="prac-hint-box" id="pracHintBox">
+      <svg id="pracHintSvg" viewBox="0 0 540 165" style="width:100%;max-height:175px;display:block;"></svg>
+    </div>
+    <div class="prac-verify-box" id="pracVerifyBox">
+      <div style="font-size:15px;font-weight:800;color:#047857;margin-bottom:6px;">🎉 實物圖解驗證：</div>
+      <svg id="pracVerifySvg" viewBox="0 0 540 155" style="width:100%;max-height:165px;display:block;"></svg>
+    </div>
+  </section>
+
+  <!-- Master / Ramanujan Visual Shortcut Panel (Inline, Pure Visual SVG!) -->
+  <section class="extra-panel master-panel" id="masterPanel">
+    <div class="extra-head">
+      <div class="extra-title">✨ 高手秒殺思維：湊整十倒扣法（一眼睇穿 27 分 3 份！）</div>
+      <button class="close-extra" id="closeMasterBtn">收起</button>
+    </div>
+    <div class="master-controls">
+      <button class="tool-btn active" id="mStep0Btn">1. 先當每罐 10 元</button>
+      <button class="tool-btn" id="mStep1Btn">2. 多咗 3 元，每罐收返 1 元</button>
+      <button class="tool-btn" id="mStep2Btn">3. 秒出每罐 9 元！</button>
+      <button class="tool-btn" id="mSpeakBtn">🔊 聽廣東話講解</button>
+    </div>
+    <div class="master-stage">
+      <svg id="masterSvg" viewBox="0 0 600 225" style="width:100%;max-height:235px;display:block;">
+        <!-- 3 Coffee Cans -->
+        <g transform="translate(130, 128)">
+          <rect x="-64" y="-66" width="128" height="142" rx="15" fill="#faf5ff" stroke="#c4b5fd" stroke-width="2"/>
+          <use href="#canCoffee" transform="translate(0, -14) scale(1.05)"/>
+          <g id="mBill0" transform="translate(0, 44)">
+            <rect x="-42" y="-18" width="84" height="36" rx="9" fill="#d1fae5" stroke="#059669" stroke-width="2.2"/>
+            <text x="0" y="7" text-anchor="middle" font-size="20" font-weight="900" fill="#065f46">$10</text>
+          </g>
+          <g id="mMinus0" opacity="0" transform="translate(42, 22)">
+            <circle r="18" fill="#fee2e2" stroke="#dc2626" stroke-width="2.2"/>
+            <text x="0" y="6" text-anchor="middle" font-size="16" font-weight="900" fill="#b91c1c">−$1</text>
+          </g>
+          <g id="mRes0" opacity="0" transform="translate(0, 44)">
+            <rect x="-42" y="-18" width="84" height="36" rx="9" fill="#8d5bd6"/>
+            <text x="0" y="7" text-anchor="middle" font-size="21" font-weight="900" fill="#fff">$9</text>
+          </g>
+        </g>
+
+        <g transform="translate(300, 128)">
+          <rect x="-64" y="-66" width="128" height="142" rx="15" fill="#faf5ff" stroke="#c4b5fd" stroke-width="2"/>
+          <use href="#canCoffee" transform="translate(0, -14) scale(1.05)"/>
+          <g id="mBill1" transform="translate(0, 44)">
+            <rect x="-42" y="-18" width="84" height="36" rx="9" fill="#d1fae5" stroke="#059669" stroke-width="2.2"/>
+            <text x="0" y="7" text-anchor="middle" font-size="20" font-weight="900" fill="#065f46">$10</text>
+          </g>
+          <g id="mMinus1" opacity="0" transform="translate(42, 22)">
+            <circle r="18" fill="#fee2e2" stroke="#dc2626" stroke-width="2.2"/>
+            <text x="0" y="6" text-anchor="middle" font-size="16" font-weight="900" fill="#b91c1c">−$1</text>
+          </g>
+          <g id="mRes1" opacity="0" transform="translate(0, 44)">
+            <rect x="-42" y="-18" width="84" height="36" rx="9" fill="#8d5bd6"/>
+            <text x="0" y="7" text-anchor="middle" font-size="21" font-weight="900" fill="#fff">$9</text>
+          </g>
+        </g>
+
+        <g transform="translate(470, 128)">
+          <rect x="-64" y="-66" width="128" height="142" rx="15" fill="#faf5ff" stroke="#c4b5fd" stroke-width="2"/>
+          <use href="#canCoffee" transform="translate(0, -14) scale(1.05)"/>
+          <g id="mBill2" transform="translate(0, 44)">
+            <rect x="-42" y="-18" width="84" height="36" rx="9" fill="#d1fae5" stroke="#059669" stroke-width="2.2"/>
+            <text x="0" y="7" text-anchor="middle" font-size="20" font-weight="900" fill="#065f46">$10</text>
+          </g>
+          <g id="mMinus2" opacity="0" transform="translate(42, 22)">
+            <circle r="18" fill="#fee2e2" stroke="#dc2626" stroke-width="2.2"/>
+            <text x="0" y="6" text-anchor="middle" font-size="16" font-weight="900" fill="#b91c1c">−$1</text>
+          </g>
+          <g id="mRes2" opacity="0" transform="translate(0, 44)">
+            <rect x="-42" y="-18" width="84" height="36" rx="9" fill="#8d5bd6"/>
+            <text x="0" y="7" text-anchor="middle" font-size="21" font-weight="900" fill="#fff">$9</text>
+          </g>
+        </g>
+
+        <!-- Top Master Equation Pill -->
+        <g transform="translate(300, 28)">
+          <rect x="-245" y="-20" width="490" height="40" rx="12" fill="#f3e8ff" stroke="#a855f7" stroke-width="2"/>
+          <text id="mTopText" x="0" y="7" text-anchor="middle" font-size="19" font-weight="900" fill="#581c87">
+            10 ＋ 10 ＋ 10 ＝ 30 元（同 27 元好近！）
+          </text>
+        </g>
+      </svg>
+    </div>
+    <div class="master-caption" id="masterCaption"></div>
+  </section>
+
+  <!-- Bottom Fixed Dock -->
+  <footer class="dock">
+    <div class="subtitle-box" id="subtitleBox"></div>
+    <div class="dock-bottom">
+      <div class="formula-strip" id="formulaStrip" aria-label="實時算式條"></div>
+      <div class="ctrl-group">
+        <span class="step-counter" id="stepCounter">0 / 9</span>
+        <button class="ctrl-btn" id="prevBtn" title="上一步">⏮</button>
+        <button class="ctrl-btn play" id="playBtn" title="播放 / 暫停">▶</button>
+        <button class="ctrl-btn" id="nextBtn" title="下一步">⏭</button>
+        <button class="ctrl-btn" id="replayBtn" title="由頭重播">🔄</button>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+(() => {
+  /* =========================================================
+     1. CENTRAL CONFIG (Data, Clauses, HETERO_MAP, Phases, Steps)
+     ========================================================= */
+  const CONFIG = {
+    defaultRate: 0.75,
+    fastRate: 1.0,
+
+    // Cantonese Heteronym & Tone Calibration Map (Subtitle stays standard Chinese!)
+    HETERO_MAP: [
+      ['第一排', '第一徘'],
+      ['第二排', '第二徘'],
+      ['一排', '一徘'],
+      ['兩排', '兩徘'],
+      ['畫出', '劃出'],
+      ['畫框', '劃框'],
+      ['畫條', '劃條'],
+      ['畫線', '劃線'],
+      ['畫斜線', '劃斜線'],
+      ['畫底線', '劃底線'],
+      ['畫簡圖', '劃簡圖'],
+      ['畫個', '劃個'],
+      ['畫圈', '劃圈'],
+      ['畫走', '劃走'],
+      ['唔畫', '唔劃'],
+      ['點數', '點嫂'],
+      ['數一數', '嫂一嫂'],
+      ['數下', '嫂下'],
+      ['重複', '從覆'],
+      ['重覆', '從覆'],
+      ['分給', '分俾'],
+      ['平均分', '平均分']
+    ],
+
+    phases: [
+      { id: 0, label: '1. 順讀畫圖', firstStep: 1 },
+      { id: 1, label: '2. 對比抵銷', firstStep: 3 },
+      { id: 2, label: '3. 平均分錢', firstStep: 5 },
+      { id: 3, label: '4. 合數驗算', firstStep: 8 },
+      { id: 4, label: '5. 填寫答案', firstStep: 9 }
+    ],
+
+    steps: [
+      {
+        id: 0,
+        phase: 0,
+        clause: -1,
+        durationMs: 2600,
+        quotePrefix: '',
+        quote: '',
+        thought: '先睇清楚原題同三個選項，準備好就撳播放，一齊順讀題目落筆計！',
+        stageHint: '開場忠實展示原題與空白算草紙'
+      },
+      {
+        id: 1,
+        phase: 0,
+        clause: 0,
+        durationMs: 4200,
+        quotePrefix: '題目寫住：',
+        quote: '3 罐果汁和 4 罐咖啡共值 60 元，',
+        thought: '即刻用三角形代表果汁、正方形代表咖啡，第一行畫 3 個果汁加 4 個咖啡等於 60 元。',
+        stageHint: '第一行：3 罐果汁 ＋ 4 罐咖啡 ＝ 60 元'
+      },
+      {
+        id: 2,
+        phase: 0,
+        clause: 1,
+        durationMs: 4200,
+        quotePrefix: '題目話：',
+        quote: '相同的 3 罐果汁和 1 罐咖啡共值 33 元，',
+        thought: '上下對齊畫第二行：同樣 3 個果汁加 1 個咖啡，等於 33 元。',
+        stageHint: '上下對齊最關鍵，一眼睇到相同部分'
+      },
+      {
+        id: 3,
+        phase: 1,
+        clause: -1,
+        durationMs: 3800,
+        quotePrefix: '',
+        quote: '',
+        thought: '上下一拍對比！兩行都有相同的 3 罐果汁同 1 罐咖啡，價錢一模一樣，可以一齊抵銷！',
+        stageHint: '閃示兩行完全相同的 3 罐果汁與 1 罐咖啡'
+      },
+      {
+        id: 4,
+        phase: 1,
+        clause: -1,
+        durationMs: 4400,
+        quotePrefix: '',
+        quote: '',
+        thought: '劃走相同部分，第一行淨返多出嘅 3 罐咖啡，價錢多出 60 減 33 等於 27 元！',
+        stageHint: '劃走相同部分 → 剩低 3 罐咖啡 ＝ 27 元',
+        quiz: {
+          question: '🤔 停一停，估一估：抵銷相同部分之後，第一行多出幾罐咖啡？價錢又多出幾多元？',
+          choices: [
+            { text: '3 罐咖啡，27 元', ok: true },
+            { text: '4 罐咖啡，27 元', ok: false, hint: '提提你：第二行都有 1 罐咖啡，要抵銷 1 罐，4 減 1 剩幾罐呀？' },
+            { text: '3 罐咖啡，33 元', ok: false, hint: '33 元係第二組嘅價錢，要計多出幾多元，應該用 60 減 33 呀！' }
+          ],
+          rightFb: '答啱啦！4 罐減 1 罐剩 3 罐咖啡，60 減 33 等於 27 元，即刻睇抵銷動畫！'
+        }
+      },
+      {
+        id: 5,
+        phase: 2,
+        clause: 2,
+        durationMs: 3600,
+        quotePrefix: '題目問：',
+        quote: '那麼 1 罐咖啡值多少元？',
+        thought: '3 罐咖啡一共值 27 元，想知道 1 罐值幾多，將 27 元平均分俾這 3 罐就得！',
+        stageHint: '將 27 元平均分俾 3 罐咖啡'
+      },
+      {
+        id: 6,
+        phase: 2,
+        clause: 2,
+        durationMs: 4600,
+        quotePrefix: '',
+        quote: '',
+        thought: '先大方啲，每罐分 5 元！3 罐合共分咗 5 加 5 加 5 等於 15 元，仲剩 12 元。',
+        stageHint: '第 1 輪平分：每罐先分 $5（剩 $12）'
+      },
+      {
+        id: 7,
+        phase: 2,
+        clause: 2,
+        durationMs: 4200,
+        quotePrefix: '',
+        quote: '',
+        thought: '剩返嘅 12 元再平均分俾 3 罐，每罐再多拿 4 元，4 加 4 加 4 等於 12，剛剛好分完！',
+        stageHint: '第 2 輪平分：每罐再分 +$4（全部分完！）',
+        quiz: {
+          question: '🤔 停一停，估一估：仲剩返 12 元平均分俾 3 罐咖啡，每罐可以再拿多幾多元？',
+          choices: [
+            { text: '3 元', ok: false, hint: '試下連加：3 加 3 加 3 得 9 元，未分完 12 元呀，再試大少少！' },
+            { text: '4 元', ok: true },
+            { text: '5 元', ok: false, hint: '試下連加：5 加 5 加 5 要 15 元，但我哋得返 12 元唔夠分呀！' }
+          ],
+          rightFb: '完全正確！4 加 4 加 4 啱啱好係 12 元，睇住飛入每罐咖啡！'
+        }
+      },
+      {
+        id: 8,
+        phase: 3,
+        clause: 2,
+        durationMs: 4000,
+        quotePrefix: '',
+        quote: '',
+        thought: '每罐咖啡拎到 5 加 4 等於 9 元！連加驗算：9 加 9 加 9 等於 27 元，分毫不差！',
+        stageHint: '合數並用連加驗算：9 + 9 + 9 = 27 ✓'
+      },
+      {
+        id: 9,
+        phase: 4,
+        clause: 2,
+        durationMs: 3800,
+        quotePrefix: '',
+        quote: '',
+        thought: '9 元對應選項 A，圈起 A 再將 A 字工整寫落括號入面，搞掂滿分！',
+        stageHint: '完成原題作答格式：圈出 A. 9 並填寫 ( A )'
+      }
+    ],
+
+    // Curated Similar Practice Problems (P1-P2 level, zero ×/÷)
+    practiceProblems: [
+      {
+        text: '2 罐果汁和 5 罐咖啡共值 52 元，相同的 2 罐果汁和 2 罐咖啡共值 28 元，那麼 1 罐咖啡值多少元？',
+        j1: 2, c1: 5, t1: 52,
+        j2: 2, c2: 2, t2: 28,
+        diffC: 3, diffMoney: 24, ans: 8,
+        options: ['A. 6 元', 'B. 8 元', 'C. 9 元'],
+        correctIdx: 1,
+        verifyText: '多出 3 罐咖啡 ＝ 52 − 28 ＝ 24 元 → 8 ＋ 8 ＋ 8 ＝ 24 元，每罐 8 元！'
+      },
+      {
+        text: '4 盒牛奶和 3 個麵包共值 46 元，相同的 4 盒牛奶和 1 個麵包共值 32 元，那麼 1 個麵包值多少元？',
+        j1: 4, c1: 3, t1: 46,
+        j2: 4, c2: 1, t2: 32,
+        diffC: 2, diffMoney: 14, ans: 7,
+        options: ['A. 7 元', 'B. 6 元', 'C. 8 元'],
+        correctIdx: 0,
+        verifyText: '多出 2 個麵包 ＝ 46 − 32 ＝ 14 元 → 7 ＋ 7 ＝ 14 元，每個 7 元！'
+      },
+      {
+        text: '3 枝鉛筆和 4 塊擦膠共值 39 元，相同的 3 枝鉛筆和 1 塊擦膠共值 21 元，那麼 1 塊擦膠值多少元？',
+        j1: 3, c1: 4, t1: 39,
+        j2: 3, c2: 1, t2: 21,
+        diffC: 3, diffMoney: 18, ans: 6,
+        options: ['A. 5 元', 'B. 7 元', 'C. 6 元'],
+        correctIdx: 2,
+        verifyText: '多出 3 塊擦膠 ＝ 39 − 21 ＝ 18 元 → 6 ＋ 6 ＋ 6 ＝ 18 元，每塊 6 元！'
+      }
+    ],
+
+    masterSteps: [
+      {
+        top: '10 ＋ 10 ＋ 10 ＝ 30 元（同 27 元好近！）',
+        caption: '高手唔使逐個硬幣分！見到 3 罐咖啡值 27 元，先想像每罐住咗一張 10 元紙幣，3 張夾埋係整齊嘅 30 元！'
+      },
+      {
+        top: '30 元比 27 元多咗 3 元 → 每罐收返 1 元！',
+        caption: '但我哋實際得 27 元，比 30 元少咗 3 元。3 罐剛剛好每罐收返 1 元，總共扣返 3 元！'
+      },
+      {
+        top: '10 − 1 ＝ 9 元！　9 ＋ 9 ＋ 9 ＝ 27 元，一眼秒殺！',
+        caption: '每罐 10 元減走 1 元，即刻秒出每罐 9 元！以後見到 27、24 呢啲接近 30 嘅數，都可以用湊整十倒扣法！'
+      }
+    ]
+  };
+
+  /* =========================================================
+     2. MATH & EASING HELPERS (Pure Functions)
+     ========================================================= */
+  const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+  const seg = (p, start, end) => clamp((p - start) / (end - start));
+  const easeOut = t => 1 - Math.pow(1 - clamp(t), 3);
+  const easeInOut = t => {
+    t = clamp(t);
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  };
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  // Highlight Trilogy: 3 clear blinks over [0..0.85], settle at soft tint on [0.85..1]
+  function blink3(t) {
+    if (t <= 0) return 0;
+    if (t >= 0.85) return 0.55;
+    const wave = Math.sin((t / 0.85) * Math.PI * 6 - Math.PI / 2) * 0.5 + 0.5;
+    return 0.15 + 0.85 * wave;
+  }
+
+  /* =========================================================
+     3. WEB AUDIO SOFT SFX & CANTONESE TTS
+     ========================================================= */
+  let audioCtx = null;
+  let muted = false;
+  let speechRate = CONFIG.defaultRate;
+
+  function ensureAudio() {
+    if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+  }
+
+  function playSfx(type) {
+    if (muted) return;
+    try {
+      ensureAudio();
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'pop') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(760, now + 0.08);
+        gain.gain.setValueAtTime(0.09, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      } else if (type === 'whoosh') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(420, now);
+        osc.frequency.exponentialRampToValueAtTime(190, now + 0.18);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.21);
+      } else if (type === 'ding') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(660, now);
+        osc.frequency.setValueAtTime(880, now + 0.09);
+        gain.gain.setValueAtTime(0.11, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+        osc.start(now);
+        osc.stop(now + 0.34);
+      } else if (type === 'wrong') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.linearRampToValueAtTime(220, now + 0.16);
+        gain.gain.setValueAtTime(0.09, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      } else if (type === 'celebrate') {
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((freq, i) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = 'triangle';
+          o.frequency.setValueAtTime(freq, now + i * 0.09);
+          g.gain.setValueAtTime(0.1, now + i * 0.09);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.35);
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          o.start(now + i * 0.09);
+          o.stop(now + i * 0.09 + 0.36);
+        });
+      }
+    } catch (e) {}
+  }
+
+  let hkVoice = null;
+  function loadVoices() {
+    if (!window.speechSynthesis) return;
+    const list = window.speechSynthesis.getVoices();
+    hkVoice =
+      list.find(v => /zh[-_]HK/i.test(v.lang) && /sin|tracy|hiugaai|wanlung|cantonese|hong/i.test(v.name)) ||
+      list.find(v => /zh[-_]HK/i.test(v.lang)) ||
+      list.find(v => /yue/i.test(v.lang)) ||
+      list.find(v => /zh/i.test(v.lang)) ||
+      null;
+  }
+  if (window.speechSynthesis) {
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
+
+  function cleanForTTS(raw) {
+    let s = String(raw || '');
+    // Strip emojis, geometric shapes, pipes, brackets used visually
+    s = s.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}△□◇☆✓✗|]/gu, ' ');
+    // Math symbols to natural Cantonese
+    s = s.replace(/[−-]/g, '減');
+    s = s.replace(/\+/g, '加');
+    s = s.replace(/×/g, '乘');
+    s = s.replace(/÷/g, '除');
+    s = s.replace(/＝|=/g, '等於');
+    // Apply heteronym & tone calibration
+    for (const [src, rep] of CONFIG.HETERO_MAP) {
+      s = s.split(src).join(rep);
+    }
+    return s.replace(/\s+/g, ' ').trim();
+  }
+
+  let speakToken = 0;
+  let fallbackSpeechTimer = null;
+
+  function stopSpeech() {
+    speakToken++;
+    if (fallbackSpeechTimer) {
+      clearTimeout(fallbackSpeechTimer);
+      fallbackSpeechTimer = null;
+    }
+    if (window.speechSynthesis) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+  }
+
+  function speakText(text, onDone) {
+    stopSpeech();
+    const myToken = speakToken;
+    const cleaned = cleanForTTS(text);
+    if (!cleaned) {
+      if (onDone) onDone();
+      return;
+    }
+
+    const estMs = Math.max(1600, Math.round((cleaned.length * 240) / speechRate));
+
+    if (muted || !window.speechSynthesis) {
+      fallbackSpeechTimer = setTimeout(() => {
+        if (myToken === speakToken && onDone) onDone();
+      }, estMs);
+      return;
+    }
+
+    try {
+      const utt = new SpeechSynthesisUtterance(cleaned);
+      utt.lang = 'zh-HK';
+      if (hkVoice) utt.voice = hkVoice;
+      utt.rate = speechRate;
+      utt.pitch = 1.03;
+
+      let finished = false;
+      const finish = () => {
+        if (finished || myToken !== speakToken) return;
+        finished = true;
+        if (fallbackSpeechTimer) {
+          clearTimeout(fallbackSpeechTimer);
+          fallbackSpeechTimer = null;
+        }
+        if (onDone) onDone();
+      };
+
+      utt.onend = finish;
+      utt.onerror = finish;
+      // Safety watchdog so playback never hangs if browser fails to fire onend
+      fallbackSpeechTimer = setTimeout(finish, estMs + 5500);
+      window.speechSynthesis.speak(utt);
+    } catch (e) {
+      fallbackSpeechTimer = setTimeout(() => {
+        if (myToken === speakToken && onDone) onDone();
+      }, estMs);
+    }
+  }
+
+  /* =========================================================
+     4. DOM REFERENCES
+     ========================================================= */
+  const $ = id => document.getElementById(id);
+
+  const phaseBar = $('phaseBar');
+  const speedBtn = $('speedBtn');
+  const muteBtn = $('muteBtn');
+  const subtitleBox = $('subtitleBox');
+  const formulaStrip = $('formulaStrip');
+  const stepCounter = $('stepCounter');
+  const stageHint = $('stageHint');
+  const prevBtn = $('prevBtn');
+  const playBtn = $('playBtn');
+  const nextBtn = $('nextBtn');
+  const replayBtn = $('replayBtn');
+  const quizBar = $('quizBar');
+  const quizQuestion = $('quizQuestion');
+  const quizBtns = $('quizBtns');
+  const quizFb = $('quizFb');
+  const celebBar = $('celebBar');
+
+  /* =========================================================
+     5. PURE FUNCTION RENDERER: renderState(stepIdx, p)
+     ========================================================= */
+  function setOp(id, v) { const el = $(id); if (el) el.setAttribute('opacity', String(clamp(v))); }
+  function setDash(id, total, prog) {
+    const el = $(id);
+    if (el) el.setAttribute('stroke-dashoffset', String(total * (1 - clamp(prog))));
+  }
+  function setTf(id, tf) { const el = $(id); if (el) el.setAttribute('transform', tf); }
+
+  function setPenDot(track, x, y, visible) {
+    const dotA = $('penDotA');
+    const dotB = $('penDotB');
+    const optDot = $('optAPenDot');
+    const ansDot = $('ansPenDot');
+    dotA.setAttribute('opacity', '0');
+    dotB.setAttribute('opacity', '0');
+    optDot.setAttribute('opacity', '0');
+    ansDot.setAttribute('opacity', '0');
+    if (!visible) return;
+    if (track === 'A') {
+      dotA.setAttribute('transform', `translate(${x.toFixed(1)}, ${y.toFixed(1)})`);
+      dotA.setAttribute('opacity', '1');
+    } else if (track === 'B') {
+      dotB.setAttribute('transform', `translate(${x.toFixed(1)}, ${y.toFixed(1)})`);
+      dotB.setAttribute('opacity', '1');
+    } else if (track === 'OPT') {
+      optDot.setAttribute('cx', x.toFixed(1));
+      optDot.setAttribute('cy', y.toFixed(1));
+      optDot.setAttribute('opacity', '1');
+    } else if (track === 'ANS') {
+      ansDot.setAttribute('cx', x.toFixed(1));
+      ansDot.setAttribute('cy', y.toFixed(1));
+      ansDot.setAttribute('opacity', '1');
+    }
+  }
+
+  function renderFormulaStrip(stepIdx, p) {
+    let html = '';
+    if (stepIdx === 0) {
+      html = '<span style="color:#94a3b8;font-size:16px;font-weight:700;">邊讀題、邊自動列出實時算式…</span>';
+    } else if (stepIdx === 1) {
+      html = '<span class="f-chip juice">3 果汁</span><span>＋</span><span class="f-chip coffee">4 咖啡</span><span>＝ 60 元</span>';
+    } else if (stepIdx === 2 || stepIdx === 3) {
+      html = '<span class="f-chip juice">3 汁</span><span>＋</span><span class="f-chip coffee">4 咖</span><span>＝ 60</span><span style="color:#94a3b8;">｜</span><span class="f-chip juice">3 汁</span><span>＋</span><span class="f-chip coffee">1 咖</span><span>＝ 33</span>';
+    } else if (stepIdx === 4) {
+      if (p < 0.45) {
+        html = '<span class="f-chip calc">抵銷相同部分…</span>';
+      } else {
+        html = '<span class="f-chip coffee">3 罐咖啡</span><span>＝</span><span class="f-chip calc">60 − 33 ＝ 27 元</span>';
+      }
+    } else if (stepIdx === 5) {
+      html = '<span class="f-chip coffee">3 罐咖啡 ＝ 27 元</span><span>→</span><span class="f-chip calc">平均分俾 3 罐</span>';
+    } else if (stepIdx === 6) {
+      html = '<span class="f-chip calc">5 ＋ 5 ＋ 5 ＝ 15</span><span>→</span><span class="f-chip calc">27 − 15 ＝ 12（剩）</span>';
+    } else if (stepIdx === 7) {
+      if (p < 0.35) {
+        html = '<span class="f-chip calc">剩 12 元 → 平均分俾 3 罐</span>';
+      } else {
+        html = '<span class="f-chip calc">4 ＋ 4 ＋ 4 ＝ 12（分完！）</span>';
+      }
+    } else if (stepIdx === 8) {
+      html = '<span class="f-chip coffee">1 罐 ＝ 5 ＋ 4 ＝ 9 元</span><span>｜</span><span class="f-chip ans">驗算：9 ＋ 9 ＋ 9 ＝ 27 ✓</span>';
+    } else if (stepIdx === 9) {
+      html = '<span class="f-chip coffee">1 罐咖啡 ＝ 9 元</span><span>→</span><span class="f-chip ans">答案：( A )</span>';
+    }
+    formulaStrip.innerHTML = html;
+  }
+
+  function renderQuestionHighlights(stepIdx, p) {
+    const step = CONFIG.steps[stepIdx];
+    for (let i = 0; i < 3; i++) {
+      const el = $('c' + i);
+      el.classList.toggle('hl', step.clause === i);
+    }
+    // Symbol tags above 果汁 & 咖啡: hidden at step 0, revealed from step 1
+    const showTags = stepIdx > 1 || (stepIdx === 1 && p > 0.15);
+    $('tagJ').classList.toggle('show', showTags);
+    $('tagC').classList.toggle('show', showTags);
+
+    // Step 9: Option A oval + handwritten 'A' inside ( )
+    if (stepIdx < 9) {
+      setDash('optARing', 265, 0);
+      setDash('ansA1', 26, 0);
+      setDash('ansA2', 26, 0);
+      setDash('ansA3', 14, 0);
+    } else {
+      const pRing = easeInOut(seg(p, 0.05, 0.45));
+      setDash('optARing', 265, pRing);
+      setDash('ansA1', 26, easeOut(seg(p, 0.52, 0.68)));
+      setDash('ansA2', 26, easeOut(seg(p, 0.68, 0.84)));
+      setDash('ansA3', 14, easeOut(seg(p, 0.84, 0.96)));
+    }
+  }
+
+  function renderState(stepIdx, p) {
+    p = clamp(p);
+    renderQuestionHighlights(stepIdx, p);
+    renderFormulaStrip(stepIdx, p);
+
+    // Reset default states
+    setPenDot(null, 0, 0, false);
+    setOp('stageEmpty', stepIdx === 0 ? 1 : 0);
+    setOp('skEmpty', stepIdx === 0 ? 1 : 0);
+
+    const inCompare = stepIdx >= 1 && stepIdx <= 4;
+    const inShare = stepIdx >= 5;
+    setOp('compareLayer', inCompare ? 1 : 0);
+    setOp('shareLayer', inShare ? 1 : 0);
+
+    // Reset glow filters
+    ['r1j0','r1j1','r1j2','r1c0','r1c1','r1c2','r1c3','r2j0','r2j1','r2j2','r2c0'].forEach(id => {
+      const el = $(id);
+      if (el) el.removeAttribute('filter');
+    });
+
+    // ================= TRACK A: COMPARE LAYER (Steps 1-4) =================
+    if (inCompare) {
+      // Base Row 1 positions
+      const r1jPos = [[56,98],[102,98],[148,98]];
+      const r1cPos = [[216,98],[268,98],[314,98],[360,98]];
+      const r2jPos = [[56,228],[102,228],[148,228]];
+
+      // Row 1 appearance
+      if (stepIdx === 1) {
+        setOp('row1Group', easeOut(seg(p, 0, 0.14)));
+        r1jPos.forEach((pt, i) => {
+          const t = easeOut(seg(p, 0.10 + i * 0.08, 0.24 + i * 0.08));
+          const yOff = (1 - t) * -28;
+          setTf('r1j' + i, `translate(${pt[0]}, ${(pt[1] + yOff).toFixed(1)}) scale(${(0.6 + 0.4 * t).toFixed(3)})`);
+          setOp('r1j' + i, t);
+          if (t > 0.1 && t < 0.95) $('r1j' + i).setAttribute('filter', 'url(#softGlow)');
+        });
+        setOp('r1plus', easeOut(seg(p, 0.34, 0.42)));
+        r1cPos.forEach((pt, i) => {
+          const t = easeOut(seg(p, 0.38 + i * 0.08, 0.52 + i * 0.08));
+          const yOff = (1 - t) * -28;
+          setTf('r1c' + i, `translate(${pt[0]}, ${(pt[1] + yOff).toFixed(1)}) scale(${(0.6 + 0.4 * t).toFixed(3)})`);
+          setOp('r1c' + i, t);
+          if (t > 0.1 && t < 0.95) $('r1c' + i).setAttribute('filter', 'url(#softGlow)');
+        });
+        const tEq = easeOut(seg(p, 0.74, 0.90));
+        setOp('r1eq', tEq);
+        setOp('r1price', tEq);
+        setOp('row2Group', 0);
+      } else {
+        setOp('row1Group', 1);
+        r1jPos.forEach((pt, i) => { setTf('r1j' + i, `translate(${pt[0]}, ${pt[1]})`); setOp('r1j' + i, 1); });
+        r1cPos.forEach((pt, i) => { setTf('r1c' + i, `translate(${pt[0]}, ${pt[1]})`); setOp('r1c' + i, 1); });
+        setOp('r1plus', 1);
+        setOp('r1eq', 1);
+        setOp('r1price', 1);
+      }
+
+      // Row 2 appearance
+      if (stepIdx === 2) {
+        setOp('row2Group', easeOut(seg(p, 0, 0.15)));
+        r2jPos.forEach((pt, i) => {
+          const t = easeOut(seg(p, 0.12 + i * 0.1, 0.30 + i * 0.1));
+          const yOff = (1 - t) * 28;
+          setTf('r2j' + i, `translate(${pt[0]}, ${(pt[1] + yOff).toFixed(1)}) scale(${(0.6 + 0.4 * t).toFixed(3)})`);
+          setOp('r2j' + i, t);
+          if (t > 0.1 && t < 0.95) $('r2j' + i).setAttribute('filter', 'url(#softGlow)');
+        });
+        setOp('r2plus', easeOut(seg(p, 0.42, 0.52)));
+        const tc = easeOut(seg(p, 0.48, 0.66));
+        setTf('r2c0', `translate(216, ${(228 + (1 - tc) * 28).toFixed(1)}) scale(${(0.6 + 0.4 * tc).toFixed(3)})`);
+        setOp('r2c0', tc);
+        if (tc > 0.1 && tc < 0.95) $('r2c0').setAttribute('filter', 'url(#softGlow)');
+        setOp('r2emptyHint', easeOut(seg(p, 0.65, 0.85)));
+        const tEq2 = easeOut(seg(p, 0.72, 0.90));
+        setOp('r2eq', tEq2);
+        setOp('r2price', tEq2);
+      } else if (stepIdx >= 3) {
+        setOp('row2Group', 1);
+        r2jPos.forEach((pt, i) => { setTf('r2j' + i, `translate(${pt[0]}, ${pt[1]})`); setOp('r2j' + i, 1); });
+        setTf('r2c0', 'translate(216, 228)');
+        setOp('r2c0', 1);
+        setOp('r2plus', 1);
+        setOp('r2emptyHint', stepIdx === 3 ? 0.8 : 0);
+        setOp('r2eq', 1);
+        setOp('r2price', 1);
+      }
+
+      // Step 3: Highlight Trilogy (3 blinks) on identical parts + extra parts
+      if (stepIdx === 3) {
+        const bSame = blink3(seg(p, 0.05, 0.65));
+        setOp('hlSameGroup', bSame > 0 ? 1 : 0);
+        $('hlSameBox').setAttribute('fill-opacity', (0.28 * bSame).toFixed(3));
+        $('hlSameBox').setAttribute('stroke-opacity', String(clamp(bSame * 1.4)));
+        setOp('hlSameBadge', easeOut(seg(p, 0.58, 0.72)));
+
+        const bExtra = blink3(seg(p, 0.55, 0.95));
+        setOp('hlExtraGroup', bExtra > 0 ? 1 : 0);
+        $('hlExtraBox').setAttribute('fill-opacity', (0.28 * bExtra).toFixed(3));
+        setOp('hlExtraBadge', easeOut(seg(p, 0.85, 0.98)));
+
+        setOp('stageSlashGroup', 0);
+        setOp('diffBanner', 0);
+      } else if (stepIdx === 4) {
+        // Step 4: Slash -> Identical items fly away cleanly -> Extra 3 coffees glow + Diff Banner
+        const pSlash = easeInOut(seg(p, 0.02, 0.30));
+        const pFly = easeInOut(seg(p, 0.32, 0.65));
+        const pRes = easeOut(seg(p, 0.65, 0.92));
+
+        setOp('hlSameGroup', 1 - pFly);
+        $('hlSameBox').setAttribute('fill-opacity', '0.16');
+        setOp('hlSameBadge', 1 - pFly);
+
+        setOp('stageSlashGroup', pSlash > 0 ? (1 - pFly * 0.85) : 0);
+        setDash('sSlash1', 220, seg(p, 0.02, 0.17));
+        setDash('sSlash2', 220, seg(p, 0.15, 0.30));
+
+        // Fly identical cans away smoothly toward left-top & shrink
+        const flyX = -95 * pFly;
+        const flyY = -45 * pFly;
+        const flyScale = 1 - 0.65 * pFly;
+        const flyOp = 1 - pFly;
+        r1jPos.forEach((pt, i) => {
+          setTf('r1j' + i, `translate(${(pt[0] + flyX).toFixed(1)}, ${(pt[1] + flyY).toFixed(1)}) scale(${flyScale.toFixed(3)})`);
+          setOp('r1j' + i, flyOp);
+        });
+        setTf('r1c0', `translate(${(216 + flyX).toFixed(1)}, ${(98 + flyY).toFixed(1)}) scale(${flyScale.toFixed(3)})`);
+        setOp('r1c0', flyOp);
+        setOp('r1plus', flyOp);
+
+        r2jPos.forEach((pt, i) => {
+          setTf('r2j' + i, `translate(${(pt[0] + flyX).toFixed(1)}, ${(pt[1] + flyY).toFixed(1)}) scale(${flyScale.toFixed(3)})`);
+          setOp('r2j' + i, flyOp);
+        });
+        setTf('r2c0', `translate(${(216 + flyX).toFixed(1)}, ${(228 + flyY).toFixed(1)}) scale(${flyScale.toFixed(3)})`);
+        setOp('r2c0', flyOp);
+        setOp('r2plus', flyOp);
+
+        // Highlight remaining 3 coffees
+        setOp('hlExtraGroup', 1);
+        $('hlExtraBox').setAttribute('fill-opacity', (0.14 + 0.12 * pRes).toFixed(3));
+        setOp('hlExtraBadge', 1);
+        if (pRes > 0.2) {
+          ['r1c1','r1c2','r1c3'].forEach(id => $(id).setAttribute('filter', 'url(#softGlow)'));
+        }
+        setOp('diffBanner', pRes);
+      } else {
+        setOp('hlSameGroup', 0);
+        setOp('hlExtraGroup', 0);
+        setOp('stageSlashGroup', 0);
+        setOp('diffBanner', 0);
+      }
+    }
+
+    // ================= TRACK A: EQUAL SHARING LAYER (Steps 5-9) =================
+    if (inShare) {
+      const canX = [120, 300, 480];
+
+      // Pool label dynamically reflects remaining money
+      const poolLabel = $('poolLabel');
+      if (stepIdx === 5) {
+        poolLabel.textContent = '共要平均分：27 元';
+      } else if (stepIdx === 6) {
+        let rem = 27;
+        if (p > 0.35) rem = 22;
+        if (p > 0.58) rem = 17;
+        if (p > 0.78) rem = 12;
+        poolLabel.textContent = rem === 12 ? '已分 15 元，還剩：12 元' : `共要平均分：27 元（剩 ${rem} 元）`;
+      } else if (stepIdx === 7) {
+        let rem = 12;
+        if (p > 0.30) rem = 8;
+        if (p > 0.55) rem = 4;
+        if (p > 0.78) rem = 0;
+        poolLabel.textContent = rem === 0 ? '27 元全部分完啦！🎉' : `剩餘 12 元繼續平分（剩 ${rem} 元）`;
+      } else {
+        poolLabel.textContent = '每罐咖啡各得 5 ＋ 4 ＝ 9 元！';
+      }
+
+      // Step 5: Reveal 3 coffee cans & 27 pool
+      if (stepIdx === 5) {
+        setOp('moneyPool', easeOut(seg(p, 0, 0.35)));
+        [0, 1, 2].forEach(i => setOp('shareCan' + i, easeOut(seg(p, 0.2 + i * 0.15, 0.45 + i * 0.15))));
+      } else {
+        setOp('moneyPool', 1);
+        [0, 1, 2].forEach(i => setOp('shareCan' + i, 1));
+      }
+
+      // Round 1: $5 tokens (Step 6: 1st slow, 2nd & 3rd faster!)
+      const r1Windows = [[0.08, 0.44], [0.46, 0.66], [0.68, 0.86]];
+      for (let i = 0; i < 3; i++) {
+        if (stepIdx < 6) {
+          setOp('tok5_' + i, 0);
+        } else if (stepIdx === 6) {
+          const t = easeInOut(seg(p, r1Windows[i][0], r1Windows[i][1]));
+          if (t <= 0) {
+            setOp('tok5_' + i, 0);
+          } else {
+            const x = lerp(300, canX[i], t);
+            const arcY = -30 * Math.sin(Math.PI * t);
+            const y = lerp(55, 206, t) + arcY;
+            setTf('tok5_' + i, `translate(${x.toFixed(1)}, ${y.toFixed(1)}) scale(${(0.7 + 0.3 * t).toFixed(3)})`);
+            setOp('tok5_' + i, clamp(t * 2.5));
+          }
+        } else {
+          setTf('tok5_' + i, `translate(${canX[i]}, 206)`);
+          setOp('tok5_' + i, stepIdx >= 8 && p > 0.35 ? 0.45 : 1);
+        }
+      }
+
+      // Round 2: +$4 tokens (Step 7)
+      const r2Windows = [[0.06, 0.36], [0.38, 0.60], [0.62, 0.84]];
+      for (let i = 0; i < 3; i++) {
+        if (stepIdx < 7) {
+          setOp('tok4_' + i, 0);
+        } else if (stepIdx === 7) {
+          const t = easeInOut(seg(p, r2Windows[i][0], r2Windows[i][1]));
+          if (t <= 0) {
+            setOp('tok4_' + i, 0);
+          } else {
+            const x = lerp(300, canX[i], t);
+            const arcY = -28 * Math.sin(Math.PI * t);
+            const y = lerp(55, 246, t) + arcY;
+            setTf('tok4_' + i, `translate(${x.toFixed(1)}, ${y.toFixed(1)}) scale(${(0.7 + 0.3 * t).toFixed(3)})`);
+            setOp('tok4_' + i, clamp(t * 2.5));
+          }
+        } else {
+          setTf('tok4_' + i, `translate(${canX[i]}, 246)`);
+          setOp('tok4_' + i, stepIdx >= 8 && p > 0.35 ? 0.45 : 1);
+        }
+      }
+
+      // Sum badges & verification (Step 8-9)
+      for (let i = 0; i < 3; i++) {
+        if (stepIdx < 8) {
+          setOp('sumBadge' + i, 0);
+        } else if (stepIdx === 8) {
+          setOp('sumBadge' + i, easeOut(seg(p, 0.1 + i * 0.14, 0.28 + i * 0.14)));
+        } else {
+          setOp('sumBadge' + i, 1);
+        }
+      }
+      if (stepIdx < 8) {
+        setOp('verifyBanner', 0);
+      } else if (stepIdx === 8) {
+        setOp('verifyBanner', easeOut(seg(p, 0.58, 0.88)));
+      } else {
+        setOp('verifyBanner', 1);
+      }
+    }
+
+    // ================= TRACK B: PENCIL SKETCHPAD (Synced!) =================
+    setOp('skLegend', stepIdx >= 1 ? (stepIdx === 1 ? easeOut(seg(p, 0, 0.2)) : 1) : 0);
+
+    // Line 1: [△ △ △](3) + [□ □ □ □](4) = 60
+    if (stepIdx === 0) {
+      setOp('skLine1', 0);
+    } else if (stepIdx === 1) {
+      setOp('skLine1', 1);
+      setOp('skL1J0', easeOut(seg(p, 0.10, 0.18)));
+      setOp('skL1J1', easeOut(seg(p, 0.18, 0.26)));
+      setOp('skL1J2', easeOut(seg(p, 0.26, 0.34)));
+      setDash('skL1JBox', 300, seg(p, 0.28, 0.40));
+      setOp('skL1JNum', easeOut(seg(p, 0.34, 0.42)));
+      setOp('skL1Plus', easeOut(seg(p, 0.40, 0.46)));
+      setOp('skL1C0', easeOut(seg(p, 0.44, 0.52)));
+      setOp('skL1C1', easeOut(seg(p, 0.52, 0.60)));
+      setOp('skL1C2', easeOut(seg(p, 0.60, 0.68)));
+      setOp('skL1C3', easeOut(seg(p, 0.68, 0.76)));
+      setDash('skL1CBox', 380, seg(p, 0.70, 0.82));
+      setOp('skL1CNum', easeOut(seg(p, 0.76, 0.84)));
+      setOp('skL1Eq', easeOut(seg(p, 0.82, 0.95)));
+    } else {
+      setOp('skLine1', 1);
+      ['skL1J0','skL1J1','skL1J2','skL1JNum','skL1Plus','skL1C0','skL1C1','skL1C2','skL1C3','skL1CNum','skL1Eq'].forEach(id => setOp(id, 1));
+      setDash('skL1JBox', 300, 1);
+      setDash('skL1CBox', 380, 1);
+    }
+
+    // Line 2: [△ △ △](3) + [□](1) = 33
+    if (stepIdx < 2) {
+      setOp('skLine2', 0);
+    } else if (stepIdx === 2) {
+      setOp('skLine2', 1);
+      setOp('skL2J0', easeOut(seg(p, 0.12, 0.22)));
+      setOp('skL2J1', easeOut(seg(p, 0.22, 0.32)));
+      setOp('skL2J2', easeOut(seg(p, 0.32, 0.42)));
+      setDash('skL2JBox', 300, seg(p, 0.36, 0.50));
+      setOp('skL2JNum', easeOut(seg(p, 0.44, 0.54)));
+      setOp('skL2Plus', easeOut(seg(p, 0.50, 0.58)));
+      setOp('skL2C0', easeOut(seg(p, 0.56, 0.68)));
+      setDash('skL2CBox', 180, seg(p, 0.64, 0.78));
+      setOp('skL2CNum', easeOut(seg(p, 0.70, 0.80)));
+      setOp('skL2Eq', easeOut(seg(p, 0.78, 0.94)));
+    } else {
+      setOp('skLine2', 1);
+      ['skL2J0','skL2J1','skL2J2','skL2JNum','skL2Plus','skL2C0','skL2CNum','skL2Eq'].forEach(id => setOp(id, 1));
+      setDash('skL2JBox', 300, 1);
+      setDash('skL2CBox', 180, 1);
+    }
+
+    // Sketch highlights (Step 3)
+    if (stepIdx === 3) {
+      setOp('skHlSame', blink3(seg(p, 0.05, 0.65)));
+      setOp('skHlExtra', blink3(seg(p, 0.55, 0.95)));
+    } else {
+      setOp('skHlSame', 0);
+      setOp('skHlExtra', stepIdx === 4 ? 0.65 : 0);
+    }
+
+    // Sketch fast slashes & Line 3 (Step 4+)
+    if (stepIdx < 4) {
+      setDash('skSlashJ1', 110, 0);
+      setDash('skSlashJ2', 110, 0);
+      setDash('skSlashC1', 55, 0);
+      setDash('skSlashC2', 55, 0);
+      setOp('skLine3', 0);
+    } else if (stepIdx === 4) {
+      setDash('skSlashJ1', 110, seg(p, 0.02, 0.16));
+      setDash('skSlashJ2', 110, seg(p, 0.12, 0.26));
+      setDash('skSlashC1', 55, seg(p, 0.22, 0.34));
+      setDash('skSlashC2', 55, seg(p, 0.30, 0.42));
+      const tL3 = easeOut(seg(p, 0.55, 0.92));
+      setOp('skLine3', tL3);
+      setDash('skL3Box', 310, seg(p, 0.55, 0.78));
+    } else {
+      setDash('skSlashJ1', 110, 1);
+      setDash('skSlashJ2', 110, 1);
+      setDash('skSlashC1', 55, 1);
+      setDash('skSlashC2', 55, 1);
+      setOp('skLine3', 1);
+      setDash('skL3Box', 310, 1);
+    }
+
+    // Sketch sharing ticks (Step 6+)
+    if (stepIdx < 6) {
+      setOp('skShare', 0);
+    } else if (stepIdx === 6) {
+      setOp('skShare', 1);
+      setOp('skS5_0', easeOut(seg(p, 0.36, 0.48)));
+      setOp('skS5_1', easeOut(seg(p, 0.58, 0.70)));
+      setOp('skS5_2', easeOut(seg(p, 0.78, 0.90)));
+      setOp('skS5Note', easeOut(seg(p, 0.85, 0.98)));
+      ['skS4_0','skS4_1','skS4_2','skS4Note'].forEach(id => setOp(id, 0));
+    } else if (stepIdx === 7) {
+      setOp('skShare', 1);
+      ['skS5_0','skS5_1','skS5_2','skS5Note'].forEach(id => setOp(id, 1));
+      setOp('skS4_0', easeOut(seg(p, 0.30, 0.42)));
+      setOp('skS4_1', easeOut(seg(p, 0.54, 0.66)));
+      setOp('skS4_2', easeOut(seg(p, 0.76, 0.88)));
+      setOp('skS4Note', easeOut(seg(p, 0.86, 0.98)));
+    } else {
+      setOp('skShare', 1);
+      ['skS5_0','skS5_1','skS5_2','skS5Note','skS4_0','skS4_1','skS4_2','skS4Note'].forEach(id => setOp(id, 1));
+    }
+
+    // Sketch final answer box (Step 8+)
+    if (stepIdx < 8) {
+      setOp('skFinal', 0);
+    } else if (stepIdx === 8) {
+      setOp('skFinal', easeOut(seg(p, 0.45, 0.85)));
+    } else {
+      setOp('skFinal', 1);
+    }
+
+    // ================= SINGLE DEEP-BLUE PEN GUIDE DOT (Mutually Exclusive) =================
+    if (stepIdx === 1) {
+      if (p < 0.82) setPenDot('B', lerp(40, 295, seg(p, 0.1, 0.82)), 92, true);
+      else setPenDot('B', 358, 92, p < 0.98);
+    } else if (stepIdx === 2) {
+      if (p < 0.78) setPenDot('B', lerp(40, 195, seg(p, 0.12, 0.78)), 160, true);
+      else setPenDot('B', 358, 160, p < 0.98);
+    } else if (stepIdx === 3) {
+      if (p < 0.55) setPenDot('A', 136, 162, true);
+      else setPenDot('A', 315, 98, p < 0.97);
+    } else if (stepIdx === 4) {
+      if (p < 0.44) setPenDot('B', lerp(26, 194, seg(p, 0.02, 0.44)), lerp(110, 142, seg(p, 0.02, 0.44)), true);
+      else setPenDot('B', lerp(79, 322, seg(p, 0.55, 0.92)), 232, p < 0.97);
+    } else if (stepIdx === 5) {
+      setPenDot('A', lerp(120, 480, easeInOut(seg(p, 0.2, 0.85))), 172, p < 0.96);
+    } else if (stepIdx === 6) {
+      if (p < 0.45) setPenDot('A', lerp(300, 120, seg(p, 0.08, 0.44)), lerp(55, 206, seg(p, 0.08, 0.44)), true);
+      else if (p < 0.67) setPenDot('A', 300, lerp(55, 206, seg(p, 0.46, 0.66)), true);
+      else if (p < 0.88) setPenDot('A', lerp(300, 480, seg(p, 0.68, 0.86)), lerp(55, 206, seg(p, 0.68, 0.86)), true);
+      else setPenDot('B', 149, 282, p < 0.98);
+    } else if (stepIdx === 7) {
+      if (p < 0.38) setPenDot('A', lerp(300, 120, seg(p, 0.06, 0.36)), lerp(55, 246, seg(p, 0.06, 0.36)), true);
+      else if (p < 0.62) setPenDot('A', 300, lerp(55, 246, seg(p, 0.38, 0.60)), true);
+      else if (p < 0.86) setPenDot('A', lerp(300, 480, seg(p, 0.62, 0.84)), lerp(55, 246, seg(p, 0.62, 0.84)), true);
+      else setPenDot('B', 149, 308, p < 0.98);
+    } else if (stepIdx === 8) {
+      if (p < 0.50) setPenDot('A', lerp(120, 480, seg(p, 0.08, 0.48)), 268, true);
+      else setPenDot('B', lerp(60, 390, seg(p, 0.50, 0.90)), 344, p < 0.97);
+    } else if (stepIdx === 9) {
+      if (p >= 0.05 && p <= 0.46) {
+        const ang = -Math.PI / 2 + easeInOut(seg(p, 0.05, 0.45)) * Math.PI * 2;
+        setPenDot('OPT', 55 + 49 * Math.cos(ang), 26 + 21 * Math.sin(ang), true);
+      } else if (p >= 0.52 && p <= 0.97) {
+        if (p < 0.68) {
+          const t = easeOut(seg(p, 0.52, 0.68));
+          setPenDot('ANS', lerp(32, 23, t), lerp(7, 29, t), true);
+        } else if (p < 0.84) {
+          const t = easeOut(seg(p, 0.68, 0.84));
+          setPenDot('ANS', lerp(32, 41, t), lerp(7, 29, t), true);
+        } else {
+          const t = easeOut(seg(p, 0.84, 0.96));
+          setPenDot('ANS', lerp(26, 38, t), 21, true);
+        }
+      }
+    }
+  }
+
+  /* =========================================================
+     6. PLAYBACK ENGINE & INTERACTIVE GATES
+     ========================================================= */
+  let currentStep = 0;
+  let currentP = 0;
+  let isPlaying = false;
+  let gatePending = false;
+  let rafId = null;
+  let lastTs = 0;
+  let stepAnimDone = false;
+  let stepSpeechDone = false;
+  let confettiFired = false;
+
+  function buildPhaseBar() {
+    phaseBar.innerHTML = '';
+    CONFIG.phases.forEach((ph, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'phase-pill';
+      btn.textContent = ph.label;
+      btn.dataset.idx = idx;
+      btn.addEventListener('click', () => {
+        ensureAudio();
+        jumpToStep(ph.firstStep, true);
+      });
+      phaseBar.appendChild(btn);
+    });
+  }
+
+  function updateUI() {
+    const step = CONFIG.steps[currentStep];
+    stepCounter.textContent = `${currentStep} / ${CONFIG.steps.length - 1}`;
+    stageHint.textContent = step.stageHint;
+    prevBtn.disabled = currentStep === 0 && currentP === 0;
+    nextBtn.disabled = currentStep === CONFIG.steps.length - 1 && currentP >= 1;
+    playBtn.textContent = isPlaying ? '⏸' : '▶';
+
+    // Update phase pills
+    const pills = phaseBar.querySelectorAll('.phase-pill');
+    pills.forEach((el, idx) => {
+      el.classList.remove('active', 'done');
+      if (currentStep > 0) {
+        if (idx < step.phase) el.classList.add('done');
+        else if (idx === step.phase) el.classList.add('active');
+      }
+    });
+
+    // Update subtitle with clear distinction between problem quote & coaching thought
+    let subHtml = '';
+    if (step.quote) {
+      subHtml += `<span class="sub-prefix">${step.quotePrefix}</span><span class="sub-quote">「${step.quote}」</span>`;
+    }
+    subHtml += `<span class="sub-thought">${step.thought}</span>`;
+    subtitleBox.innerHTML = subHtml;
+
+    // Celebration bar only on final step completed
+    const finishedAll = currentStep === CONFIG.steps.length - 1 && currentP >= 0.99;
+    celebBar.classList.toggle('show', finishedAll);
+  }
+
+  function hideQuizBar() {
+    quizBar.classList.remove('show');
+    quizFb.textContent = '';
+    quizFb.className = 'quiz-fb';
+  }
+
+  function showQuizGate(step) {
+    gatePending = true;
+    isPlaying = false;
+    cancelRaf();
+    stopSpeech();
+
+    quizQuestion.textContent = step.quiz.question;
+    quizFb.textContent = '';
+    quizFb.className = 'quiz-fb';
+    quizBtns.innerHTML = '';
+
+    step.quiz.choices.forEach(ch => {
+      const b = document.createElement('button');
+      b.className = 'q-choice';
+      b.textContent = ch.text;
+      b.addEventListener('click', () => {
+        ensureAudio();
+        if (ch.ok) {
+          b.classList.add('right');
+          quizFb.textContent = '🎉 ' + step.quiz.rightFb;
+          quizFb.className = 'quiz-fb ok';
+          playSfx('ding');
+          // Disable choices and resume animation immediately!
+          quizBtns.querySelectorAll('button').forEach(x => x.disabled = true);
+          gatePending = false;
+          setTimeout(() => {
+            hideQuizBar();
+            startStepRun(true);
+          }, 950);
+        } else {
+          b.classList.add('wrong');
+          quizFb.textContent = '💡 ' + ch.hint;
+          quizFb.className = 'quiz-fb err';
+          playSfx('wrong');
+          speakText(ch.hint);
+        }
+      });
+      quizBtns.appendChild(b);
+    });
+
+    const skip = document.createElement('button');
+    skip.className = 'q-skip';
+    skip.textContent = '跳過 ⏭';
+    skip.addEventListener('click', () => {
+      ensureAudio();
+      gatePending = false;
+      hideQuizBar();
+      startStepRun(true);
+    });
+    quizBtns.appendChild(skip);
+
+    quizBar.classList.add('show');
+    updateUI();
+    speakText(step.quiz.question);
+  }
+
+  function cancelRaf() {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  }
+
+  function tryAdvanceAfterStep() {
+    if (!isPlaying || gatePending) return;
+    if (stepAnimDone && stepSpeechDone) {
+      if (currentStep < CONFIG.steps.length - 1) {
+        currentStep++;
+        currentP = 0;
+        enterCurrentStep(true);
+      } else {
+        isPlaying = false;
+        updateUI();
+        if (!confettiFired) {
+          confettiFired = true;
+          playSfx('celebrate');
+          launchConfetti();
+        }
+      }
+    }
+  }
+
+  function tick(ts) {
+    if (!isPlaying || gatePending) return;
+    if (!lastTs) lastTs = ts;
+    const dt = Math.min(80, ts - lastTs);
+    lastTs = ts;
+
+    const step = CONFIG.steps[currentStep];
+    // Speed scales proportionally with speechRate (0.75x slower, 1.0x brisker)
+    const effectiveDur = step.durationMs * (CONFIG.defaultRate / speechRate);
+    currentP = clamp(currentP + dt / effectiveDur);
+    renderState(currentStep, currentP);
+
+    if (currentP >= 1) {
+      stepAnimDone = true;
+      cancelRaf();
+      updateUI();
+      if (currentStep === CONFIG.steps.length - 1 && !confettiFired) {
+        confettiFired = true;
+        playSfx('celebrate');
+        launchConfetti();
+      }
+      tryAdvanceAfterStep();
+      return;
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function startStepRun(autoPlay) {
+    const step = CONFIG.steps[currentStep];
+    isPlaying = autoPlay;
+    stepAnimDone = currentP >= 1;
+    stepSpeechDone = false;
+    lastTs = 0;
+
+    if (currentStep === 4) playSfx('whoosh');
+    else if (currentStep > 0) playSfx('pop');
+
+    renderState(currentStep, currentP);
+    updateUI();
+
+    const narration = (step.quote ? (step.quotePrefix + step.quote + ' ') : '') + step.thought;
+    speakText(narration, () => {
+      stepSpeechDone = true;
+      tryAdvanceAfterStep();
+    });
+
+    if (isPlaying && !stepAnimDone) {
+      cancelRaf();
+      rafId = requestAnimationFrame(tick);
+    }
+  }
+
+  function enterCurrentStep(autoPlay, bypassGate = false) {
+    cancelRaf();
+    stopSpeech();
+    hideQuizBar();
+    gatePending = false;
+
+    const step = CONFIG.steps[currentStep];
+    renderState(currentStep, currentP);
+    updateUI();
+
+    if (step.quiz && !bypassGate && currentP < 0.05) {
+      showQuizGate(step);
+      return;
+    }
+
+    startStepRun(autoPlay);
+  }
+
+  function jumpToStep(stepIdx, autoPlay = true) {
+    currentStep = clamp(stepIdx, 0, CONFIG.steps.length - 1);
+    currentP = 0;
+    if (currentStep < CONFIG.steps.length - 1) confettiFired = false;
+    enterCurrentStep(autoPlay);
+  }
+
+  /* =========================================================
+     7. CONTROLS & EVENTS
+     ========================================================= */
+  playBtn.addEventListener('click', () => {
+    ensureAudio();
+    if (gatePending) {
+      // Clicking play while at a gate lets user skip gate smoothly
+      gatePending = false;
+      hideQuizBar();
+      startStepRun(true);
+      return;
+    }
+    if (isPlaying) {
+      isPlaying = false;
+      cancelRaf();
+      stopSpeech();
+      updateUI();
+    } else {
+      if (currentStep === 0) {
+        jumpToStep(1, true);
+      } else if (currentStep === CONFIG.steps.length - 1 && currentP >= 1) {
+        confettiFired = false;
+        jumpToStep(1, true);
+      } else {
+        startStepRun(true);
+      }
+    }
+  });
+
+  prevBtn.addEventListener('click', () => {
+    ensureAudio();
+    const target = currentStep > 0 ? currentStep - 1 : 0;
+    currentStep = target;
+    currentP = target === 0 ? 0 : 1;
+    isPlaying = false;
+    gatePending = false;
+    cancelRaf();
+    stopSpeech();
+    hideQuizBar();
+    renderState(currentStep, currentP);
+    updateUI();
+    const step = CONFIG.steps[currentStep];
+    const narration = (step.quote ? (step.quotePrefix + step.quote + ' ') : '') + step.thought;
+    speakText(narration);
+  });
+
+  nextBtn.addEventListener('click', () => {
+    ensureAudio();
+    if (gatePending) {
+      gatePending = false;
+      hideQuizBar();
+      startStepRun(true);
+      return;
+    }
+    if (currentStep < CONFIG.steps.length - 1) {
+      jumpToStep(currentStep + 1, true);
+    }
+  });
+
+  replayBtn.addEventListener('click', () => {
+    ensureAudio();
+    confettiFired = false;
+    jumpToStep(0, false);
+    setTimeout(() => jumpToStep(1, true), 120);
+  });
+
+  speedBtn.addEventListener('click', () => {
+    if (speechRate === CONFIG.defaultRate) {
+      speechRate = CONFIG.fastRate;
+      speedBtn.textContent = '🚶 1.0x 較快';
+    } else {
+      speechRate = CONFIG.defaultRate;
+      speedBtn.textContent = '🐢 0.75x 適中';
+    }
+  });
+
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    muteBtn.textContent = muted ? '🔇 已靜音' : '🔊 有聲';
+    muteBtn.classList.toggle('muted', muted);
+    if (muted) stopSpeech();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.target && (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT')) return;
+    if (e.code === 'Space') { e.preventDefault(); playBtn.click(); }
+    else if (e.code === 'ArrowRight') { e.preventDefault(); nextBtn.click(); }
+    else if (e.code === 'ArrowLeft') { e.preventDefault(); prevBtn.click(); }
+  });
+
+  /* =========================================================
+     8. SIMILAR PRACTICE PANEL (Safe Symbols Hint + Visual Verify)
+     ========================================================= */
+  let pracIdx = 0;
+  const practicePanel = $('practicePanel');
+  const masterPanel = $('masterPanel');
+
+  function renderPractice() {
+    const pr = CONFIG.practiceProblems[pracIdx];
+    $('pracQ').textContent = `【類似題 ${pracIdx + 1}】${pr.text}`;
+    $('pracFb').textContent = '';
+    $('pracFb').className = 'quiz-fb';
+    $('pracHintBox').classList.remove('show');
+    $('pracVerifyBox').classList.remove('show');
+    $('togglePracHintBtn').textContent = '✏️ 睇草稿提示';
+
+    // Build safe-symbol sketch hint SVG (NO cute illustrations!)
+    const j1Str = Array(pr.j1).fill('△').join(' ');
+    const c1Str = Array(pr.c1).fill('□').join(' ');
+    const j2Str = Array(pr.j2).fill('△').join(' ');
+    const c2Str = Array(pr.c2).fill('□').join(' ');
+    const remStr = Array(pr.diffC).fill('□').join(' ');
+
+    $('pracHintSvg').innerHTML = `
+      <rect x="10" y="14" width="118" height="32" rx="7" fill="#fff7ed" stroke="#f4711f" stroke-width="1.8"/>
+      <text x="69" y="37" text-anchor="middle" font-size="20" font-weight="900" fill="#f4711f">${j1Str}</text>
+      <text x="142" y="37" text-anchor="middle" font-size="20" font-weight="900" fill="#475569">+</text>
+      <rect x="156" y="14" width="160" height="32" rx="7" fill="#fdf4eb" stroke="#8c4a1c" stroke-width="1.8"/>
+      <text x="236" y="37" text-anchor="middle" font-size="20" font-weight="900" fill="#8c4a1c">${c1Str}</text>
+      <text x="372" y="37" font-size="21" font-weight="900" fill="#334155">= ${pr.t1}</text>
+
+      <rect x="10" y="58" width="118" height="32" rx="7" fill="#fff7ed" stroke="#f4711f" stroke-width="1.8"/>
+      <text x="69" y="81" text-anchor="middle" font-size="20" font-weight="900" fill="#f4711f">${j2Str}</text>
+      <text x="142" y="81" text-anchor="middle" font-size="20" font-weight="900" fill="#475569">+</text>
+      <rect x="156" y="58" width="84" height="32" rx="7" fill="#fdf4eb" stroke="#8c4a1c" stroke-width="1.8"/>
+      <text x="198" y="81" text-anchor="middle" font-size="20" font-weight="900" fill="#8c4a1c">${c2Str}</text>
+      <text x="372" y="81" font-size="21" font-weight="900" fill="#334155">= ${pr.t2}</text>
+
+      <line x1="16" y1="45" x2="122" y2="16" stroke="#e8467c" stroke-width="3.2" stroke-linecap="round"/>
+      <line x1="16" y1="89" x2="122" y2="60" stroke="#e8467c" stroke-width="3.2" stroke-linecap="round"/>
+      <line x1="162" y1="45" x2="232" y2="16" stroke="#e8467c" stroke-width="3.2" stroke-linecap="round"/>
+      <line x1="162" y1="89" x2="232" y2="60" stroke="#e8467c" stroke-width="3.2" stroke-linecap="round"/>
+
+      <line x1="10" y1="104" x2="520" y2="104" stroke="#cbd5e1" stroke-width="1.8" stroke-dasharray="5 4"/>
+      <text x="20" y="142" font-size="21" font-weight="900" fill="#8d5bd6">→ 剩 ${remStr} ＝ ${pr.t1} − ${pr.t2} ＝ ${pr.diffMoney}（平均分俾 ${pr.diffC} 個 □！）</text>
+    `;
+
+    // Build visual verification SVG (revealed ONLY after correct answer)
+    let blocks = '';
+    const startX = pr.diffC === 2 ? 175 : 115;
+    const gap = 155;
+    for (let i = 0; i < pr.diffC; i++) {
+      const cx = startX + i * gap;
+      blocks += `
+        <g transform="translate(${cx}, 64)">
+          <rect x="-54" y="-44" width="108" height="90" rx="13" fill="#ecfdf5" stroke="#22a06b" stroke-width="2"/>
+          <rect x="-15" y="-32" width="30" height="40" rx="6" fill="#8c4a1c" stroke="#4d260b" stroke-width="1.8"/>
+          <rect x="-12" y="-20" width="24" height="16" rx="2" fill="#fef3e6"/>
+          <text x="0" y="34" text-anchor="middle" font-size="18" font-weight="900" fill="#065f46">$${pr.ans}</text>
+        </g>
+      `;
+    }
+    $('pracVerifySvg').innerHTML = `
+      ${blocks}
+      <text x="270" y="140" text-anchor="middle" font-size="17" font-weight="900" fill="#047857">${pr.verifyText}</text>
+    `;
+
+    const wrap = $('pracChoices');
+    wrap.innerHTML = '';
+    pr.options.forEach((opt, i) => {
+      const b = document.createElement('button');
+      b.className = 'q-choice';
+      b.textContent = opt;
+      b.addEventListener('click', () => {
+        ensureAudio();
+        if (i === pr.correctIdx) {
+          b.classList.add('right');
+          $('pracFb').textContent = '🎉 勁呀！一計就啱，下面展開實物圖解驗算俾你睇！';
+          $('pracFb').className = 'quiz-fb ok';
+          $('pracVerifyBox').classList.add('show');
+          playSfx('celebrate');
+          speakText('勁呀！完全答啱，' + pr.verifyText);
+        } else {
+          b.classList.add('wrong');
+          $('pracFb').textContent = `💡 未啱喎！試下先計 ${pr.t1} 減 ${pr.t2} 等於 ${pr.diffMoney}，再平均分俾 ${pr.diffC} 個！`;
+          $('pracFb').className = 'quiz-fb err';
+          playSfx('wrong');
+        }
+      });
+      wrap.appendChild(b);
+    });
+  }
+
+  $('openPracticeBtn').addEventListener('click', () => {
+    masterPanel.classList.remove('show');
+    practicePanel.classList.toggle('show');
+    if (practicePanel.classList.contains('show')) {
+      renderPractice();
+      practicePanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+  $('closePracBtn').addEventListener('click', () => practicePanel.classList.remove('show'));
+  $('nextPracBtn').addEventListener('click', () => {
+    pracIdx = (pracIdx + 1) % CONFIG.practiceProblems.length;
+    renderPractice();
+  });
+  $('togglePracHintBtn').addEventListener('click', () => {
+    const box = $('pracHintBox');
+    box.classList.toggle('show');
+    $('togglePracHintBtn').textContent = box.classList.contains('show') ? '🙈 收起草稿提示' : '✏️ 睇草稿提示';
+  });
+
+  /* =========================================================
+     9. MASTER / RAMANUJAN VISUAL SHORTCUT PANEL
+     ========================================================= */
+  let masterStep = 0;
+
+  function renderMaster(idx, speakIt = false) {
+    masterStep = idx;
+    const ms = CONFIG.masterSteps[idx];
+    $('mTopText').textContent = ms.top;
+    $('masterCaption').textContent = ms.caption;
+
+    [0, 1, 2].forEach(i => {
+      $('mStep' + i + 'Btn').classList.toggle('active', i === idx);
+      setOp('mBill' + i, idx < 2 ? 1 : 0);
+      setOp('mMinus' + i, idx === 1 ? 1 : 0);
+      setOp('mRes' + i, idx === 2 ? 1 : 0);
+    });
+
+    if (speakIt) speakText(ms.caption);
+  }
+
+  $('openMasterBtn').addEventListener('click', () => {
+    practicePanel.classList.remove('show');
+    masterPanel.classList.toggle('show');
+    if (masterPanel.classList.contains('show')) {
+      renderMaster(0, true);
+      masterPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+  $('closeMasterBtn').addEventListener('click', () => {
+    stopSpeech();
+    masterPanel.classList.remove('show');
+  });
+  [0, 1, 2].forEach(i => {
+    $('mStep' + i + 'Btn').addEventListener('click', () => {
+      ensureAudio();
+      playSfx('pop');
+      renderMaster(i, true);
+    });
+  });
+  $('mSpeakBtn').addEventListener('click', () => {
+    ensureAudio();
+    speakText(CONFIG.masterSteps[masterStep].caption);
+  });
+
+  /* =========================================================
+     10. LIGHTWEIGHT CONFETTI CELEBRATION
+     ========================================================= */
+  function launchConfetti() {
+    const canvas = $('confettiCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const colors = ['#f4711f', '#0aa5c9', '#8d5bd6', '#f0a500', '#e8467c', '#22a06b'];
+    const parts = Array.from({ length: 85 }, () => ({
+      x: Math.random() * canvas.width,
+      y: -20 - Math.random() * 140,
+      vx: (Math.random() - 0.5) * 4.5,
+      vy: 2.5 + Math.random() * 4.5,
+      r: 5 + Math.random() * 6,
+      rot: Math.random() * Math.PI * 2,
+      vrot: (Math.random() - 0.5) * 0.2,
+      color: colors[Math.floor(Math.random() * colors.length)]
+    }));
+
+    let frame = 0;
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+      for (const pt of parts) {
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.vy += 0.06;
+        pt.rot += pt.vrot;
+        if (pt.y < canvas.height + 30) alive = true;
+        ctx.save();
+        ctx.translate(pt.x, pt.y);
+        ctx.rotate(pt.rot);
+        ctx.fillStyle = pt.color;
+        ctx.fillRect(-pt.r / 2, -pt.r / 2, pt.r, pt.r * 0.65);
+        ctx.restore();
+      }
+      frame++;
+      if (alive && frame < 190) requestAnimationFrame(draw);
+      else ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    requestAnimationFrame(draw);
+  }
+
+  /* =========================================================
+     11. BOOTSTRAP
+     ========================================================= */
+  buildPhaseBar();
+  renderState(0, 0);
+  updateUI();
+})();
+</script>
+</body>
+</html>
