@@ -1,0 +1,2221 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>拓展練習 7｜販賣機排隊題・視覺化教學與考場速算草稿</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --ink: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --primary: #1d4ed8;
+    --primary-soft: #dbeafe;
+    --c-orange: #f4711f;
+    --c-cyan: #0aa5c9;
+    --c-purple: #8d5bd6;
+    --c-amber: #f0a500;
+    --c-cola: #dc2626;
+    --c-sprite: #16a34a;
+    --paper: #fffdf4;
+    --paper-grid: #ebe4ce;
+    --radius: 16px;
+    --shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: "PingFang TC", "PingFang HK", "Microsoft JhengHei", "Noto Sans TC", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  /* App Shell: Non-overlapping Flex Column */
+  .app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    max-width: 1260px;
+    margin: 0 auto;
+    padding: 10px 12px 190px;
+    gap: 10px;
+  }
+
+  /* 1. Top Header & Clickable Phase Pills */
+  .topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 14px;
+    box-shadow: var(--shadow);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    font-size: 16px;
+    color: #0f172a;
+    white-space: nowrap;
+  }
+  .brand-badge {
+    background: #334155;
+    color: #fff;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+  }
+  .phase-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .phase-pill {
+    border: 1.5px solid var(--border);
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    font-family: inherit;
+  }
+  .phase-pill:hover { border-color: var(--primary); color: var(--primary); background: #eff6ff; }
+  .phase-pill.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(29, 78, 216, 0.28);
+  }
+  .phase-pill.done:not(.active) {
+    background: #ecfdf5;
+    border-color: #86efac;
+    color: #15803d;
+  }
+  .top-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tool-btn {
+    border: 1.5px solid var(--border);
+    background: #fff;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s;
+  }
+  .tool-btn:hover { background: #f1f5f9; }
+  .tool-btn.active { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+  .kbd-hint {
+    font-size: 12px;
+    color: var(--muted);
+    padding-left: 4px;
+    white-space: nowrap;
+  }
+  @media (hover: none), (max-width: 960px) {
+    .kbd-hint { display: none; }
+  }
+
+  /* 2. Question Card */
+  .q-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px 12px;
+    box-shadow: var(--shadow);
+  }
+  .q-cn {
+    font-size: clamp(20px, 2.5vw, 23px);
+    line-height: 1.85;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 6px;
+  }
+  .q-seg {
+    position: relative;
+    display: inline;
+    padding: 2px 3px;
+    border-radius: 6px;
+    transition: background-color 0.25s ease, color 0.25s ease;
+    cursor: pointer;
+  }
+  .q-seg.active {
+    background: #fef08a;
+    color: #0f172a;
+    box-shadow: inset 0 -3px 0 #eab308;
+  }
+  .q-seg.read:not(.active) {
+    color: #334155;
+  }
+  .code-anchor {
+    position: relative;
+    display: inline-block;
+  }
+  .code-tag {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.4);
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 6px;
+    color: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  }
+  .code-tag.show {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  .code-tag.cola { background: var(--c-cola); }
+  .code-tag.sprite { background: var(--c-sprite); }
+
+  .q-en {
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: #64748b;
+    margin: 0 0 10px;
+  }
+
+  /* Answer Line inside Question Card */
+  .answer-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #cbd5e1;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  .answer-slot-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 36px;
+    vertical-align: middle;
+  }
+  .answer-slot-svg {
+    width: 72px;
+    height: 36px;
+    overflow: visible;
+  }
+
+  /* 3. Dual-Track Main Stage */
+  .stage-grid {
+    display: grid;
+    grid-template-columns: 1.22fr 0.98fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+  @media (max-width: 880px) {
+    .stage-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .track-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .track-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    font-weight: 800;
+  }
+  .track-head.concrete { background: #f8fafc; color: #0f172a; }
+  .track-head.scratch { background: #fef9e7; color: #78350f; border-bottom-color: #f3e5ab; }
+  .track-tag {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.06);
+    color: #475569;
+  }
+  .track-head.scratch .track-tag { background: rgba(180, 83, 9, 0.12); color: #92400e; }
+  .svg-wrap {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    background: #fff;
+  }
+  .svg-wrap.paper { background: var(--paper); }
+  .svg-wrap svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    user-select: none;
+  }
+
+  /* Interactive Checkpoint Inline Banner (Non-overlapping above bottom dock) */
+  .checkpoint-box {
+    display: none;
+    background: linear-gradient(135deg, #eef2ff 0%, #eff6ff 100%);
+    border: 2px solid #3b82f6;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.16);
+    animation: popIn 0.25s ease;
+  }
+  .checkpoint-box.show { display: block; }
+  .cp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .cp-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: #1e40af;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cp-skip {
+    border: 1px solid #93c5fd;
+    background: #fff;
+    color: #1d4ed8;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .cp-q {
+    font-size: 17px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 10px;
+  }
+  .cp-opts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cp-opt {
+    flex: 1 1 160px;
+    border: 2px solid #bfdbfe;
+    background: #fff;
+    color: #1e293b;
+    font-size: 16px;
+    font-weight: 800;
+    padding: 10px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .cp-opt:hover { border-color: #2563eb; background: #eff6ff; transform: translateY(-1px); }
+  .cp-opt.correct { background: #dcfce7; border-color: #16a34a; color: #166534; }
+  .cp-opt.wrong { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
+  .cp-fb {
+    margin-top: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    min-height: 22px;
+  }
+  .cp-fb.ok { color: #15803d; }
+  .cp-fb.err { color: #b91c1c; }
+
+  /* Celebration Banner at Step 10 */
+  .celebrate-box {
+    display: none;
+    background: linear-gradient(135deg, #fefce8 0%, #ecfdf5 100%);
+    border: 2px solid #22c55e;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    box-shadow: 0 8px 24px rgba(22, 163, 74, 0.14);
+  }
+  .celebrate-box.show { display: block; animation: popIn 0.3s ease; }
+  .mantra-line {
+    font-size: 17px;
+    font-weight: 800;
+    color: #14532d;
+    margin: 0 0 12px;
+    line-height: 1.5;
+  }
+  .celebrate-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .action-cta {
+    border: none;
+    border-radius: 12px;
+    padding: 11px 18px;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .action-cta:hover { transform: translateY(-1px); }
+  .cta-practice {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.28);
+  }
+  .cta-master {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.28);
+  }
+
+  /* 4. Fixed Bottom Dock */
+  .bottom-dock {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 40;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(10px);
+    border-top: 1.5px solid #cbd5e1;
+    box-shadow: 0 -6px 22px rgba(15, 23, 42, 0.08);
+    padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+  }
+  .dock-inner {
+    max-width: 1236px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .subtitle-bar {
+    font-size: clamp(17px, 2vw, 19px);
+    line-height: 1.5;
+    font-weight: 700;
+    color: #0f172a;
+    min-height: 30px;
+  }
+  .sub-quote {
+    display: inline-block;
+    background: #fef3c7;
+    color: #92400e;
+    border-left: 4px solid #f59e0b;
+    padding: 1px 8px;
+    border-radius: 6px;
+    margin-right: 8px;
+    font-weight: 800;
+  }
+  .sub-tag {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 6px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .sub-tag.read { background: #f59e0b; color: #fff; }
+  .sub-tag.think { background: #1d4ed8; color: #fff; }
+
+  .dock-bottom-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .formula-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+  }
+  .f-chip {
+    font-size: 20px;
+    font-weight: 900;
+    padding: 3px 10px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    letter-spacing: 0.5px;
+    animation: popIn 0.22s ease;
+  }
+  .f-chip.final {
+    background: #fefce8;
+    border-color: #eab308;
+    box-shadow: 0 2px 8px rgba(234, 179, 8, 0.25);
+  }
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .ctrl-btn {
+    border: 1.5px solid #cbd5e1;
+    background: #fff;
+    color: #0f172a;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .ctrl-btn:hover:not(:disabled) { background: #eff6ff; border-color: var(--primary); color: var(--primary); }
+  .ctrl-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .ctrl-btn.play-main {
+    width: auto;
+    min-width: 112px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    font-size: 16px;
+    gap: 6px;
+    box-shadow: 0 3px 10px rgba(29, 78, 216, 0.3);
+  }
+  .ctrl-btn.play-main:hover { background: #1e40af; color: #fff; }
+  .step-counter {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--muted);
+    min-width: 66px;
+    text-align: center;
+  }
+
+  /* Modals (Practice & Master Shortcut) */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.52);
+    z-index: 80;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+  }
+  .modal-backdrop.open { display: flex; animation: fadeIn 0.2s ease; }
+  .modal-card {
+    background: #fff;
+    border-radius: 20px;
+    max-width: 680px;
+    width: 100%;
+    max-height: 90dvh;
+    overflow-y: auto;
+    padding: 20px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+  }
+  .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+  .modal-title { font-size: 20px; font-weight: 900; margin: 0; color: #0f172a; }
+  .modal-close {
+    border: none;
+    background: #f1f5f9;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    font-size: 18px; font-weight: 800;
+    cursor: pointer; color: #475569;
+  }
+  .modal-close:hover { background: #e2e8f0; }
+
+  .prac-q {
+    font-size: 19px;
+    line-height: 1.65;
+    font-weight: 700;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .prac-hint-box {
+    display: none;
+    background: var(--paper);
+    border: 1.5px dashed #d97706;
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 12px;
+  }
+  .prac-hint-box.show { display: block; animation: popIn 0.2s ease; }
+  .prac-verify-box {
+    display: none;
+    background: #ecfdf5;
+    border: 1.5px solid #22c55e;
+    border-radius: 12px;
+    padding: 10px;
+    margin-top: 12px;
+  }
+  .prac-verify-box.show { display: block; animation: popIn 0.25s ease; }
+
+  /* Confetti Canvas */
+  #confettiCanvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 90;
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.95) translateY(4px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<canvas id="confettiCanvas"></canvas>
+
+<div class="app">
+  <!-- 1. Top Bar with Clickable Phase Portals -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-badge">拓展練習 7</span>
+      <span>販賣機排隊題</span>
+    </div>
+    <nav class="phase-pills" id="phasePills" aria-label="解題階段"></nav>
+    <div class="top-tools">
+      <button class="tool-btn" id="speedBtn" title="切換語速">🚶 1.0x</button>
+      <button class="tool-btn" id="muteBtn" title="靜音切換">🔊 語音開</button>
+      <span class="kbd-hint">← → 切步 · Space 播放</span>
+    </div>
+  </header>
+
+  <!-- 2. Original Question Card (Exact Text + Clause Highlight + Minimal Code Tags + Answer Line) -->
+  <section class="q-card" aria-label="題目區">
+    <p class="q-cn" id="questionCn"></p>
+    <p class="q-en">There is a row of drinks in the vending machine, with a total of 18 cans. Counting from left to right, the cola can is the 12th can, and counting from right to left, the Sprite can is the 10th can. The Sprite can is to the left of the cola can. How many cans are there between the cola and the Sprite?</p>
+    <div class="answer-row">
+      <span>答：可樂罐和雪碧罐之間一共有</span>
+      <span class="answer-slot-wrap">
+        <svg class="answer-slot-svg" viewBox="0 0 72 36">
+          <line x1="4" y1="31" x2="68" y2="31" stroke="#334155" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- Hand-written stroke of '2' driven by Step 10 pure progress -->
+          <path id="ansStroke2" d="M 24 13 C 24 6, 46 5, 46 13 C 46 20, 26 24, 23 28 L 48 28"
+                fill="none" stroke="#dc2626" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"
+                stroke-dasharray="90" stroke-dashoffset="90"/>
+          <circle id="ansPenDot" cx="24" cy="13" r="5" fill="#1e3a8a" stroke="#fff" stroke-width="2" opacity="0"/>
+        </svg>
+      </span>
+      <span>個罐子。</span>
+    </div>
+  </section>
+
+  <!-- 3. Dual-Track Stage: Concrete Animation + Shortest-Stroke Pencil Scratchpad -->
+  <main class="stage-grid">
+    <!-- Track A: Concrete Visual Stage -->
+    <section class="track-card">
+      <div class="track-head concrete">
+        <span>🥤 具象動畫舞台（睇明原理）</span>
+        <span class="track-tag" id="trackATag">原題空白架</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="svgConcrete" viewBox="0 0 640 310" role="img" aria-label="販賣機飲料具象動畫"></svg>
+      </div>
+    </section>
+
+    <!-- Track B: Exam Pencil Scratchpad -->
+    <section class="track-card">
+      <div class="track-head scratch">
+        <span>✏️ 實戰鉛筆算草紙（最短筆劃）</span>
+        <span class="track-tag">1 支鉛筆 · 10 秒畫完</span>
+      </div>
+      <div class="svg-wrap paper">
+        <svg id="svgScratch" viewBox="0 0 500 310" role="img" aria-label="考場實戰鉛筆算草紙"></svg>
+      </div>
+    </section>
+  </main>
+
+  <!-- Interactive Checkpoint Banner (appears inline without blocking diagrams) -->
+  <section class="checkpoint-box" id="checkpointBox" aria-live="polite">
+    <div class="cp-head">
+      <span class="cp-title">🤔 停一停，估一估！</span>
+      <button class="cp-skip" id="cpSkipBtn">跳過 ⏭</button>
+    </div>
+    <p class="cp-q" id="cpQuestion"></p>
+    <div class="cp-opts" id="cpOpts"></div>
+    <div class="cp-fb" id="cpFb"></div>
+  </section>
+
+  <!-- Step 10 Celebration + Mantra + Similar Practice + Master Shortcut -->
+  <section class="celebrate-box" id="celebrateBox">
+    <p class="mantra-line">🎉 搞掂！考場口訣：<strong>「先計左右剩幾多，併埋一排扣兩邊，問『之間』記得再減頭尾 2 罐！」</strong></p>
+    <div class="celebrate-actions">
+      <button class="action-cta cta-practice" id="openPracticeBtn">🎯 挑戰類似題</button>
+      <button class="action-cta cta-master" id="openMasterBtn">✨ 高手秒殺思維（重疊法）</button>
+    </div>
+  </section>
+</div>
+
+<!-- 4. Fixed Bottom Dock: Subtitles + Color Formula Strip + Touch Controls -->
+<footer class="bottom-dock">
+  <div class="dock-inner">
+    <div class="subtitle-bar" id="subtitleBar"></div>
+    <div class="dock-bottom-row">
+      <div class="formula-strip" id="formulaStrip"></div>
+      <div class="controls">
+        <button class="ctrl-btn" id="prevBtn" title="上一步" aria-label="上一步">⏮</button>
+        <button class="ctrl-btn play-main" id="playBtn" aria-label="播放或暫停">▶ 播放</button>
+        <button class="ctrl-btn" id="nextBtn" title="下一步" aria-label="下一步">⏭</button>
+        <button class="ctrl-btn" id="replayBtn" title="重播" aria-label="重播">🔄</button>
+        <span class="step-counter" id="stepCounter">0 / 10</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Modal 1: Similar Practice Problem -->
+<div class="modal-backdrop" id="practiceModal" role="dialog" aria-modal="true" aria-label="挑戰類似題">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 class="modal-title">🎯 考場實戰：挑戰類似題</h2>
+      <button class="modal-close" data-close="practiceModal">✕</button>
+    </div>
+    <div class="prac-q" id="pracQ"></div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+      <button class="tool-btn" id="pracHintBtn">✏️ 睇草稿提示</button>
+      <button class="tool-btn" id="pracNextBtn">🔄 換另一題</button>
+    </div>
+    <div class="prac-hint-box" id="pracHintBox">
+      <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:6px;">✏️ 極簡鉛筆算草（無公仔實戰版）：</div>
+      <svg id="pracHintSvg" viewBox="0 0 460 110" style="width:100%;height:auto;"></svg>
+    </div>
+    <div class="cp-opts" id="pracOpts"></div>
+    <div class="cp-fb" id="pracFb"></div>
+    <div class="prac-verify-box" id="pracVerifyBox">
+      <div style="font-size:14px;font-weight:800;color:#166534;margin-bottom:6px;">✅ 實物排隊圖解驗證：</div>
+      <svg id="pracVerifySvg" viewBox="0 0 580 110" style="width:100%;height:auto;"></svg>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 2: Master Shortcut (Overlap / Inclusion-Exclusion) -->
+<div class="modal-backdrop" id="masterModal" role="dialog" aria-modal="true" aria-label="高手秒殺思維">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 class="modal-title">✨ 高手秒殺思維：重疊法</h2>
+      <button class="modal-close" data-close="masterModal">✕</button>
+    </div>
+    <p style="font-size:16px;line-height:1.65;margin:0 0 10px;font-weight:600;color:#334155;">
+      唔使分開計左邊 8 罐、右邊 6 罐！直接將兩段加埋，<strong>多出嚟嗰截，就係重疊數咗兩次嘅部分！</strong>
+    </p>
+    <div style="background:#fffdf4;border:1.5px solid #f59e0b;border-radius:14px;padding:10px;margin-bottom:12px;">
+      <svg viewBox="0 0 540 205" style="width:100%;height:auto;display:block;">
+        <!-- Total bar -->
+        <text x="270" y="20" text-anchor="middle" font-size="14" font-weight="800" fill="#334155">成排總共 18 罐</text>
+        <rect x="30" y="28" width="480" height="22" rx="6" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
+        <!-- Left to Cola = 12 (12/18 * 480 = 320) -->
+        <rect x="30" y="64" width="320" height="26" rx="6" fill="rgba(244,113,31,0.22)" stroke="#f4711f" stroke-width="2"/>
+        <text x="170" y="82" text-anchor="middle" font-size="14" font-weight="800" fill="#c2410c">左 → 可樂 C（12 罐）</text>
+        <!-- Right to Sprite = 10 (10/18 * 480 = 266.7, starts at 8/18*480+30 = 243.3) -->
+        <rect x="243" y="102" width="267" height="26" rx="6" fill="rgba(22,163,74,0.2)" stroke="#16a34a" stroke-width="2"/>
+        <text x="382" y="120" text-anchor="middle" font-size="14" font-weight="800" fill="#15803d">雪碧 S ← 右（10 罐）</text>
+        <!-- Overlap highlight box: x=243 to 350 (width=107 = 4/18*480) -->
+        <rect x="243" y="58" width="107" height="76" rx="8" fill="rgba(240,165,0,0.22)" stroke="#d97706" stroke-width="2.5" stroke-dasharray="6,4"/>
+        <text x="296" y="152" text-anchor="middle" font-size="14" font-weight="900" fill="#b45309">重疊區：S ＋ 中間 ＋ C</text>
+        <text x="296" y="174" text-anchor="middle" font-size="15" font-weight="900" fill="#0f172a">12 + 10 − 18 = 4 罐（重複計咗一次！）</text>
+        <text x="296" y="196" text-anchor="middle" font-size="16" font-weight="900" fill="#dc2626">再減頭尾 S、C 兩罐：4 − 2 = 2 罐！</text>
+      </svg>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <button class="action-cta cta-master" id="masterSpeakBtn">🔊 聽廣東話講解</button>
+      <span style="font-size:14px;font-weight:800;color:#64748b;">一行速算：12 + 10 − 18 − 2 = 2</span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   集中 CONFIG 區：題目分句、代號對照、色板、異讀映射表、步驟與互動題庫
+============================================================================ */
+const CONFIG = {
+  total: 18,
+  colaFromLeft: 12,     // 1-indexed = 12 (0-indexed = 11)
+  spriteFromRight: 10,  // 1-indexed from right = 10 -> 0-indexed = 8 (9th from left)
+  leftOfSprite: 8,      // 18 - 10 = 8 (indices 0..7)
+  rightOfCola: 6,       // 18 - 12 = 6 (indices 12..17)
+  middleCount: 2,       // indices 9..10 (10th, 11th)
+  palette: {
+    orange: '#f4711f',
+    cyan:   '#0aa5c9',
+    purple: '#8d5bd6',
+    amber:  '#f0a500',
+    cola:   '#dc2626',
+    sprite: '#16a34a',
+    pen:    '#1e3a8a',
+    slate:  '#94a3b8'
+  },
+  // 原題完整分句（一字不漏）
+  segments: [
+    { id: 0, text: '販賣機裡有一排飲料，一共 18 罐。' },
+    { id: 1, text: '從左往右數，可樂罐是第 12 個，', codeWord: '可樂罐', code: 'C', codeClass: 'cola', showCodeAt: 2 },
+    { id: 2, text: '從右往左數，雪碧罐是第 10 個，', codeWord: '雪碧罐', code: 'S', codeClass: 'sprite', showCodeAt: 4 },
+    { id: 3, text: '雪碧罐在可樂罐的左邊。' },
+    { id: 4, text: '請問可樂罐和雪碧罐之間一共有多少個罐子？' }
+  ],
+  phases: [
+    { id: 0, label: '0 原題', startStep: 0 },
+    { id: 1, label: '1 讀題拆段', startStep: 1 },
+    { id: 2, label: '2 拼合全排', startStep: 6 },
+    { id: 3, label: '3 扣減作答', startStep: 8 }
+  ],
+  // 廣東話異讀字情境校準表（只用於語音引擎，畫面保持標準中文）
+  HETERO_MAP: [
+    // 動詞「畫」讀 waak6（劃）
+    ['畫條', '劃條'], ['畫一', '劃一'], ['畫個', '劃個'], ['畫線', '劃線'],
+    ['畫圈', '劃圈'], ['畫出', '劃出'], ['畫晒', '劃晒'], ['畫草', '劃草'],
+    ['畫返', '劃返'], ['邊讀邊畫', '邊讀邊劃'],
+    // 動詞「數」讀 sou2（嫂），名詞「總數/數目」保留 sou3
+    ['往右數', '往右嫂'], ['往左數', '往左嫂'], ['由左數', '由左嫂'],
+    ['由右數', '由右嫂'], ['數多次', '嫂多次'], ['數一數', '嫂一嫂'],
+    ['數到', '嫂到'], ['數埋', '嫂埋'], ['數咗', '嫂咗'],
+    // 量詞前的「2」自然讀「兩」
+    ['2 罐', '兩罐'], ['2 個', '兩個'], ['2 段', '兩段'],
+    // 算式符號自然轉讀
+    ['−', ' 減 '], ['-', ' 減 '], ['+', ' 加 '], ['×', ' 乘 '], ['÷', ' 除 '], ['=', ' 等於 ']
+  ],
+  // 11 個純函數步驟（0..10）
+  steps: [
+    {
+      phase: 0, seg: -1, duration: 1200, trackTag: '原題空白架',
+      prefix: '', quote: '',
+      narr: '先望清楚原題同空白算草紙。按播放，順住題目逐句讀、邊讀邊畫！'
+    },
+    {
+      phase: 1, seg: 0, duration: 2200, trackTag: '共 18 罐',
+      prefix: '題目寫住：', quote: '販賣機裡有一排飲料，一共 18 罐。',
+      narr: '即刻畫條線代表成排，頂頭寫個 18。'
+    },
+    {
+      phase: 1, seg: 1, duration: 2400, trackTag: '標出可樂 C',
+      prefix: '題目寫住：', quote: '從左往右數，可樂罐是第 12 個，',
+      narr: '可樂簡寫做 C，由左數到第 12 個標出嚟。'
+    },
+    {
+      phase: 1, seg: 1, duration: 2400, trackTag: '可樂右邊 6 罐',
+      prefix: '', quote: '',
+      narr: '成排 18 罐，由左數到可樂佔 12 罐，右邊剩 18 − 12 = 6 罐，即刻記低。'
+    },
+    {
+      phase: 1, seg: 2, duration: 2300, trackTag: '獨立草擬雪碧 S',
+      prefix: '題目寫住：', quote: '從右往左數，雪碧罐是第 10 個，',
+      narr: '雪碧簡寫做 S。未講雪碧喺可樂邊面，先隔開草擬住。'
+    },
+    {
+      phase: 1, seg: 2, duration: 2400, trackTag: '雪碧左邊 8 罐',
+      prefix: '', quote: '',
+      narr: '成排 18 罐，由右數到雪碧佔 10 罐，所以雪碧左邊有 18 − 10 = 8 罐！',
+      checkpoint: {
+        id: 'cp1',
+        question: '成排一共 18 罐，從右往左數，雪碧罐係第 10 個。咁雪碧嘅「左邊」（唔計雪碧自己）有幾多罐？',
+        options: [
+          { label: '8 罐（18 − 10）', correct: true, fb: '答啱晒！右邊連埋雪碧佔 10 罐，剩低左邊就係 18 − 10 = 8 罐！' },
+          { label: '9 罐', correct: false, fb: '差少少！9 係雪碧由左數嘅位置（包埋雪碧自己），唔計雪碧係 18 − 10 呀，再試吓！' },
+          { label: '10 罐', correct: false, fb: '10 係由右數到雪碧嘅罐數，左邊要由總數 18 減走 10 呀，再揀一次！' }
+        ]
+      }
+    },
+    {
+      phase: 2, seg: 3, duration: 2500, trackTag: '動態拼合全排',
+      prefix: '題目寫住：', quote: '雪碧罐在可樂罐的左邊。',
+      narr: '即刻劃走問號，將兩段拼成同一排：雪碧擺左，可樂擺右。'
+    },
+    {
+      phase: 2, seg: 3, duration: 2100, trackTag: '五段一目了然',
+      prefix: '', quote: '',
+      narr: '拼好一目了然：左邊 8 罐、雪碧、中間未知、可樂、右邊 6 罐，共 18 罐。'
+    },
+    {
+      phase: 3, seg: 4, duration: 2100, trackTag: '鎖定「之間」',
+      prefix: '題目問：', quote: '請問可樂罐和雪碧罐之間一共有多少個罐子？',
+      narr: '注意！「之間」唔包雪碧同可樂本身，計數記得扣埋佢哋 2 罐。'
+    },
+    {
+      phase: 3, seg: 4, duration: 2600, trackTag: '算得中間 2 罐',
+      prefix: '', quote: '',
+      narr: '18 − 8 − 6 − 2 = 2！睇實物數多次：1、2，中間啱啱有 2 罐！',
+      checkpoint: {
+        id: 'cp2',
+        question: '拼好成排 18 罐，左邊 8 罐、右邊 6 罐。問雪碧同可樂「之間」有幾多罐，點樣列式先啱？',
+        options: [
+          { label: '18 − 8 − 6 − 2 = 2 罐', correct: true, fb: '完全正確！扣走左邊 8、右邊 6，再減雪碧同可樂自己 2 罐，就係 2 罐！' },
+          { label: '18 − 8 − 6 = 4 罐', correct: false, fb: '小心陷阱！4 罐包埋雪碧同可樂自己，題目問「之間」，要扣走佢哋 2 罐呀！' },
+          { label: '18 − 8 − 6 + 2 = 6 罐', correct: false, fb: '頭尾 2 罐唔算入「之間」，應該要減走唔係加上去，再試一次！' }
+        ]
+      }
+    },
+    {
+      phase: 3, seg: 4, duration: 2200, trackTag: '完成作答 ✅',
+      prefix: '', quote: '',
+      narr: '喺答題橫線寫上 2！口訣：先計左右剩幾多，拼排扣兩邊，問之間再減 2！'
+    }
+  ],
+  masterTTS: '高手秒殺思維：重疊法！唔使分開計左右剩幾多。由左數到可樂有 12 罐，由右數到雪碧有 10 罐，直接加埋係 22 罐。成排明明得 18 罐，多出嚟嗰 4 罐，就係重疊數咗兩次嘅雪碧、中間同可樂！最後減走雪碧同可樂呢 2 罐，4 減 2 等於 2 罐，3 秒搞掂！',
+  practiceBank: [
+    {
+      total: 20, unit: '支', rightName: '果汁', rightCode: 'J', rightColor: '#ea580c', fromLeft: 14,
+      leftName: '綠茶', leftCode: 'T', leftColor: '#16a34a', fromRight: 12,
+      text: '貨架上有一排飲品，一共 20 支。從左往右數，果汁是第 14 支，從右往左數，綠茶是第 12 支，綠茶在果汁的左邊。請問果汁和綠茶之間一共有多少支飲品？',
+      choices: [3, 4, 6]
+    },
+    {
+      total: 15, unit: '罐', rightName: '可樂', rightCode: 'C', rightColor: '#dc2626', fromLeft: 11,
+      leftName: '檸茶', leftCode: 'L', leftColor: '#ca8a04', fromRight: 9,
+      text: '販賣機裡有一排飲料，一共 15 罐。從左往右數，可樂罐是第 11 個，從右往左數，檸茶罐是第 9 個，檸茶罐在可樂罐的左邊。請問可樂罐和檸茶罐之間一共有多少個罐子？',
+      choices: [2, 3, 5]
+    },
+    {
+      total: 22, unit: '盒', rightName: '牛奶', rightCode: 'M', rightColor: '#2563eb', fromLeft: 16,
+      leftName: '豆奶', leftCode: 'S', leftColor: '#7c3aed', fromRight: 13,
+      text: '雪櫃裡有一排紙包飲品，一共 22 盒。從左往右數，牛奶是第 16 盒，從右往左數，豆奶是第 13 盒，豆奶在牛奶的左邊。請問牛奶和豆奶之間一共有多少盒飲品？',
+      choices: [5, 6, 7]
+    }
+  ]
+};
+
+/* ============================================================================
+   音效引擎（Web Audio API 零外部檔案合成）＋ 廣東話語音引擎
+============================================================================ */
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+function playSFX(type) {
+  if (state.muted) return;
+  try {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    if (type === 'pop') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(840, now + 0.08);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now); osc.stop(now + 0.11);
+    } else if (type === 'whoosh') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(620, now + 0.16);
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.start(now); osc.stop(now + 0.19);
+    } else if (type === 'ding') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(784, now);
+      osc.frequency.setValueAtTime(1046.5, now + 0.09);
+      gain.gain.setValueAtTime(0.11, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+      osc.start(now); osc.stop(now + 0.35);
+    } else if (type === 'buzz') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(210, now);
+      osc.frequency.linearRampToValueAtTime(170, now + 0.18);
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.21);
+    } else if (type === 'celebrate') {
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((f, idx) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.connect(g); g.connect(audioCtx.destination);
+        const t = now + idx * 0.09;
+        o.frequency.setValueAtTime(f, t);
+        g.gain.setValueAtTime(0.1, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+        o.start(t); o.stop(t + 0.46);
+      });
+    }
+  } catch (e) {}
+}
+
+let hkVoice = null;
+function loadVoices() {
+  if (!('speechSynthesis' in window)) return;
+  const voices = speechSynthesis.getVoices();
+  hkVoice = voices.find(v => /zh[-_]HK/i.test(v.lang))
+         || voices.find(v => /Cantonese|Hong Kong|Sin[- ]?Ji|HiuGaai|HiuMaan/i.test(v.name))
+         || voices.find(v => /zh[-_]TW/i.test(v.lang))
+         || voices.find(v => /^zh/i.test(v.lang))
+         || null;
+}
+if ('speechSynthesis' in window) {
+  loadVoices();
+  speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function cleanForTTS(text) {
+  let out = String(text || '');
+  // 剝除 Emoji、方框及特殊裝飾符號
+  out = out.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}□■▢▣|｜_]/gu, ' ');
+  for (const [src, dst] of CONFIG.HETERO_MAP) {
+    out = out.split(src).join(dst);
+  }
+  return out.replace(/\s+/g, ' ').trim();
+}
+
+let speechTimer = null;
+let speechSeq = 0;
+
+function stopSpeech() {
+  speechSeq++;
+  if (speechTimer) { clearTimeout(speechTimer); speechTimer = null; }
+  if ('speechSynthesis' in window) {
+    try { speechSynthesis.cancel(); } catch (e) {}
+  }
+}
+
+function speakText(rawText, onDone) {
+  stopSpeech();
+  const seq = speechSeq;
+  const cleaned = cleanForTTS(rawText);
+  const finish = () => {
+    if (seq !== speechSeq) return;
+    if (speechTimer) { clearTimeout(speechTimer); speechTimer = null; }
+    if (onDone) onDone();
+  };
+  const estMs = Math.max(1600, (cleaned.length * 210) / state.speed);
+  if (state.muted || !('speechSynthesis' in window) || !cleaned) {
+    speechTimer = setTimeout(finish, estMs);
+    return;
+  }
+  try {
+    loadVoices();
+    const u = new SpeechSynthesisUtterance(cleaned);
+    if (hkVoice) u.voice = hkVoice;
+    u.lang = 'zh-HK';
+    u.rate = state.speed;
+    u.pitch = 1.03;
+    u.onend = finish;
+    u.onerror = finish;
+    speechSynthesis.speak(u);
+    // 安全超時防瀏覽器卡死
+    speechTimer = setTimeout(finish, estMs + 4500);
+  } catch (e) {
+    speechTimer = setTimeout(finish, estMs);
+  }
+}
+
+/* ============================================================================
+   SVG 建構工具：一次建立結構，後續完全由純函數 renderFrame(step, p) 驅動
+============================================================================ */
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs = {}, parent = null) {
+  const node = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (parent) parent.appendChild(node);
+  return node;
+}
+
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * clamp(t);
+const easeOut = t => 1 - Math.pow(1 - clamp(t), 3);
+const easeInOut = t => {
+  const c = clamp(t);
+  return c < 0.5 ? 4 * c * c * c : 1 - Math.pow(-2 * c + 2, 3) / 2;
+};
+// 閃 3 下純函數 (p in 0..0.65 -> 3 個清楚脈衝; p > 0.65 -> 定住淡色 0.22)
+function flash3Opacity(p, base = 0.20, peak = 0.56) {
+  if (p <= 0) return 0;
+  if (p < 0.66) {
+    const wave = Math.sin((p / 0.66) * Math.PI * 3);
+    return base + (peak - base) * Math.abs(wave);
+  }
+  return base;
+}
+
+// Track A 座標常數
+const CAN_W = 24, CAN_H = 54, CAN_PITCH = 31;
+const CAN_START_X = 44.5;
+const MAIN_Y = 86;
+const DRAFT_Y = 222;
+const canX = i => CAN_START_X + i * CAN_PITCH;
+const canCX = i => canX(i) + CAN_W / 2;
+
+const domA = { cans: [], draftCans: [], badgesR: [], badgesL: [], badgesM: [] };
+const domB = {};
+
+function buildConcreteSVG() {
+  const svg = document.getElementById('svgConcrete');
+  svg.innerHTML = '';
+
+  // Vending machine outer housing
+  el('rect', { x: 14, y: 12, width: 612, height: 286, rx: 18, fill: '#f8fafc', stroke: '#cbd5e1', 'stroke-width': 2 }, svg);
+  el('rect', { x: 24, y: 20, width: 592, height: 26, rx: 8, fill: '#1e293b' }, svg);
+  const hdr = el('text', { x: 320, y: 38, 'text-anchor': 'middle', fill: '#f8fafc', 'font-size': 13.5, 'font-weight': 800 }, svg);
+  hdr.textContent = '🥤 自動販賣機飲料架（左 ◀ ────── ▶ 右）';
+
+  // Empty shelf prompt (Step 0 only)
+  domA.emptyMsg = el('text', { x: 320, y: 158, 'text-anchor': 'middle', fill: '#94a3b8', 'font-size': 16, 'font-weight': 700 }, svg);
+  domA.emptyMsg.textContent = '按「▶ 播放」開始順讀題目，將飲料逐一擺上貨架';
+
+  // Main Shelf Rail
+  domA.mainRail = el('g', { opacity: 0 }, svg);
+  el('rect', { x: 34, y: MAIN_Y + CAN_H, width: 572, height: 9, rx: 4, fill: '#64748b' }, domA.mainRail);
+  el('rect', { x: 34, y: MAIN_Y + CAN_H, width: 572, height: 3, rx: 2, fill: '#94a3b8' }, domA.mainRail);
+
+  // Total 18 bracket above main shelf
+  domA.totalGrp = el('g', { opacity: 0 }, svg);
+  el('path', { d: `M ${canX(0)} 68 L ${canX(0)} 60 L ${canX(17) + CAN_W} 60 L ${canX(17) + CAN_W} 68`, fill: 'none', stroke: '#334155', 'stroke-width': 2 }, domA.totalGrp);
+  el('rect', { x: 266, y: 48, width: 108, height: 21, rx: 10, fill: '#1e293b' }, domA.totalGrp);
+  const tTxt = el('text', { x: 320, y: 63, 'text-anchor': 'middle', fill: '#fff', 'font-size': 13, 'font-weight': 800 }, domA.totalGrp);
+  tTxt.textContent = '一共 18 罐';
+
+  // Zone highlight boxes (Main Row)
+  const makeZone = (x, w, color, dash = '') => {
+    const g = el('g', { opacity: 0 }, svg);
+    const fillRect = el('rect', { x, y: MAIN_Y - 6, width: w, height: CAN_H + 14, rx: 8, fill: color, opacity: 0.2 }, g);
+    const strokeRect = el('rect', { x, y: MAIN_Y - 6, width: w, height: CAN_H + 14, rx: 8, fill: 'none', stroke: color, 'stroke-width': 2.8, ...(dash ? { 'stroke-dasharray': dash } : {}) }, g);
+    return { g, fillRect, strokeRect };
+  };
+  // Zone 1: Left-to-Cola (indices 0..11)
+  domA.zoneLeftToCola = makeZone(canX(0) - 4, (canX(11) + CAN_W) - canX(0) + 8, CONFIG.palette.orange);
+  // Zone 2: Right of Cola (indices 12..17)
+  domA.zoneRightCola = makeZone(canX(12) - 4, (canX(17) + CAN_W) - canX(12) + 8, CONFIG.palette.cyan);
+  // Zone 3: Left of Sprite on Main Row (indices 0..7)
+  domA.zoneLeftSpriteMain = makeZone(canX(0) - 4, (canX(7) + CAN_W) - canX(0) + 8, CONFIG.palette.purple);
+  // Zone 4: Middle between S & C (indices 9..10)
+  domA.zoneMiddle = makeZone(canX(9) - 4, (canX(10) + CAN_W) - canX(9) + 8, CONFIG.palette.amber);
+
+  // Build 18 Main Row Cans
+  domA.mainCansGrp = el('g', {}, svg);
+  for (let i = 0; i < 18; i++) {
+    const g = el('g', { opacity: 0 }, domA.mainCansGrp);
+    const body = el('rect', { x: 0, y: 6, width: CAN_W, height: CAN_H - 6, rx: 5, fill: '#cbd5e1', stroke: '#64748b', 'stroke-width': 1.5 }, g);
+    const topRim = el('rect', { x: 3, y: 2, width: CAN_W - 6, height: 5, rx: 2, fill: '#e2e8f0', stroke: '#64748b', 'stroke-width': 1.2 }, g);
+    const stripe = el('rect', { x: 2, y: 20, width: CAN_W - 4, height: 18, rx: 2, fill: '#e2e8f0', opacity: 0.7 }, g);
+    const label = el('text', { x: CAN_W / 2, y: 33, 'text-anchor': 'middle', fill: '#475569', 'font-size': 12, 'font-weight': 900 }, g);
+    label.textContent = '';
+    const sub = el('text', { x: CAN_W / 2, y: 47, 'text-anchor': 'middle', fill: '#fff', 'font-size': 9, 'font-weight': 800, opacity: 0 }, g);
+    domA.cans.push({ g, body, topRim, stripe, label, sub, idx: i });
+  }
+
+  // Main Row Labels below shelf
+  domA.lblLeftToCola = el('g', { opacity: 0 }, svg);
+  el('path', { d: `M ${canX(0)} 158 L ${canX(0)} 164 L ${canX(11) + CAN_W} 164 L ${canX(11) + CAN_W} 158`, fill: 'none', stroke: CONFIG.palette.orange, 'stroke-width': 2 }, domA.lblLeftToCola);
+  const tLC = el('text', { x: (canX(0) + canX(11) + CAN_W) / 2, y: 179, 'text-anchor': 'middle', fill: CONFIG.palette.orange, 'font-size': 13, 'font-weight': 800 }, domA.lblLeftToCola);
+  tLC.textContent = '由左數到可樂 C：12 罐';
+
+  domA.lblRightCola = el('g', { opacity: 0 }, svg);
+  el('path', { d: `M ${canX(12)} 158 L ${canX(12)} 164 L ${canX(17) + CAN_W} 164 L ${canX(17) + CAN_W} 158`, fill: 'none', stroke: CONFIG.palette.cyan, 'stroke-width': 2 }, domA.lblRightCola);
+  const tRC = el('text', { x: (canX(12) + canX(17) + CAN_W) / 2, y: 179, 'text-anchor': 'middle', fill: CONFIG.palette.cyan, 'font-size': 13, 'font-weight': 800 }, domA.lblRightCola);
+  tRC.textContent = '右邊 6 罐';
+
+  domA.lblLeftSpriteMain = el('g', { opacity: 0 }, svg);
+  el('path', { d: `M ${canX(0)} 158 L ${canX(0)} 164 L ${canX(7) + CAN_W} 164 L ${canX(7) + CAN_W} 158`, fill: 'none', stroke: CONFIG.palette.purple, 'stroke-width': 2 }, domA.lblLeftSpriteMain);
+  const tLS = el('text', { x: (canX(0) + canX(7) + CAN_W) / 2, y: 179, 'text-anchor': 'middle', fill: CONFIG.palette.purple, 'font-size': 13, 'font-weight': 800 }, domA.lblLeftSpriteMain);
+  tLS.textContent = '左邊 8 罐';
+
+  domA.lblMiddle = el('g', { opacity: 0 }, svg);
+  el('path', { d: `M ${canX(9)} 158 L ${canX(9)} 164 L ${canX(10) + CAN_W} 164 L ${canX(10) + CAN_W} 158`, fill: 'none', stroke: '#b45309', 'stroke-width': 2.2 }, domA.lblMiddle);
+  domA.lblMiddleText = el('text', { x: (canX(9) + canX(10) + CAN_W) / 2, y: 179, 'text-anchor': 'middle', fill: '#b45309', 'font-size': 13.5, 'font-weight': 900 }, domA.lblMiddle);
+  domA.lblMiddleText.textContent = '中間 ?';
+
+  // "唔計呢 2 罐" tags under S & C at Step 8-9
+  domA.exclTags = el('g', { opacity: 0 }, svg);
+  el('rect', { x: canCX(8) - 18, y: 156, width: 36, height: 18, rx: 6, fill: '#dcfce7', stroke: '#16a34a', 'stroke-width': 1.2 }, domA.exclTags);
+  const exS = el('text', { x: canCX(8), y: 169, 'text-anchor': 'middle', fill: '#15803d', 'font-size': 10.5, 'font-weight': 900 }, domA.exclTags);
+  exS.textContent = '雪碧';
+  el('rect', { x: canCX(11) - 18, y: 156, width: 36, height: 18, rx: 6, fill: '#fee2e2', stroke: '#dc2626', 'stroke-width': 1.2 }, domA.exclTags);
+  const exC = el('text', { x: canCX(11), y: 169, 'text-anchor': 'middle', fill: '#b91c1c', 'font-size': 10.5, 'font-weight': 900 }, domA.exclTags);
+  exC.textContent = '可樂';
+
+  // Single-layer numbered badges (NO circled unicode!)
+  const makeBadge = (cx, cy, num, color, parent) => {
+    const g = el('g', { opacity: 0 }, parent);
+    el('circle', { cx, cy, r: 9.5, fill: color, stroke: '#fff', 'stroke-width': 1.6 }, g);
+    const tx = el('text', { x: cx, y: cy + 3.8, 'text-anchor': 'middle', fill: '#fff', 'font-size': 11, 'font-weight': 900 }, g);
+    tx.textContent = String(num);
+    return g;
+  };
+  domA.badgesRGrp = el('g', {}, svg);
+  for (let k = 0; k < 6; k++) domA.badgesR.push(makeBadge(canCX(12 + k), MAIN_Y - 14, k + 1, CONFIG.palette.cyan, domA.badgesRGrp));
+
+  domA.badgesMGrp = el('g', {}, svg);
+  for (let k = 0; k < 2; k++) domA.badgesM.push(makeBadge(canCX(9 + k), MAIN_Y - 14, k + 1, '#d97706', domA.badgesMGrp));
+
+  // Lower Temporary Draft Strip (Steps 4–5 before merging in Step 6)
+  domA.draftStrip = el('g', { opacity: 0 }, svg);
+  // Dashed divider with '?'
+  el('line', { x1: 36, y1: 196, x2: 294, y2: 196, stroke: '#94a3b8', 'stroke-width': 1.5, 'stroke-dasharray': '5,5' }, domA.draftStrip);
+  el('line', { x1: 346, y1: 196, x2: 604, y2: 196, stroke: '#94a3b8', 'stroke-width': 1.5, 'stroke-dasharray': '5,5' }, domA.draftStrip);
+  domA.draftQCircle = el('g', {}, domA.draftStrip);
+  el('circle', { cx: 320, cy: 196, r: 14, fill: '#fef3c7', stroke: '#f59e0b', 'stroke-width': 2 }, domA.draftQCircle);
+  const dqTxt = el('text', { x: 320, y: 201, 'text-anchor': 'middle', fill: '#b45309', 'font-size': 15, 'font-weight': 900 }, domA.draftQCircle);
+  dqTxt.textContent = '?';
+  domA.draftQSlash = el('line', { x1: 306, y1: 210, x2: 334, y2: 182, stroke: '#dc2626', 'stroke-width': 3.5, 'stroke-linecap': 'round', 'stroke-dasharray': 42, 'stroke-dashoffset': 42 }, domA.draftStrip);
+
+  const dNote = el('text', { x: 44, y: 214, fill: '#64748b', 'font-size': 11.5, 'font-weight': 700 }, domA.draftStrip);
+  dNote.textContent = '獨立草擬雪碧位置（未定喺可樂左定右）：';
+
+  // Draft strip zones
+  domA.zoneDraftRightSprite = el('g', { opacity: 0 }, domA.draftStrip);
+  domA.zoneDraftRSFill = el('rect', { x: canX(8) - 4, y: DRAFT_Y - 5, width: (canX(17) + CAN_W) - canX(8) + 8, height: CAN_H + 10, rx: 8, fill: CONFIG.palette.sprite, opacity: 0.18 }, domA.zoneDraftRightSprite);
+  el('rect', { x: canX(8) - 4, y: DRAFT_Y - 5, width: (canX(17) + CAN_W) - canX(8) + 8, height: CAN_H + 10, rx: 8, fill: 'none', stroke: CONFIG.palette.sprite, 'stroke-width': 2.5 }, domA.zoneDraftRightSprite);
+
+  domA.zoneDraftLeftSprite = el('g', { opacity: 0 }, domA.draftStrip);
+  domA.zoneDraftLSFill = el('rect', { x: canX(0) - 4, y: DRAFT_Y - 5, width: (canX(7) + CAN_W) - canX(0) + 8, height: CAN_H + 10, rx: 8, fill: CONFIG.palette.purple, opacity: 0.18 }, domA.zoneDraftLeftSprite);
+  el('rect', { x: canX(0) - 4, y: DRAFT_Y - 5, width: (canX(7) + CAN_W) - canX(0) + 8, height: CAN_H + 10, rx: 8, fill: 'none', stroke: CONFIG.palette.purple, 'stroke-width': 2.5 }, domA.zoneDraftLeftSprite);
+
+  // 18 cans in draft strip
+  for (let i = 0; i < 18; i++) {
+    const g = el('g', { transform: `translate(${canX(i)}, ${DRAFT_Y})` }, domA.draftStrip);
+    const isS = (i === 8);
+    el('rect', { x: 0, y: 6, width: CAN_W, height: CAN_H - 6, rx: 5, fill: isS ? CONFIG.palette.sprite : '#e2e8f0', stroke: isS ? '#14532d' : '#94a3b8', 'stroke-width': 1.4 }, g);
+    el('rect', { x: 3, y: 2, width: CAN_W - 6, height: 5, rx: 2, fill: isS ? '#bbf7d0' : '#f1f5f9', stroke: isS ? '#14532d' : '#94a3b8', 'stroke-width': 1.1 }, g);
+    if (isS) {
+      el('rect', { x: 2, y: 20, width: CAN_W - 4, height: 16, rx: 2, fill: '#fef08a', opacity: 0.9 }, g);
+      const l = el('text', { x: CAN_W / 2, y: 32, 'text-anchor': 'middle', fill: '#14532d', 'font-size': 12.5, 'font-weight': 900 }, g);
+      l.textContent = 'S';
+      const s = el('text', { x: CAN_W / 2, y: 48, 'text-anchor': 'middle', fill: '#fff', 'font-size': 9, 'font-weight': 800 }, g);
+      s.textContent = '雪碧';
+    }
+    domA.draftCans.push(g);
+  }
+  domA.badgesLGrp = el('g', {}, domA.draftStrip);
+  for (let k = 0; k < 8; k++) domA.badgesL.push(makeBadge(canCX(k), DRAFT_Y + CAN_H + 14, k + 1, CONFIG.palette.purple, domA.badgesLGrp));
+
+  domA.draftRSLabel = el('text', { x: (canX(8) + canX(17) + CAN_W) / 2, y: DRAFT_Y + CAN_H + 20, 'text-anchor': 'middle', fill: '#15803d', 'font-size': 12.5, 'font-weight': 800, opacity: 0 }, domA.draftStrip);
+  domA.draftRSLabel.textContent = '由右數到雪碧 S：10 罐';
+
+  // Flying Sprite Can (for smooth Step 6 merge upward)
+  domA.flySprite = el('g', { opacity: 0 }, svg);
+  el('rect', { x: 0, y: 6, width: CAN_W, height: CAN_H - 6, rx: 5, fill: CONFIG.palette.sprite, stroke: '#14532d', 'stroke-width': 1.8 }, domA.flySprite);
+  el('rect', { x: 3, y: 2, width: CAN_W - 6, height: 5, rx: 2, fill: '#bbf7d0', stroke: '#14532d', 'stroke-width': 1.2 }, domA.flySprite);
+  el('rect', { x: 2, y: 20, width: CAN_W - 4, height: 16, rx: 2, fill: '#fef08a' }, domA.flySprite);
+  const flS = el('text', { x: CAN_W / 2, y: 32, 'text-anchor': 'middle', fill: '#14532d', 'font-size': 12.5, 'font-weight': 900 }, domA.flySprite);
+  flS.textContent = 'S';
+  const flSub = el('text', { x: CAN_W / 2, y: 48, 'text-anchor': 'middle', fill: '#fff', 'font-size': 9, 'font-weight': 800 }, domA.flySprite);
+  flSub.textContent = '雪碧';
+
+  // Single Pen Tip Guide on Track A
+  domA.pen = el('g', { opacity: 0 }, svg);
+  el('circle', { cx: 0, cy: 0, r: 10, fill: 'rgba(30,58,138,0.22)' }, domA.pen);
+  el('circle', { cx: 0, cy: 0, r: 5.5, fill: CONFIG.palette.pen, stroke: '#fff', 'stroke-width': 2 }, domA.pen);
+}
+
+function buildScratchSVG() {
+  const svg = document.getElementById('svgScratch');
+  svg.innerHTML = '';
+
+  // Subtle cream grid paper
+  const defs = el('defs', {}, svg);
+  const pat = el('pattern', { id: 'gridPat', width: 20, height: 20, patternUnits: 'userSpaceOnUse' }, defs);
+  el('path', { d: 'M 20 0 L 0 0 0 20', fill: 'none', stroke: '#ebe4ce', 'stroke-width': 1 }, pat);
+  el('rect', { x: 0, y: 0, width: 500, height: 310, fill: '#fffdf4' }, svg);
+  el('rect', { x: 0, y: 0, width: 500, height: 310, fill: 'url(#gridPat)' }, svg);
+  // Subtle notebook margin
+  el('line', { x1: 0, y1: 36, x2: 500, y2: 36, stroke: '#e6d5b8', 'stroke-width': 1.5 }, svg);
+
+  // Corner Legend (zero confusion mapping — pops only when introduced)
+  domB.legendC = el('g', { opacity: 0 }, svg);
+  el('rect', { x: 266, y: 7, width: 96, height: 22, rx: 7, fill: '#fee2e2', stroke: '#dc2626', 'stroke-width': 1.4 }, domB.legendC);
+  const lcT = el('text', { x: 314, y: 22, 'text-anchor': 'middle', fill: '#b91c1c', 'font-size': 13, 'font-weight': 900 }, domB.legendC);
+  lcT.textContent = 'C = 可樂';
+
+  domB.legendS = el('g', { opacity: 0 }, svg);
+  el('rect', { x: 372, y: 7, width: 96, height: 22, rx: 7, fill: '#dcfce7', stroke: '#16a34a', 'stroke-width': 1.4 }, domB.legendS);
+  const lsT = el('text', { x: 420, y: 22, 'text-anchor': 'middle', fill: '#15803d', 'font-size': 13, 'font-weight': 900 }, domB.legendS);
+  lsT.textContent = 'S = 雪碧';
+
+  domB.blankHint = el('text', { x: 250, y: 162, 'text-anchor': 'middle', fill: '#b8a98a', 'font-size': 16, 'font-weight': 700 }, svg);
+  domB.blankHint.textContent = '（空白算草紙：見字即落筆）';
+
+  // Step 1: Total line + "18"
+  domB.totalLine = el('path', { d: 'M 42 74 L 458 74', fill: 'none', stroke: '#334155', 'stroke-width': 2.6, 'stroke-linecap': 'round', 'stroke-dasharray': 420, 'stroke-dashoffset': 420 }, svg);
+  domB.totalTickL = el('path', { d: 'M 42 66 L 42 82', fill: 'none', stroke: '#334155', 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-dasharray': 20, 'stroke-dashoffset': 20 }, svg);
+  domB.totalTickR = el('path', { d: 'M 458 66 L 458 82', fill: 'none', stroke: '#334155', 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-dasharray': 20, 'stroke-dashoffset': 20 }, svg);
+  domB.totalNum = el('text', { x: 250, y: 64, 'text-anchor': 'middle', fill: '#0f172a', 'font-size': 25, 'font-weight': 900, opacity: 0 }, svg);
+  domB.totalNum.textContent = '18';
+
+  // Fragment 1 Group (Cola C + 12-> + 6_) -> translates cleanly to unified row y in Step 6!
+  domB.frag1 = el('g', {}, svg);
+  domB.arc12 = el('path', { d: 'M 44 102 Q 190 124 334 102', fill: 'none', stroke: CONFIG.palette.orange, 'stroke-width': 2.5, 'stroke-linecap': 'round', 'stroke-dasharray': 310, 'stroke-dashoffset': 310 }, domB.frag1);
+  domB.txt12 = el('text', { x: 184, y: 126, 'text-anchor': 'middle', fill: CONFIG.palette.orange, 'font-size': 17, 'font-weight': 900, opacity: 0 }, domB.frag1);
+  domB.txt12.textContent = '12 →';
+
+  // C symbol
+  domB.symCGrp = el('g', { opacity: 0 }, domB.frag1);
+  el('rect', { x: 306, y: 78, width: 34, height: 34, rx: 9, fill: 'rgba(220,38,38,0.12)' }, domB.symCGrp);
+  const cT = el('text', { x: 323, y: 104, 'text-anchor': 'middle', fill: CONFIG.palette.cola, 'font-size': 28, 'font-weight': 900 }, domB.symCGrp);
+  cT.textContent = 'C';
+
+  // 6_ symbol (right of C)
+  domB.sym6Grp = el('g', { opacity: 0 }, domB.frag1);
+  el('rect', { x: 382, y: 78, width: 52, height: 34, rx: 9, fill: 'rgba(10,165,201,0.13)' }, domB.sym6Grp);
+  const s6T = el('text', { x: 408, y: 103, 'text-anchor': 'middle', fill: CONFIG.palette.cyan, 'font-size': 26, 'font-weight': 900 }, domB.sym6Grp);
+  s6T.textContent = '6';
+  domB.under6 = el('path', { d: 'M 388 109 L 428 109', fill: 'none', stroke: CONFIG.palette.cyan, 'stroke-width': 3.2, 'stroke-linecap': 'round', 'stroke-dasharray': 45, 'stroke-dashoffset': 45 }, domB.sym6Grp);
+  domB.slash6 = el('path', { d: 'M 390 110 L 426 80', fill: 'none', stroke: '#64748b', 'stroke-width': 3.2, 'stroke-linecap': 'round', 'stroke-dasharray': 50, 'stroke-dashoffset': 50 }, domB.sym6Grp);
+
+  // Temporary '?' divider between Frag 1 & Frag 2 (Steps 4-5, slashed in Step 6)
+  domB.sepQGrp = el('g', { opacity: 0 }, svg);
+  el('line', { x1: 60, y1: 140, x2: 226, y2: 140, stroke: '#cbd5e1', 'stroke-width': 1.6, 'stroke-dasharray': '4,4' }, domB.sepQGrp);
+  el('line', { x1: 274, y1: 140, x2: 440, y2: 140, stroke: '#cbd5e1', 'stroke-width': 1.6, 'stroke-dasharray': '4,4' }, domB.sepQGrp);
+  const sqT = el('text', { x: 250, y: 148, 'text-anchor': 'middle', fill: '#d97706', 'font-size': 24, 'font-weight': 900 }, domB.sepQGrp);
+  sqT.textContent = '?';
+  domB.sepQSlash = el('path', { d: 'M 234 154 L 266 124', fill: 'none', stroke: '#dc2626', 'stroke-width': 3.5, 'stroke-linecap': 'round', 'stroke-dasharray': 48, 'stroke-dashoffset': 48 }, domB.sepQGrp);
+
+  // Fragment 2 Group (8_ + Sprite S + <-10) -> translates cleanly up to merge in Step 6!
+  domB.frag2 = el('g', {}, svg);
+  domB.arc10 = el('path', { d: 'M 456 196 Q 312 218 166 196', fill: 'none', stroke: CONFIG.palette.sprite, 'stroke-width': 2.5, 'stroke-linecap': 'round', 'stroke-dasharray': 310, 'stroke-dashoffset': 310 }, domB.frag2);
+  domB.txt10 = el('text', { x: 316, y: 219, 'text-anchor': 'middle', fill: CONFIG.palette.sprite, 'font-size': 17, 'font-weight': 900, opacity: 0 }, domB.frag2);
+  domB.txt10.textContent = '← 10';
+
+  // S symbol
+  domB.symSGrp = el('g', { opacity: 0 }, domB.frag2);
+  el('rect', { x: 160, y: 170, width: 34, height: 34, rx: 9, fill: 'rgba(22,163,74,0.14)' }, domB.symSGrp);
+  const sT = el('text', { x: 177, y: 196, 'text-anchor': 'middle', fill: CONFIG.palette.sprite, 'font-size': 28, 'font-weight': 900 }, domB.symSGrp);
+  sT.textContent = 'S';
+
+  // 8_ symbol (left of S)
+  domB.sym8Grp = el('g', { opacity: 0 }, domB.frag2);
+  el('rect', { x: 66, y: 170, width: 52, height: 34, rx: 9, fill: 'rgba(141,91,214,0.14)' }, domB.sym8Grp);
+  const s8T = el('text', { x: 92, y: 195, 'text-anchor': 'middle', fill: CONFIG.palette.purple, 'font-size': 26, 'font-weight': 900 }, domB.sym8Grp);
+  s8T.textContent = '8';
+  domB.under8 = el('path', { d: 'M 72 201 L 112 201', fill: 'none', stroke: CONFIG.palette.purple, 'stroke-width': 3.2, 'stroke-linecap': 'round', 'stroke-dasharray': 45, 'stroke-dashoffset': 45 }, domB.sym8Grp);
+  domB.slash8 = el('path', { d: 'M 74 202 L 110 172', fill: 'none', stroke: '#64748b', 'stroke-width': 3.2, 'stroke-linecap': 'round', 'stroke-dasharray': 50, 'stroke-dashoffset': 50 }, domB.sym8Grp);
+
+  // Unified Row Center Middle '?' & Final '2' (at y=132, x=250)
+  domB.midQGrp = el('g', { opacity: 0 }, svg);
+  domB.midOval = el('ellipse', { cx: 250, cy: 132, rx: 24, ry: 20, fill: 'rgba(240,165,0,0.16)', stroke: '#d97706', 'stroke-width': 2.8, 'stroke-dasharray': 150, 'stroke-dashoffset': 150 }, domB.midQGrp);
+  domB.midQTxt = el('text', { x: 250, y: 141, 'text-anchor': 'middle', fill: '#b45309', 'font-size': 27, 'font-weight': 900 }, domB.midQGrp);
+  domB.midQTxt.textContent = '?';
+  domB.midAnsTxt = el('text', { x: 250, y: 141, 'text-anchor': 'middle', fill: '#dc2626', 'font-size': 28, 'font-weight': 900, opacity: 0 }, domB.midQGrp);
+  domB.midAnsTxt.textContent = '2';
+
+  // Tiny link under S & C reminding "-2"
+  domB.scLink = el('g', { opacity: 0 }, svg);
+  el('path', { d: 'M 177 158 Q 250 182 323 158', fill: 'none', stroke: '#dc2626', 'stroke-width': 2, 'stroke-dasharray': '4,3' }, domB.scLink);
+  const scT = el('text', { x: 250, y: 184, 'text-anchor': 'middle', fill: '#dc2626', 'font-size': 13, 'font-weight': 900 }, domB.scLink);
+  scT.textContent = '頭尾 2 罐（唔計）';
+
+  // Bottom Calculation Scratch Area (y=236..300)
+  el('line', { x1: 24, y1: 224, x2: 476, y2: 224, stroke: '#e5dcc2', 'stroke-width': 1.2, 'stroke-dasharray': '4,4' }, svg);
+
+  domB.calc1 = el('text', { x: 46, y: 254, fill: CONFIG.palette.cyan, 'font-size': 21, 'font-weight': 900, opacity: 0 }, svg);
+  domB.calc1.textContent = '18 − 12 = 6';
+
+  domB.calc2 = el('text', { x: 274, y: 254, fill: CONFIG.palette.purple, 'font-size': 21, 'font-weight': 900, opacity: 0 }, svg);
+  domB.calc2.textContent = '18 − 10 = 8';
+
+  domB.calcFinal = el('g', { opacity: 0 }, svg);
+  const cfT = el('text', { x: 250, y: 292, 'text-anchor': 'middle', 'font-size': 25, 'font-weight': 900 }, domB.calcFinal);
+  const addSpan = (txt, fill) => {
+    const s = el('tspan', { fill }, cfT);
+    s.textContent = txt;
+  };
+  addSpan('18', '#0f172a');
+  addSpan(' − ', '#475569');
+  addSpan('8', CONFIG.palette.purple);
+  addSpan(' − ', '#475569');
+  addSpan('6', CONFIG.palette.cyan);
+  addSpan(' − ', '#475569');
+  addSpan('2', '#dc2626');
+  addSpan(' = ', '#475569');
+  addSpan('2', '#d97706');
+  domB.finalUnderline = el('path', { d: 'M 332 299 L 366 299', fill: 'none', stroke: '#dc2626', 'stroke-width': 3.5, 'stroke-linecap': 'round', 'stroke-dasharray': 40, 'stroke-dashoffset': 40 }, domB.calcFinal);
+
+  // Single Pen Tip Guide on Track B
+  domB.pen = el('g', { opacity: 0 }, svg);
+  el('circle', { cx: 0, cy: 0, r: 9.5, fill: 'rgba(30,58,138,0.22)' }, domB.pen);
+  el('circle', { cx: 0, cy: 0, r: 5, fill: CONFIG.palette.pen, stroke: '#fff', 'stroke-width': 2 }, domB.pen);
+}
+
+/* ============================================================================
+   純函數狀態渲染引擎：renderFrame(stepIndex, p)
+   100% 決定性輸出，無任何殘影，上一步/下一步/跳轉完美撤銷
+============================================================================ */
+function setCanStyle(can, mode, dim = false) {
+  if (mode === 'cola') {
+    can.body.setAttribute('fill', CONFIG.palette.cola);
+    can.body.setAttribute('stroke', '#7f1d1d');
+    can.topRim.setAttribute('fill', '#fecaca');
+    can.stripe.setAttribute('fill', '#fff');
+    can.stripe.setAttribute('opacity', '0.92');
+    can.label.textContent = 'C';
+    can.label.setAttribute('fill', '#b91c1c');
+    can.sub.textContent = '可樂';
+    can.sub.setAttribute('opacity', '1');
+  } else if (mode === 'sprite') {
+    can.body.setAttribute('fill', CONFIG.palette.sprite);
+    can.body.setAttribute('stroke', '#14532d');
+    can.topRim.setAttribute('fill', '#bbf7d0');
+    can.stripe.setAttribute('fill', '#fef08a');
+    can.stripe.setAttribute('opacity', '0.95');
+    can.label.textContent = 'S';
+    can.label.setAttribute('fill', '#14532d');
+    can.sub.textContent = '雪碧';
+    can.sub.setAttribute('opacity', '1');
+  } else if (mode === 'gold') {
+    can.body.setAttribute('fill', '#fbbf24');
+    can.body.setAttribute('stroke', '#b45309');
+    can.topRim.setAttribute('fill', '#fef3c7');
+    can.stripe.setAttribute('fill', '#fffbeb');
+    can.stripe.setAttribute('opacity', '0.85');
+    can.label.textContent = '?';
+    can.label.setAttribute('fill', '#92400e');
+    can.sub.setAttribute('opacity', '0');
+  } else {
+    can.body.setAttribute('fill', '#cbd5e1');
+    can.body.setAttribute('stroke', '#64748b');
+    can.topRim.setAttribute('fill', '#e2e8f0');
+    can.stripe.setAttribute('fill', '#f1f5f9');
+    can.stripe.setAttribute('opacity', '0.7');
+    can.label.textContent = '';
+    can.sub.setAttribute('opacity', '0');
+  }
+  can.g.setAttribute('opacity', dim ? '0.36' : '1');
+}
+
+function setPen(track, x, y, show = true) {
+  domA.pen.setAttribute('opacity', track === 'A' && show ? '1' : '0');
+  domB.pen.setAttribute('opacity', track === 'B' && show ? '1' : '0');
+  document.getElementById('ansPenDot').setAttribute('opacity', track === 'ANS' && show ? '1' : '0');
+  if (track === 'A') domA.pen.setAttribute('transform', `translate(${x}, ${y})`);
+  if (track === 'B') domB.pen.setAttribute('transform', `translate(${x}, ${y})`);
+  if (track === 'ANS') {
+    const dot = document.getElementById('ansPenDot');
+    dot.setAttribute('cx', x); dot.setAttribute('cy', y);
+  }
+}
+
+function renderFrame(step, p) {
+  const s = step;
+  const ep = easeOut(p);
+
+  // ---------- 1. Question highlights & minimal code superscripts ----------
+  const curSeg = CONFIG.steps[s].seg;
+  document.querySelectorAll('.q-seg').forEach((node, idx) => {
+    node.classList.toggle('active', idx === curSeg);
+    node.classList.toggle('read', curSeg >= 0 && idx < curSeg);
+  });
+  CONFIG.segments.forEach(seg => {
+    if (!seg.code) return;
+    const tag = document.getElementById(`codeTag-${seg.code}`);
+    if (tag) tag.classList.toggle('show', s >= seg.showCodeAt);
+  });
+
+  // Track A header tag
+  document.getElementById('trackATag').textContent = CONFIG.steps[s].trackTag;
+
+  // ---------- 2. Reset defaults ----------
+  setPen('NONE', 0, 0, false);
+  domA.emptyMsg.setAttribute('opacity', s === 0 ? '1' : '0');
+  domA.mainRail.setAttribute('opacity', s >= 1 ? '1' : '0');
+  domA.totalGrp.setAttribute('opacity', s >= 1 ? (s === 1 ? ep : 1) : 0);
+
+  // Zones reset
+  domA.zoneLeftToCola.g.setAttribute('opacity', '0');
+  domA.zoneRightCola.g.setAttribute('opacity', '0');
+  domA.zoneLeftSpriteMain.g.setAttribute('opacity', '0');
+  domA.zoneMiddle.g.setAttribute('opacity', '0');
+  domA.lblLeftToCola.setAttribute('opacity', '0');
+  domA.lblRightCola.setAttribute('opacity', '0');
+  domA.lblLeftSpriteMain.setAttribute('opacity', '0');
+  domA.lblMiddle.setAttribute('opacity', '0');
+  domA.exclTags.setAttribute('opacity', '0');
+  domA.draftStrip.setAttribute('opacity', '0');
+  domA.zoneDraftRightSprite.setAttribute('opacity', '0');
+  domA.zoneDraftLeftSprite.setAttribute('opacity', '0');
+  domA.draftRSLabel.setAttribute('opacity', '0');
+  domA.draftQSlash.setAttribute('stroke-dashoffset', '42');
+  domA.draftCans[8].setAttribute('opacity', '1');
+  domA.flySprite.setAttribute('opacity', '0');
+  domA.badgesR.forEach(b => b.setAttribute('opacity', '0'));
+  domA.badgesL.forEach(b => b.setAttribute('opacity', '0'));
+  domA.badgesM.forEach(b => b.setAttribute('opacity', '0'));
+
+  // Main 18 cans positioning & base styles
+  for (let i = 0; i < 18; i++) {
+    const can = domA.cans[i];
+    if (s === 0) {
+      can.g.setAttribute('opacity', '0');
+      can.g.setAttribute('transform', `translate(${canX(i)}, ${MAIN_Y})`);
+    } else if (s === 1) {
+      // Fly in along arc: first 3 slower, rest brisk
+      const start = i < 3 ? i * 0.14 : 0.40 + (i - 3) * 0.032;
+      const t = clamp((p - start) / 0.18);
+      const et = easeOut(t);
+      const dx = lerp(45, 0, et);
+      const dy = lerp(-38, 0, et) - Math.sin(t * Math.PI) * 14;
+      const sc = lerp(0.45, 1, et);
+      setCanStyle(can, 'plain', false);
+      can.g.setAttribute('opacity', t > 0 ? String(clamp(t * 2)) : '0');
+      can.g.setAttribute('transform', `translate(${canX(i) + dx}, ${MAIN_Y + dy}) scale(${sc})`);
+    } else {
+      let mode = 'plain';
+      let dim = false;
+      if (i === 11 && (s > 2 || (s === 2 && p >= 0.58))) mode = 'cola';
+      if (i === 8 && (s > 6 || (s === 6 && p >= 0.85))) mode = 'sprite';
+      if ((i === 9 || i === 10) && s >= 8) {
+        mode = 'gold';
+      }
+      if (s === 9 && p > 0.25 && (i < 8 || i > 11)) dim = true;
+      if (s === 10 && (i < 8 || i > 11)) dim = true;
+      setCanStyle(can, mode, dim);
+      if (mode === 'gold' && (s > 9 || (s === 9 && p > 0.55))) {
+        can.label.textContent = '';
+      }
+      // Gentle sync bounce when highlighted
+      let bounceY = 0;
+      if (s === 7) {
+        const segIdx = p < 0.2 ? 0 : p < 0.4 ? 1 : p < 0.6 ? 2 : p < 0.8 ? 3 : 4;
+        const inSeg = (segIdx === 0 && i < 8) || (segIdx === 1 && i === 8) || (segIdx === 2 && (i === 9 || i === 10)) || (segIdx === 3 && i === 11) || (segIdx === 4 && i > 11);
+        if (inSeg) bounceY = -5 * Math.sin(((p * 5) % 1) * Math.PI);
+      }
+      can.g.setAttribute('transform', `translate(${canX(i)}, ${MAIN_Y + bounceY})`);
+    }
+  }
+
+  // ---------- 3. Track A Step-specific visuals ----------
+  if (s === 2) {
+    // Count 1..12 from left, flash orange zone 3x, reveal Cola C
+    domA.zoneLeftToCola.g.setAttribute('opacity', '1');
+    domA.zoneLeftToCola.fillRect.setAttribute('opacity', String(flash3Opacity(p)));
+    domA.lblLeftToCola.setAttribute('opacity', String(clamp((p - 0.55) / 0.25)));
+    if (p < 0.6) {
+      setPen('A', lerp(canCX(0), canCX(11), easeInOut(p / 0.6)), MAIN_Y - 14, true);
+    }
+  }
+  if (s === 3) {
+    // Keep subtle orange left-to-cola, highlight right 6 cans in cyan with 3 flashes + badges 1..6
+    domA.zoneLeftToCola.g.setAttribute('opacity', '0.32');
+    domA.zoneLeftToCola.fillRect.setAttribute('opacity', '0.12');
+    domA.zoneRightCola.g.setAttribute('opacity', '1');
+    domA.zoneRightCola.fillRect.setAttribute('opacity', String(flash3Opacity(p)));
+    domA.lblRightCola.setAttribute('opacity', String(clamp((p - 0.35) / 0.25)));
+    // Badges pop ONLY after 3 flashes finish (p >= 0.66)
+    domA.badgesR.forEach((b, k) => {
+      const bt = clamp((p - (0.66 + k * 0.045)) / 0.09);
+      b.setAttribute('opacity', String(bt));
+    });
+  }
+  if (s === 4 || s === 5) {
+    // Keep right-6 zone clean (badges faded out cleanly)
+    domA.zoneRightCola.g.setAttribute('opacity', '0.85');
+    domA.zoneRightCola.fillRect.setAttribute('opacity', '0.16');
+    domA.lblRightCola.setAttribute('opacity', '1');
+
+    // Show separate lower draft strip with '?' divider
+    domA.draftStrip.setAttribute('opacity', s === 4 ? String(clamp(p / 0.25)) : '1');
+    domA.draftQSlash.setAttribute('stroke-dashoffset', '42');
+    domA.zoneDraftRightSprite.setAttribute('opacity', '1');
+    domA.zoneDraftRSFill.setAttribute('opacity', s === 4 ? String(flash3Opacity(p)) : '0.14');
+    domA.draftRSLabel.setAttribute('opacity', s === 4 ? String(clamp((p - 0.5) / 0.25)) : '0.75');
+    if (s === 4 && p < 0.55) {
+      setPen('A', lerp(canCX(17), canCX(8), easeInOut(p / 0.55)), DRAFT_Y - 12, true);
+    }
+    if (s === 5) {
+      domA.zoneDraftLeftSprite.setAttribute('opacity', '1');
+      domA.zoneDraftLSFill.setAttribute('opacity', String(flash3Opacity(p)));
+      domA.badgesL.forEach((b, k) => {
+        const bt = clamp((p - (0.66 + k * 0.035)) / 0.08);
+        b.setAttribute('opacity', String(bt));
+      });
+    }
+  }
+  if (s === 6) {
+    // Slash '?' and glide Sprite S + purple left-8 UP onto main shelf!
+    domA.zoneRightCola.g.setAttribute('opacity', '0.85');
+    domA.zoneRightCola.fillRect.setAttribute('opacity', '0.16');
+    domA.lblRightCola.setAttribute('opacity', '1');
+
+    const slashP = clamp(p / 0.30);
+    const flyP = easeInOut(clamp((p - 0.30) / 0.55));
+    const fadeStrip = 1 - clamp((p - 0.55) / 0.35);
+
+    domA.draftStrip.setAttribute('opacity', String(fadeStrip));
+    domA.draftQSlash.setAttribute('stroke-dashoffset', String(42 * (1 - slashP)));
+    domA.zoneDraftLeftSprite.setAttribute('opacity', String(fadeStrip));
+    domA.zoneDraftRightSprite.setAttribute('opacity', String(fadeStrip * 0.5));
+
+    // Flying Sprite can travels from DRAFT_Y to MAIN_Y
+    if (p >= 0.30 && p < 0.86) {
+      domA.flySprite.setAttribute('opacity', '1');
+      const fy = lerp(DRAFT_Y, MAIN_Y, flyP);
+      const fx = canX(8) - Math.sin(flyP * Math.PI) * 18;
+      domA.flySprite.setAttribute('transform', `translate(${fx}, ${fy})`);
+      domA.draftCans[8].setAttribute('opacity', '0');
+    } else {
+      domA.draftCans[8].setAttribute('opacity', p < 0.30 ? '1' : '0');
+    }
+
+    // Purple left-8 zone settles on main row
+    const mainPurpleOp = clamp((p - 0.65) / 0.25);
+    domA.zoneLeftSpriteMain.g.setAttribute('opacity', String(mainPurpleOp));
+    domA.zoneLeftSpriteMain.fillRect.setAttribute('opacity', '0.16');
+    domA.lblLeftSpriteMain.setAttribute('opacity', String(mainPurpleOp));
+  }
+  if (s >= 7) {
+    domA.zoneLeftSpriteMain.g.setAttribute('opacity', s >= 9 ? '0.55' : '0.9');
+    domA.zoneLeftSpriteMain.fillRect.setAttribute('opacity', '0.14');
+    domA.lblLeftSpriteMain.setAttribute('opacity', '1');
+
+    domA.zoneRightCola.g.setAttribute('opacity', s >= 9 ? '0.55' : '0.9');
+    domA.zoneRightCola.fillRect.setAttribute('opacity', '0.14');
+    domA.lblRightCola.setAttribute('opacity', '1');
+  }
+  if (s === 7) {
+    // Pen sweeps across the 5 zones on Track A
+    const targets = [canCX(3.5), canCX(8), canCX(9.5), canCX(11), canCX(14.5)];
+    const seg = Math.min(4, Math.floor(p * 5));
+    const next = Math.min(4, seg + 1);
+    const localT = (p * 5) % 1;
+    setPen('A', lerp(targets[seg], targets[next], easeInOut(localT)), MAIN_Y - 14, true);
+  }
+  if (s >= 8) {
+    domA.zoneMiddle.g.setAttribute('opacity', '1');
+    domA.zoneMiddle.fillRect.setAttribute('opacity', s === 8 ? String(flash3Opacity(p, 0.22, 0.58)) : '0.26');
+    domA.lblMiddle.setAttribute('opacity', '1');
+    domA.lblMiddleText.textContent = (s === 9 && p > 0.6) || s === 10 ? '中間 2 罐！' : '中間 ?';
+    domA.exclTags.setAttribute('opacity', '1');
+  }
+  if (s === 9) {
+    // Pop single-layer badges 1, 2 after calculation completes
+    domA.badgesM.forEach((b, k) => {
+      const bt = clamp((p - (0.62 + k * 0.14)) / 0.12);
+      b.setAttribute('opacity', String(bt));
+    });
+    if (p > 0.62) {
+      setPen('A', lerp(canCX(9), canCX(10), clamp((p - 0.62) / 0.25)), MAIN_Y - 26, true);
+    }
+  }
+  if (s === 10) {
+    domA.badgesM.forEach(b => b.setAttribute('opacity', '1'));
+  }
+
+  // ---------- 4. Track B (Pencil Scratchpad — Pure stroke-dashoffset & Merge) ----------
+  domB.blankHint.setAttribute('opacity', s === 0 ? '1' : '0');
+  domB.legendC.setAttribute('opacity', s >= 2 ? '1' : '0');
+  domB.legendS.setAttribute('opacity', s >= 4 ? '1' : '0');
+
+  // Step 1: Total line + 18
+  const t1 = s > 1 ? 1 : (s === 1 ? easeOut(p) : 0);
+  domB.totalLine.setAttribute('stroke-dashoffset', String(420 * (1 - t1)));
+  domB.totalTickL.setAttribute('stroke-dashoffset', String(20 * (1 - clamp(t1 * 3))));
+  domB.totalTickR.setAttribute('stroke-dashoffset', String(20 * (1 - clamp((t1 - 0.7) * 3.3))));
+  domB.totalNum.setAttribute('opacity', s > 1 ? '1' : (s === 1 ? String(clamp((p - 0.6) / 0.3)) : '0'));
+  if (s === 1 && p < 0.88) {
+    setPen('B', lerp(42, 458, t1), 74, true);
+  }
+
+  // Compute merge offset for Frag 1 (down +37px: y 95->132) & Frag 2 (up -55px: y 187->132)
+  const mergeP = s > 6 ? 1 : (s === 6 ? easeInOut(clamp((p - 0.30) / 0.50)) : 0);
+  const f1dy = lerp(0, 37, mergeP);
+  const f2dy = lerp(0, -55, mergeP);
+  domB.frag1.setAttribute('transform', `translate(0, ${f1dy})`);
+  domB.frag2.setAttribute('transform', `translate(0, ${f2dy})`);
+
+  // Step 2: C & 12->
+  const t2 = s > 2 ? 1 : (s === 2 ? easeOut(clamp((p - 0.45) / 0.48)) : 0);
+  const arcFade = 1 - mergeP;
+  domB.arc12.setAttribute('stroke-dashoffset', String(310 * (1 - t2)));
+  domB.arc12.setAttribute('opacity', String(arcFade));
+  domB.txt12.setAttribute('opacity', String((s > 2 ? 1 : clamp((p - 0.65) / 0.25)) * arcFade));
+  domB.symCGrp.setAttribute('opacity', s > 2 ? '1' : (s === 2 ? String(clamp((p - 0.52) / 0.25)) : '0'));
+  if (s === 2 && p >= 0.6) {
+    setPen('B', lerp(44, 323, clamp((p - 0.6) / 0.35)), 102, true);
+  }
+
+  // Step 3: 6_ & calc1
+  const t3 = s > 3 ? 1 : (s === 3 ? easeOut(clamp((p - 0.35) / 0.45)) : 0);
+  domB.sym6Grp.setAttribute('opacity', s > 3 ? '1' : (s === 3 ? String(clamp((p - 0.25) / 0.2)) : '0'));
+  domB.under6.setAttribute('stroke-dashoffset', String(45 * (1 - t3)));
+  domB.calc1.setAttribute('opacity', s > 3 ? '1' : (s === 3 ? String(clamp((p - 0.55) / 0.25)) : '0'));
+  if (s === 3 && p >= 0.25 && p < 0.85) {
+    setPen('B', lerp(388, 428, t3), 109, true);
+  }
+
+  // Step 4: '?' divider + S & <-10
+  const t4 = s > 4 ? 1 : (s === 4 ? easeOut(clamp((p - 0.45) / 0.48)) : 0);
+  domB.sepQGrp.setAttribute('opacity', (s === 4 || s === 5) ? (s === 4 ? String(clamp((p - 0.2) / 0.25)) : '1') : (s === 6 ? String(1 - clamp((p - 0.35) / 0.25)) : '0'));
+  domB.sepQSlash.setAttribute('stroke-dashoffset', s === 6 ? String(48 * (1 - clamp(p / 0.28))) : (s > 6 ? '0' : '48'));
+  domB.arc10.setAttribute('stroke-dashoffset', String(310 * (1 - t4)));
+  domB.arc10.setAttribute('opacity', String(arcFade));
+  domB.txt10.setAttribute('opacity', String((s > 4 ? 1 : clamp((p - 0.65) / 0.25)) * arcFade));
+  domB.symSGrp.setAttribute('opacity', s > 4 ? '1' : (s === 4 ? String(clamp((p - 0.52) / 0.25)) : '0'));
+  if (s === 4 && p >= 0.55) {
+    setPen('B', lerp(456, 177, clamp((p - 0.55) / 0.38)), 196, true);
+  }
+
+  // Step 5: 8_ & calc2
+  const t5 = s > 5 ? 1 : (s === 5 ? easeOut(clamp((p - 0.35) / 0.45)) : 0);
+  domB.sym8Grp.setAttribute('opacity', s > 5 ? '1' : (s === 5 ? String(clamp((p - 0.25) / 0.2)) : '0'));
+  domB.under8.setAttribute('stroke-dashoffset', String(45 * (1 - t5)));
+  domB.calc2.setAttribute('opacity', s > 5 ? '1' : (s === 5 ? String(clamp((p - 0.55) / 0.25)) : '0'));
+  if (s === 5 && p >= 0.25 && p < 0.85) {
+    setPen('B', lerp(72, 112, t5), 201, true);
+  }
+
+  // Step 6: Merge + write middle '?'
+  if (s === 6 && p < 0.32) {
+    const sp = clamp(p / 0.28);
+    setPen('B', lerp(234, 266, sp), lerp(154, 124, sp), true);
+  }
+  domB.midQGrp.setAttribute('opacity', s > 6 ? '1' : (s === 6 ? String(clamp((p - 0.78) / 0.2)) : '0'));
+
+  // Step 8: Circle middle '?' in amber
+  const t8 = s > 8 ? 1 : (s === 8 ? easeOut(clamp((p - 0.25) / 0.55)) : 0);
+  domB.midOval.setAttribute('stroke-dashoffset', String(150 * (1 - t8)));
+  domB.scLink.setAttribute('opacity', s > 8 ? '1' : (s === 8 ? String(clamp((p - 0.65) / 0.25)) : '0'));
+  if (s === 8 && p >= 0.25 && p < 0.82) {
+    const ang = t8 * Math.PI * 2;
+    setPen('B', 250 + Math.cos(ang) * 24, 132 + Math.sin(ang) * 20, true);
+  }
+
+  // Step 9: Slash 8_ and 6_, write final equation, replace '?' with '2'
+  const sl8 = s > 9 ? 1 : (s === 9 ? easeOut(clamp(p / 0.22)) : 0);
+  const sl6 = s > 9 ? 1 : (s === 9 ? easeOut(clamp((p - 0.20) / 0.22)) : 0);
+  domB.slash8.setAttribute('stroke-dashoffset', String(50 * (1 - sl8)));
+  domB.slash6.setAttribute('stroke-dashoffset', String(50 * (1 - sl6)));
+  domB.calcFinal.setAttribute('opacity', s > 9 ? '1' : (s === 9 ? String(clamp((p - 0.40) / 0.25)) : '0'));
+  const showTwo = s > 9 ? 1 : (s === 9 ? clamp((p - 0.55) / 0.2) : 0);
+  domB.midQTxt.setAttribute('opacity', String(1 - showTwo));
+  domB.midAnsTxt.setAttribute('opacity', String(showTwo));
+  const ul = s > 9 ? 1 : (s === 9 ? easeOut(clamp((p - 0.72) / 0.22)) : 0);
+  domB.finalUnderline.setAttribute('stroke-dashoffset', String(40 * (1 - ul)));
+  if (s === 9 && p < 0.55) {
+    if (p < 0.22) setPen('B', lerp(74, 110, sl8), lerp(147, 117, sl8), true);
+    else if (p < 0.44) setPen('B', lerp(390, 426, sl6), lerp(147, 117, sl6), true);
+  }
+
+  // ---------- 5. Step 10 True Answer-Writing Action (Stroke '2' onto Answer Line) ----------
+  const ansPath = document.getElementById('ansStroke2');
+  const ansP = s === 10 ? easeInOut(clamp(p / 0.65)) : 0;
+  ansPath.setAttribute('stroke-dashoffset', String(90 * (1 - ansP)));
+  if (s === 10 && p < 0.68) {
+    try {
+      const len = ansPath.getTotalLength();
+      const pt = ansPath.getPointAtLength(len * ansP);
+      setPen('ANS', pt.x, pt.y, true);
+    } catch (e) {}
+  }
+
+  // ---------- 6. Formula Strip (Edge-built step by step) ----------
+  renderFormulaStrip(s, p);
+}
+
+let lastFormulaKey = '';
+function renderFormulaStrip(s, p) {
+  const show1 = s > 3 || (s === 3 && p >= 0.55);
+  const show2 = s > 5 || (s === 5 && p >= 0.55);
+  const showF = s > 9 || (s === 9 && p >= 0.40);
+  const key = `${show1}-${show2}-${showF}`;
+  if (key === lastFormulaKey) return;
+  lastFormulaKey = key;
+  const strip = document.getElementById('formulaStrip');
+  let html = '';
+  if (show1) html += `<span class="f-chip" style="color:${CONFIG.palette.cyan}">18 − 12 = 6</span>`;
+  if (show2) html += `<span class="f-chip" style="color:${CONFIG.palette.purple}">18 − 10 = 8</span>`;
+  if (showF) html += `<span class="f-chip final"><span style="color:#0f172a">18</span> − <span style="color:${CONFIG.palette.purple}">8</span> − <span style="color:${CONFIG.palette.cyan}">6</span> − <span style="color:#dc2626">2</span> = <span style="color:#d97706">2</span></span>`;
+  strip.innerHTML = html;
+}
+
+/* ============================================================================
+   主狀態機與動畫迴圈（零 setTimeout 控制動畫，RAF 純函數推進）
+============================================================================ */
+const state = {
+  step: 0,
+  p: 1,
+  isPlaying: false,
+  speed: 1.0,
+  muted: false,
+  waitingCheckpoint: null,
+  clearedCheckpoints: new Set(),
+  rafId: null,
+  lastTs: 0,
+  speechDone: true,
+  animDone: true,
+  celebrated: false
+};
+
+function renderSubtitle(stepIdx) {
+  const st = CONFIG.steps[stepIdx];
+  const bar = document.getElementById('subtitleBar');
+  if (st.quote) {
+    bar.innerHTML = `<span class="sub-quote"><span class="sub-tag read">讀題</span>${st.prefix}「${st.quote}」</span><span class="sub-tag think">思路</span>${st.narr}`;
+  } else {
+    bar.innerHTML = `<span class="sub-tag think">思路</span>${st.narr}`;
+  }
+}
+
+function updateUI() {
+  document.getElementById('stepCounter').textContent = `${state.step} / ${CONFIG.steps.length - 1}`;
+  document.getElementById('prevBtn').disabled = state.step === 0;
+  document.getElementById('nextBtn').disabled = state.step === CONFIG.steps.length - 1;
+  document.getElementById('playBtn').innerHTML = state.isPlaying ? '⏸ 暫停' : (state.step === CONFIG.steps.length - 1 && state.p >= 1 ? '🔄 重播' : '▶ 播放');
+
+  const curPhase = CONFIG.steps[state.step].phase;
+  document.querySelectorAll('.phase-pill').forEach((btn, idx) => {
+    btn.classList.toggle('active', idx === curPhase);
+    btn.classList.toggle('done', idx < curPhase);
+  });
+
+  const cel = document.getElementById('celebrateBox');
+  cel.classList.toggle('show', state.step === CONFIG.steps.length - 1 && state.p >= 0.7);
+}
+
+function showCheckpoint(cp) {
+  state.waitingCheckpoint = cp;
+  state.isPlaying = false;
+  updateUI();
+  const box = document.getElementById('checkpointBox');
+  document.getElementById('cpQuestion').textContent = cp.question;
+  const fb = document.getElementById('cpFb');
+  fb.textContent = '';
+  fb.className = 'cp-fb';
+  const opts = document.getElementById('cpOpts');
+  opts.innerHTML = '';
+  cp.options.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'cp-opt';
+    b.textContent = opt.label;
+    b.onclick = () => {
+      if (opt.correct) {
+        b.classList.add('correct');
+        fb.textContent = '🌟 ' + opt.fb;
+        fb.className = 'cp-fb ok';
+        playSFX('ding');
+        state.clearedCheckpoints.add(cp.id);
+        speakText(opt.fb, () => {
+          hideCheckpoint();
+          startStepExecution(state.step, true);
+        });
+      } else {
+        b.classList.add('wrong');
+        fb.textContent = '💡 ' + opt.fb;
+        fb.className = 'cp-fb err';
+        playSFX('buzz');
+        speakText(opt.fb);
+      }
+    };
+    opts.appendChild(b);
+  });
+  box.classList.add('show');
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  speakText('停一停，估一估！' + cp.question);
+}
+
+function hideCheckpoint() {
+  state.waitingCheckpoint = null;
+  document.getElementById('checkpointBox').classList.remove('show');
+}
+
+function cancelAnim() {
+  if (state.rafId) { cancelAnimationFrame(state.rafId); state.rafId = null; }
+}
+
+function goToStep(stepIdx, autoPlay = false, skipCpCheck = false) {
+  stopSpeech();
+  cancelAnim();
+  hideCheckpoint();
+  state.step = clamp(stepIdx, 0, CONFIG.steps.length - 1);
+  state.p = 0;
+  state.isPlaying = autoPlay;
+  state.celebrated = false;
+
+  const st = CONFIG.steps[state.step];
+  // Check if this step has an interactive pause BEFORE revealing
+  if (!skipCpCheck && st.checkpoint && !state.clearedCheckpoints.has(st.checkpoint.id)) {
+    renderFrame(state.step, 0);
+    renderSubtitle(state.step);
+    updateUI();
+    showCheckpoint(st.checkpoint);
+    return;
+  }
+
+  startStepExecution(state.step, autoPlay);
+}
+
+function startStepExecution(stepIdx, autoPlay) {
+  const st = CONFIG.steps[stepIdx];
+  state.isPlaying = autoPlay;
+  state.p = 0;
+  state.animDone = false;
+  state.speechDone = false;
+  renderSubtitle(stepIdx);
+  renderFrame(stepIdx, 0);
+  updateUI();
+
+  if (stepIdx === 1 || stepIdx === 6) playSFX('whoosh');
+  else if (stepIdx > 0 && stepIdx < 10) playSFX('pop');
+
+  const fullSpeak = (st.quote ? `${st.prefix}${st.quote} ` : '') + st.narr;
+  speakText(fullSpeak, () => {
+    state.speechDone = true;
+    tryAdvance();
+  });
+
+  state.lastTs = performance.now();
+  function tick(ts) {
+    const dt = Math.min(64, ts - state.lastTs);
+    state.lastTs = ts;
+    const dur = st.duration / state.speed;
+    state.p = clamp(state.p + dt / dur, 0, 1);
+    renderFrame(state.step, state.p);
+
+    if (state.step === CONFIG.steps.length - 1 && state.p >= 0.7 && !state.celebrated) {
+      state.celebrated = true;
+      updateUI();
+      playSFX('celebrate');
+      launchConfetti();
+    }
+
+    if (state.p < 1) {
+      state.rafId = requestAnimationFrame(tick);
+    } else {
+      state.rafId = null;
+      state.animDone = true;
+      updateUI();
+      tryAdvance();
+    }
+  }
+  state.rafId = requestAnimationFrame(tick);
+}
+
+function tryAdvance() {
+  if (!state.isPlaying || !state.animDone || !state.speechDone) return;
+  if (state.step < CONFIG.steps.length - 1) {
+    goToStep(state.step + 1, true, false);
+  } else {
+    state.isPlaying = false;
+    updateUI();
+  }
+}
+
+/* ============================================================================
+   彩紙慶祝粒子效果
+============================================================================ */
+function launchConfetti() {
+  const cvs = document.getElementById('confettiCanvas');
+  const ctx = cvs.getContext('2d');
+  cvs.width = window.innerWidth;
+  cvs.height = window.innerHeight;
+  const colors = ['#f4711f', '#0aa5c9', '#8d5bd6', '#f0a500', '#16a34a', '#dc2626'];
+  const parts = Array.from({ length: 75 }, () => ({
+    x: cvs.width * (0.2 + Math.random() * 0.6),
+    y: cvs.height * 0.25,
+    vx: (Math.random() - 0.5) * 11,
+    vy: -4 - Math.random() * 9,
+    r: 4 + Math.random() * 5,
+    rot: Math.random() * 6,
+    vr: (Math.random() - 0.5) * 0.25,
+    c: colors[Math.floor(Math.random() * colors.length)]
+  }));
+  let frames = 0;
+  function draw() {
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    frames++;
+    parts.forEach(pt => {
+      pt.x += pt.vx;
+      pt.y += pt.vy;
+      pt.vy += 0.34;
+      pt.rot += pt.vr;
+      ctx.save();
+      ctx.translate(pt.x, pt.y);
+      ctx.rotate(pt.rot);
+      ctx.fillStyle = pt.c;
+      ctx.fillRect(-pt.r, -pt.r * 0.5, pt.r * 2, pt.r);
+      ctx.restore();
+    });
+    if (frames < 110) requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, cvs.width, cvs.height);
+  }
+  requestAnimationFrame(draw);
+}
+
+/* ============================================================================
+   片尾類似題實戰模組（預設隱藏公仔，附極簡鉛筆草稿提示，答對展開實物圖解）
+============================================================================ */
+let pracIdx = 0;
+function loadPractice(idx) {
+  pracIdx = idx % CONFIG.practiceBank.length;
+  const item = CONFIG.practiceBank[pracIdx];
+  const leftSide = item.total - item.fromRight;
+  const rightSide = item.total - item.fromLeft;
+  const ans = item.total - leftSide - rightSide - 2;
+
+  document.getElementById('pracQ').textContent = item.text;
+  document.getElementById('pracHintBox').classList.remove('show');
+  document.getElementById('pracVerifyBox').classList.remove('show');
+  document.getElementById('pracFb').textContent = '';
+  document.getElementById('pracFb').className = 'cp-fb';
+
+  // Render minimal pencil scratch hint SVG (NO colorful objects!)
+  const hSvg = document.getElementById('pracHintSvg');
+  hSvg.innerHTML = `
+    <text x="230" y="20" text-anchor="middle" font-size="16" font-weight="900" fill="#0f172a">總共 ${item.total}</text>
+    <path d="M 30 30 L 430 30" stroke="#334155" stroke-width="2"/>
+    <text x="80" y="64" text-anchor="middle" font-size="22" font-weight="900" fill="#8d5bd6">${leftSide}</text>
+    <line x1="60" y1="70" x2="100" y2="70" stroke="#8d5bd6" stroke-width="3"/>
+    <text x="155" y="64" text-anchor="middle" font-size="24" font-weight="900" fill="${item.leftColor}">${item.leftCode}</text>
+    <text x="230" y="64" text-anchor="middle" font-size="24" font-weight="900" fill="#d97706">?</text>
+    <text x="305" y="64" text-anchor="middle" font-size="24" font-weight="900" fill="${item.rightColor}">${item.rightCode}</text>
+    <text x="380" y="64" text-anchor="middle" font-size="22" font-weight="900" fill="#0aa5c9">${rightSide}</text>
+    <line x1="360" y1="70" x2="400" y2="70" stroke="#0aa5c9" stroke-width="3"/>
+    <text x="230" y="98" text-anchor="middle" font-size="14" font-weight="800" fill="#64748b">
+      ${item.leftCode}=${item.leftName}（左邊 ${item.total}−${item.fromRight}=${leftSide}）　｜　${item.rightCode}=${item.rightName}（右邊 ${item.total}−${item.fromLeft}=${rightSide}）
+    </text>
+  `;
+
+  // Render choices
+  const opts = document.getElementById('pracOpts');
+  opts.innerHTML = '';
+  item.choices.forEach(val => {
+    const b = document.createElement('button');
+    b.className = 'cp-opt';
+    b.textContent = `${val} ${item.unit}`;
+    b.onclick = () => {
+      const fb = document.getElementById('pracFb');
+      if (val === ans) {
+        b.classList.add('correct');
+        fb.textContent = `🎉 勁呀！${item.total} − ${leftSide} − ${rightSide} − 2 = ${ans}！即刻展開實物圖解驗證：`;
+        fb.className = 'cp-fb ok';
+        playSFX('celebrate');
+        launchConfetti();
+        renderPracticeVerify(item, leftSide, rightSide, ans);
+        document.getElementById('pracVerifyBox').classList.add('show');
+      } else {
+        b.classList.add('wrong');
+        fb.textContent = `💡 再諗吓：左邊有 ${item.total}−${item.fromRight}=${leftSide}，右邊有 ${item.total}−${item.fromLeft}=${rightSide}，記住仲要減頭尾 2 ${item.unit}呀！`;
+        fb.className = 'cp-fb err';
+        playSFX('buzz');
+      }
+    };
+    opts.appendChild(b);
+  });
+}
+
+function renderPracticeVerify(item, leftSide, rightSide, ans) {
+  const svg = document.getElementById('pracVerifySvg');
+  const n = item.total;
+  const w = Math.min(22, Math.floor(540 / n) - 3);
+  const pitch = Math.floor(550 / n);
+  const startX = (580 - (n - 1) * pitch - w) / 2;
+  let out = '';
+  const leftIdx = leftSide;            // 0-based index of left drink
+  const rightIdx = item.fromLeft - 1;  // 0-based index of right drink
+  for (let i = 0; i < n; i++) {
+    const x = startX + i * pitch;
+    let fill = '#cbd5e1', stroke = '#64748b', txt = '', tc = '#fff';
+    if (i < leftIdx) { fill = '#ede9fe'; stroke = '#8d5bd6'; }
+    else if (i === leftIdx) { fill = item.leftColor; stroke = '#14532d'; txt = item.leftCode; }
+    else if (i > leftIdx && i < rightIdx) { fill = '#fbbf24'; stroke = '#b45309'; txt = String(i - leftIdx); tc = '#78350f'; }
+    else if (i === rightIdx) { fill = item.rightColor; stroke = '#7f1d1d'; txt = item.rightCode; }
+    else { fill = '#e0f2fe'; stroke = '#0aa5c9'; }
+    out += `<rect x="${x}" y="22" width="${w}" height="44" rx="4" fill="${fill}" stroke="${stroke}" stroke-width="1.4"/>`;
+    if (txt) out += `<text x="${x + w / 2}" y="49" text-anchor="middle" font-size="11" font-weight="900" fill="${tc}">${txt}</text>`;
+  }
+  out += `<text x="290" y="92" text-anchor="middle" font-size="14" font-weight="900" fill="#166534">左邊 ${leftSide} ｜ ${item.leftCode} ｜ 中間 ${ans} ｜ ${item.rightCode} ｜ 右邊 ${rightSide}（合共 ${n}）</text>`;
+  svg.innerHTML = out;
+}
+
+/* ============================================================================
+   初始化與事件綁定
+============================================================================ */
+function init() {
+  // 1. Build Phase Pills
+  const pillsWrap = document.getElementById('phasePills');
+  CONFIG.phases.forEach(ph => {
+    const btn = document.createElement('button');
+    btn.className = 'phase-pill';
+    btn.textContent = ph.label;
+    btn.onclick = () => goToStep(ph.startStep, false, true);
+    pillsWrap.appendChild(btn);
+  });
+
+  // 2. Build Question Clauses with Minimal Code Superscripts
+  const qCn = document.getElementById('questionCn');
+  CONFIG.segments.forEach(seg => {
+    const span = document.createElement('span');
+    span.className = 'q-seg';
+    if (seg.codeWord) {
+      const parts = seg.text.split(seg.codeWord);
+      span.innerHTML = `${parts[0]}<span class="code-anchor"><span class="code-tag ${seg.codeClass}" id="codeTag-${seg.code}">${seg.code}</span>${seg.codeWord}</span>${parts[1]}`;
+    } else {
+      span.textContent = seg.text;
+    }
+    span.title = '點擊跳到此句對應步驟';
+    span.onclick = () => {
+      const firstStep = CONFIG.steps.findIndex(st => st.seg === seg.id);
+      if (firstStep >= 0) goToStep(firstStep, false, true);
+    };
+    qCn.appendChild(span);
+  });
+
+  // 3. Build Dual SVGs
+  buildConcreteSVG();
+  buildScratchSVG();
+
+  // 4. Bind Controls
+  document.getElementById('playBtn').onclick = () => {
+    ensureAudio();
+    if (state.waitingCheckpoint) {
+      speakText(state.waitingCheckpoint.question);
+      return;
+    }
+    if (state.isPlaying) {
+      state.isPlaying = false;
+      stopSpeech();
+      cancelAnim();
+      updateUI();
+    } else {
+      if (state.step === CONFIG.steps.length - 1 && state.p >= 1) {
+        state.clearedCheckpoints.clear();
+        goToStep(0, true, false);
+      } else if (state.step === 0 && state.p >= 1) {
+        goToStep(1, true, false);
+      } else {
+        goToStep(state.step, true, true);
+      }
+    }
+  };
+  document.getElementById('prevBtn').onclick = () => {
+    if (state.step > 0) goToStep(state.step - 1, false, true);
+  };
+  document.getElementById('nextBtn').onclick = () => {
+    if (state.step < CONFIG.steps.length - 1) goToStep(state.step + 1, false, false);
+  };
+  document.getElementById('replayBtn').onclick = () => {
+    state.clearedCheckpoints.clear();
+    goToStep(0, true, false);
+  };
+  document.getElementById('cpSkipBtn').onclick = () => {
+    if (state.waitingCheckpoint) {
+      state.clearedCheckpoints.add(state.waitingCheckpoint.id);
+      hideCheckpoint();
+      startStepExecution(state.step, true);
+    }
+  };
+
+  document.getElementById('speedBtn').onclick = () => {
+    state.speed = state.speed === 1.0 ? 0.75 : 1.0;
+    const btn = document.getElementById('speedBtn');
+    btn.textContent = state.speed === 0.75 ? '🐢 0.75x' : '🚶 1.0x';
+    btn.classList.toggle('active', state.speed === 0.75);
+  };
+  document.getElementById('muteBtn').onclick = () => {
+    state.muted = !state.muted;
+    const btn = document.getElementById('muteBtn');
+    btn.textContent = state.muted ? '🔇 靜音' : '🔊 語音開';
+    btn.classList.toggle('active', state.muted);
+    if (state.muted) stopSpeech();
+  };
+
+  // Modals
+  document.getElementById('openPracticeBtn').onclick = () => {
+    stopSpeech();
+    loadPractice(pracIdx);
+    document.getElementById('practiceModal').classList.add('open');
+  };
+  document.getElementById('pracHintBtn').onclick = () => {
+    document.getElementById('pracHintBox').classList.toggle('show');
+    playSFX('pop');
+  };
+  document.getElementById('pracNextBtn').onclick = () => {
+    loadPractice(pracIdx + 1);
+    playSFX('pop');
+  };
+  document.getElementById('openMasterBtn').onclick = () => {
+    stopSpeech();
+    document.getElementById('masterModal').classList.add('open');
+  };
+  document.getElementById('masterSpeakBtn').onclick = () => {
+    ensureAudio();
+    speakText(CONFIG.masterTTS);
+  };
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.onclick = () => {
+      stopSpeech();
+      document.getElementById(btn.dataset.close).classList.remove('open');
+    };
+  });
+  document.querySelectorAll('.modal-backdrop').forEach(bg => {
+    bg.onclick = e => {
+      if (e.target === bg) { stopSpeech(); bg.classList.remove('open'); }
+    };
+  });
+
+  // Keyboard shortcuts (desktop)
+  window.addEventListener('keydown', e => {
+    if (document.querySelector('.modal-backdrop.open')) return;
+    if (e.code === 'Space') { e.preventDefault(); document.getElementById('playBtn').click(); }
+    else if (e.code === 'ArrowRight') { e.preventDefault(); document.getElementById('nextBtn').click(); }
+    else if (e.code === 'ArrowLeft') { e.preventDefault(); document.getElementById('prevBtn').click(); }
+  });
+
+  // Render initial faithful Step 0 (no auto-audio until user interacts)
+  renderSubtitle(0);
+  renderFrame(0, 1);
+  updateUI();
+}
+
+init();
+</script>
+</body>
+</html>

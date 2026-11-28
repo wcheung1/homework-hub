@@ -1,0 +1,2361 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>拓展練習 4：一共有多少位顧客在排隊？— 雙軌實戰＋高手思維動畫</title>
+<style>
+  :root{
+    --bg:#eef3f9;
+    --card:#ffffff;
+    --paper:#fffdf5;
+    --ink:#1f2d3d;
+    --muted:#5a6b7d;
+    --border:#d5e0ec;
+    --primary:#0066cc;
+    --primary-dark:#004f9e;
+    --c-front:#0aa5c9;
+    --c-eddie:#f4711f;
+    --c-mid:#e8467c;
+    --c-vera:#8d5bd6;
+    --c-back:#2f9e57;
+    --c-ans:#e8541f;
+    --pencil:#36414f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Heiti TC",sans-serif;
+    -webkit-user-select:none;user-select:none;
+  }
+  #app{
+    display:flex;flex-direction:column;height:100%;height:100dvh;width:100%;
+    overflow:hidden;
+  }
+
+  /* ===== 頂部：可點擊階段進度列 ===== */
+  #header{
+    flex:0 0 auto;background:rgba(255,255,255,.97);
+    border-bottom:1px solid var(--border);
+    padding:7px 12px 6px;z-index:20;
+    box-shadow:0 2px 8px rgba(25,55,90,.05);
+  }
+  .head-top{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    max-width:1240px;margin:0 auto 5px;
+  }
+  .q-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    font-weight:800;font-size:14.5px;color:#fff;background:#556677;
+    padding:3px 11px;border-radius:999px;white-space:nowrap;
+  }
+  .q-badge .tri{
+    display:inline-block;width:0;height:0;
+    border-left:6px solid transparent;border-right:6px solid transparent;
+    border-bottom:10px solid #fff;
+  }
+  .kbd-hint{font-size:12.5px;color:var(--muted);white-space:nowrap;}
+  .kbd-hint b{color:var(--primary);}
+  @media (hover:none),(pointer:coarse),(max-width:820px){
+    .kbd-hint{display:none !important;}
+  }
+  #phases{
+    display:flex;flex-wrap:wrap;justify-content:center;gap:5px 6px;
+    max-width:1240px;margin:0 auto;
+  }
+  .ph-pill{
+    border:1.5px solid #d4dfec;background:#f4f7fb;color:#55677a;
+    border-radius:999px;padding:3.5px 11px;font-size:13.5px;font-weight:700;
+    cursor:pointer;transition:transform .16s ease,background .2s,color .2s,border-color .2s;
+  }
+  .ph-pill:hover{border-color:var(--primary);color:var(--primary);}
+  .ph-pill.done{background:#e1f4e8;border-color:#9bd6b0;color:#237541;}
+  .ph-pill.active{
+    background:var(--primary);border-color:var(--primary);color:#fff;
+    box-shadow:0 3px 10px rgba(0,102,204,.28);transform:scale(1.04);
+  }
+
+  /* ===== 中間主捲動區 ===== */
+  #stageWrap{
+    flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;
+    padding:9px 12px 14px;display:flex;flex-direction:column;align-items:center;
+    scroll-behavior:smooth;position:relative;
+  }
+
+  /* 順讀題目卡片（完整原句動態高亮＋零迷失代號上標 E / V） */
+  .question-card{
+    width:100%;max-width:1240px;background:var(--card);
+    border:1.5px solid var(--border);border-radius:14px;
+    padding:12px 15px 9px;margin-bottom:9px;
+    box-shadow:0 3px 12px rgba(25,55,90,.06);
+  }
+  .q-zh{
+    font-size:clamp(18px,2.05vw,22.5px);font-weight:800;line-height:1.85;color:#243445;
+  }
+  .q-en{
+    font-size:clamp(12.5px,1.28vw,14.8px);color:#5d6f82;line-height:1.38;margin-top:3px;
+  }
+  .q-seg{
+    display:inline;padding:1px 3px;border-radius:6px;
+    transition:background .25s ease,color .25s ease,border-color .25s ease;
+    border-bottom:3px solid transparent;
+  }
+  .q-seg.read-done{color:#3c4d5e;border-bottom-color:#d8e3ef;}
+  .q-seg.active-0{background:#e7f1ff;color:#004f9e;border-bottom-color:#0066cc;}
+  .q-seg.active-1{background:#e0f7fc;color:#076a82;border-bottom-color:#0aa5c9;}
+  .q-seg.active-2{background:#e4f8ec;color:#1b6e39;border-bottom-color:#2f9e57;}
+  .q-seg.active-3{background:#fde9f0;color:#ad1f52;border-bottom-color:#e8467c;}
+  .q-seg.active-4{background:#f3eaff;color:#5a2ca3;border-bottom-color:#8d5bd6;}
+
+  .kw-wrap{position:relative;display:inline-block;}
+  .code-sup{
+    position:absolute;top:-15px;left:50%;transform:translateX(-50%) scale(0.4);
+    font-size:12px;font-weight:900;line-height:1;padding:2px 6px;border-radius:999px;
+    color:#fff;opacity:0;pointer-events:none;white-space:nowrap;
+    transition:opacity .25s ease,transform .25s cubic-bezier(.2,1.4,.4,1);
+    box-shadow:0 2px 5px rgba(0,0,0,.18);
+  }
+  .code-sup.show{opacity:1;transform:translateX(-50%) scale(1);}
+  .code-sup.e-tag{background:var(--c-eddie);}
+  .code-sup.v-tag{background:var(--c-vera);}
+
+  /* ===== 雙軌主舞台：具象動畫區 ＋ ✏️ 實戰鉛筆算草紙 ===== */
+  #dualStage{
+    width:100%;max-width:1240px;
+    display:grid;grid-template-columns:1.34fr 0.90fr;gap:10px;
+    position:relative;flex:0 0 auto;
+  }
+  @media (max-width:860px){
+    #dualStage{grid-template-columns:1fr;gap:8px;}
+  }
+
+  .track-card{
+    background:var(--card);border:1.5px solid var(--border);border-radius:16px;
+    box-shadow:0 5px 18px rgba(25,55,90,.07);overflow:hidden;
+    display:flex;flex-direction:column;position:relative;
+  }
+  .track-card.paper-card{background:var(--paper);border-color:#dfd3b8;}
+  .track-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:6px 12px;font-size:13.5px;font-weight:800;
+    border-bottom:1px solid #e7eef6;background:#f7fafd;color:#385068;
+  }
+  .paper-card .track-head{
+    background:#fbf4e2;border-bottom:1px solid #e6d8b9;color:#6c5222;
+  }
+  .track-sub{font-size:12px;font-weight:700;opacity:.85;}
+  .track-svg{display:block;width:100%;height:auto;}
+
+  /* 開場大播放遮罩 */
+  #startOverlay{
+    position:absolute;inset:0;background:rgba(238,243,249,.58);
+    backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;
+    z-index:12;border-radius:16px;transition:opacity .25s ease;
+  }
+  #startOverlay.hidden{opacity:0;pointer-events:none;}
+  #startBigBtn{
+    border:none;border-radius:999px;background:linear-gradient(135deg,#0077ee,#0052b0);
+    color:#fff;font-size:clamp(18px,2.1vw,22px);font-weight:800;
+    padding:14px 28px;cursor:pointer;
+    box-shadow:0 8px 24px rgba(0,102,204,.38);
+    display:flex;align-items:center;gap:10px;
+    animation:pulseBtn 1.5s ease-in-out infinite;
+  }
+  @keyframes pulseBtn{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+
+  /* 互動小提問（「停一停，估一估」） */
+  #quizBox{
+    display:none;width:100%;max-width:1240px;margin-top:9px;
+    background:#fffdf4;border:2.5px solid #f0a500;border-radius:16px;
+    padding:11px 16px;box-shadow:0 6px 20px rgba(240,165,0,.18);
+  }
+  #quizBox.show{display:block;animation:popIn .3s cubic-bezier(.2,1.3,.4,1);}
+  @keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+  .quiz-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;}
+  .quiz-tag{font-size:14px;font-weight:800;color:#995d00;background:#ffefc2;padding:3px 10px;border-radius:999px;}
+  .quiz-skip{border:1px solid #d5c59b;background:#fff;color:#6c5b32;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:700;cursor:pointer;}
+  .quiz-q{font-size:clamp(17px,1.95vw,20px);font-weight:800;color:#23303e;margin-bottom:9px;}
+  .quiz-opts{display:flex;flex-wrap:wrap;gap:9px;}
+  .quiz-btn{
+    flex:1 1 170px;border:2px solid #cfdceb;background:#fff;color:#1f2d3d;
+    border-radius:12px;padding:10px 14px;font-size:17px;font-weight:800;
+    cursor:pointer;transition:all .15s;text-align:center;
+  }
+  .quiz-btn:hover{border-color:var(--primary);background:#f2f8ff;}
+  .quiz-btn.correct{background:#dcf5e6;border-color:#2f9e57;color:#1b6e39;}
+  .quiz-btn.wrong{background:#fdeaea;border-color:#d64545;color:#a82424;animation:shake .35s;}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  .quiz-fb{margin-top:8px;font-size:15.5px;font-weight:700;min-height:22px;line-height:1.45;}
+
+  /* 慶祝口訣 ＋ ✨ 高手秒殺思維 ＋ 🎯 挑戰類似題列 */
+  #celebrateBar{
+    display:none;width:100%;max-width:1240px;margin-top:9px;
+    background:linear-gradient(135deg,#fff7ed,#eef9f2);
+    border:2px solid #f4a261;border-radius:14px;padding:11px 16px;
+    align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    box-shadow:0 4px 14px rgba(232,84,31,.14);
+  }
+  #celebrateBar.show{display:flex;animation:popIn .35s cubic-bezier(.2,1.3,.4,1);}
+  .motto-wrap{flex:1 1 260px;}
+  .motto-title{font-size:14.5px;font-weight:800;color:#d9531e;margin-bottom:2px;}
+  .motto-text{font-size:clamp(16.5px,1.9vw,19.5px);font-weight:800;color:#1f2d3d;}
+  .cel-btns{display:flex;flex-wrap:wrap;gap:9px;align-items:center;}
+  #btnProTip{
+    border:none;border-radius:999px;background:linear-gradient(135deg,#7b4ce2,#5b2fc9);
+    color:#fff;font-size:16px;font-weight:800;padding:10px 18px;cursor:pointer;
+    box-shadow:0 4px 14px rgba(107,60,210,.32);white-space:nowrap;
+  }
+  #btnProTip:active{transform:scale(.97);}
+  #btnChallenge{
+    border:none;border-radius:999px;background:linear-gradient(135deg,#ff7b29,#e8541f);
+    color:#fff;font-size:16.5px;font-weight:800;padding:10px 20px;cursor:pointer;
+    box-shadow:0 4px 14px rgba(232,84,31,.35);white-space:nowrap;
+  }
+  #btnChallenge:active{transform:scale(.97);}
+
+  /* ===== ✨ 高手秒殺思維卡片（拉馬努金式湊十配對心算） ===== */
+  #proTipCard{
+    display:none;width:100%;max-width:1240px;margin-top:9px;
+    background:linear-gradient(135deg,#f8f4ff,#eef7ff);
+    border:2px solid #8d5bd6;border-radius:16px;padding:14px 16px;
+    box-shadow:0 8px 24px rgba(107,60,210,.15);
+  }
+  #proTipCard.show{display:block;animation:popIn .3s cubic-bezier(.2,1.3,.4,1);}
+  .pro-head{
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+    margin-bottom:8px;
+  }
+  .pro-title{font-size:clamp(17px,2vw,20px);font-weight:900;color:#5527a8;}
+  .pro-acts{display:flex;gap:8px;}
+  .pro-btn{
+    border:1.5px solid #bda6ea;background:#fff;color:#4f259c;
+    border-radius:999px;padding:5px 13px;font-size:14px;font-weight:800;cursor:pointer;
+  }
+  .pro-btn:active{background:#efe7ff;}
+  .pro-desc{
+    font-size:clamp(15.5px,1.75vw,17.5px);line-height:1.55;color:#253344;
+    font-weight:700;margin-bottom:10px;
+  }
+  #proSvg{
+    display:block;width:100%;max-width:780px;height:auto;margin:0 auto;
+    background:#fffdf5;border:1.5px solid #dfd3b8;border-radius:12px;
+  }
+
+  /* ===== 挑戰類似題面板 ===== */
+  #practiceView{
+    display:none;width:100%;max-width:1040px;background:#fff;
+    border:2px solid #8d5bd6;border-radius:16px;padding:16px;
+    box-shadow:0 8px 26px rgba(141,91,214,.16);
+  }
+  #practiceView.show{display:block;animation:popIn .3s ease;}
+  .pr-top{
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+    margin-bottom:10px;border-bottom:1px solid #e6ebf2;padding-bottom:8px;
+  }
+  .pr-title{font-size:20px;font-weight:800;color:#6a3cb5;}
+  .pr-actions{display:flex;flex-wrap:wrap;gap:8px;}
+  .pr-mini-btn{
+    border:1.5px solid #c9d6e4;background:#f5f8fc;color:#2b3d4f;
+    border-radius:999px;padding:6px 14px;font-size:14px;font-weight:800;cursor:pointer;
+  }
+  .pr-mini-btn.hint-btn{border-color:#d9a441;background:#fff8e6;color:#8a5a00;}
+  .pr-q{font-size:clamp(18px,2.1vw,22px);font-weight:800;line-height:1.52;margin-bottom:12px;}
+  #prHintWrap{
+    display:none;background:var(--paper);border:2px dashed #d7c396;
+    border-radius:14px;padding:8px 12px;margin-bottom:12px;
+  }
+  #prHintWrap.show{display:block;animation:popIn .25s ease;}
+  .pr-hint-lbl{font-size:13.5px;font-weight:800;color:#7a5b21;margin-bottom:4px;}
+  #prScratchSvg,#prVerifySvg{display:block;width:100%;height:auto;}
+  #prVerifyWrap{
+    display:none;background:#f5fbf7;border:1.5px solid #9bd6b0;
+    border-radius:14px;padding:8px 10px;margin-bottom:12px;
+  }
+  #prVerifyWrap.show{display:block;animation:popIn .3s ease;}
+  .pr-opts{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
+  .pr-opt{
+    flex:1 1 120px;border:2px solid #cddae8;background:#fff;color:#1f2d3d;
+    border-radius:14px;padding:12px 16px;font-size:21px;font-weight:800;cursor:pointer;
+  }
+  .pr-opt:hover{border-color:#8d5bd6;background:#f8f4ff;}
+  .pr-opt.correct{background:#dcf5e6;border-color:#2f9e57;color:#1b6e39;}
+  .pr-opt.wrong{background:#fdeaea;border-color:#d64545;color:#a82424;animation:shake .35s;}
+  #prFeedback{font-size:17px;font-weight:700;line-height:1.55;min-height:28px;}
+
+  /* ===== 底部固定停靠區：讀題／解題視覺分界字幕 ＋ 同色算式條 ＋ 大觸控掣 ===== */
+  #dock{
+    flex:0 0 auto;background:rgba(255,255,255,.98);
+    border-top:1px solid var(--border);
+    padding:7px 12px max(9px,env(safe-area-inset-bottom));
+    box-shadow:0 -4px 16px rgba(25,55,90,.07);z-index:25;
+  }
+  .dock-inner{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:6px;}
+  #narrBox{
+    background:#f2f7fd;border:1px solid #d9e6f4;border-radius:12px;
+    padding:7px 12px;font-size:clamp(16px,1.82vw,18.2px);line-height:1.55;
+    color:#1f2d3d;min-height:48px;display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;
+  }
+  .narr-lead{
+    display:inline-block;font-size:.86em;font-weight:900;
+    color:#0052a3;background:#dcecff;padding:1px 8px;border-radius:999px;
+  }
+  .narr-quote{
+    display:inline;font-weight:800;color:#16304b;
+    background:#fff7df;border-bottom:2px solid #eab308;
+    padding:1px 6px;border-radius:6px;
+  }
+  .narr-sep{color:#8fa3b8;font-weight:900;}
+  .narr-think{font-weight:700;color:#1f2d3d;}
+
+  .dock-bottom{
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px 12px;
+  }
+  #calcBar{
+    display:flex;align-items:center;flex-wrap:wrap;gap:3px 5px;
+    background:#f9fbfd;border:1.5px solid #dde6f0;border-radius:12px;
+    padding:4px 10px;min-height:42px;flex:1 1 260px;justify-content:center;
+  }
+  .ctok{
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:clamp(20px,2.3vw,26px);font-weight:900;
+    padding:1px 5px;border-radius:8px;opacity:0;transform:scale(.4);
+    transition:opacity .22s ease,transform .25s cubic-bezier(.2,1.4,.4,1),background .25s;
+  }
+  .ctok.show{opacity:1;transform:scale(1);}
+  .ctok.pulse{transform:scale(1.18);background:rgba(0,102,204,.1);}
+  .ctok.op{color:#5a6b7d;padding:1px 1px;}
+  .ctok.t-front{color:var(--c-front);}
+  .ctok.t-eddie{color:var(--c-eddie);}
+  .ctok.t-mid{color:var(--c-mid);}
+  .ctok.t-vera{color:var(--c-vera);}
+  .ctok.t-back{color:var(--c-back);}
+  .ctok.t-ans{color:var(--c-ans);font-size:clamp(23px,2.7vw,29px);background:#fff1eb;border:1.5px solid #f7bda5;}
+
+  .ctrl-row{display:flex;align-items:center;gap:7px;justify-content:center;flex:0 0 auto;}
+  .tool-btn{
+    height:42px;border-radius:999px;border:1.5px solid #cad7e6;
+    background:#f4f7fb;color:#243445;font-size:14.5px;font-weight:800;
+    padding:0 11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+  }
+  .tool-btn:active{background:#e3ecf6;}
+  .nav-btn{
+    width:44px;height:44px;border-radius:50%;border:none;
+    background:#e8f1fb;color:var(--primary);font-size:19px;font-weight:800;
+    cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+  }
+  .nav-btn:active{background:#d1e4f8;}
+  #btnPlay{
+    width:52px;height:52px;border-radius:50%;border:none;
+    background:var(--primary);color:#fff;font-size:23px;
+    cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 12px rgba(0,102,204,.34);
+  }
+  #btnPlay:active{background:var(--primary-dark);transform:scale(.96);}
+
+  @media (max-width:640px){
+    #header{padding:6px 8px;}
+    .ph-pill{font-size:12px;padding:3px 8px;}
+    #stageWrap{padding:7px 8px 10px;}
+    .question-card{padding:11px 11px 8px;}
+    #dock{padding:6px 8px max(8px,env(safe-area-inset-bottom));}
+    .dock-bottom{justify-content:center;}
+    #calcBar{flex:1 1 100%;min-height:38px;}
+    .tool-btn{height:38px;font-size:13.5px;padding:0 9px;}
+    .nav-btn{width:40px;height:40px;font-size:17px;}
+    #btnPlay{width:48px;height:48px;font-size:21px;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 頂部：可點擊階段進度列 -->
+  <header id="header">
+    <div class="head-top">
+      <span class="q-badge"><span class="tri"></span> 拓展練習 4・排隊計數（有間隔＋唔包主角）</span>
+      <span class="kbd-hint"><b>Space</b> 播放/暫停 · <b>←/→</b> 上下步 · <b>R</b> 重播</span>
+    </div>
+    <nav id="phases" aria-label="解題步驟進度"></nav>
+  </header>
+
+  <!-- 中間主區 -->
+  <main id="stageWrap">
+    <!-- 順讀題目卡：完整原句逐句高亮＋零迷失代號上標 E / V -->
+    <section class="question-card" id="questionCard">
+      <div class="q-zh">
+        <span class="q-seg" id="qseg-0">艾迪和薇兒在文具店排隊買文具，</span><span class="q-seg" id="qseg-1"><span class="kw-wrap">艾迪<span class="code-sup e-tag" id="supE1">E</span></span>的前面有 8 位顧客，</span><span class="q-seg" id="qseg-2"><span class="kw-wrap">薇兒<span class="code-sup v-tag" id="supV1">V</span></span>的後面有 14 位顧客。</span><span class="q-seg" id="qseg-3"><span class="kw-wrap">艾迪<span class="code-sup e-tag" id="supE2">E</span></span>在<span class="kw-wrap">薇兒<span class="code-sup v-tag" id="supV2">V</span></span>的前面，艾迪和薇兒之間有 6 位顧客。</span><span class="q-seg" id="qseg-4">那麼一共有多少位顧客在排隊？</span>
+      </div>
+      <div class="q-en">
+        <b>E</b>ddie and <b>V</b>era are queuing at the stationery store to buy supplies. There are 8 customers in front of Eddie, and 14 customers behind Vera. Eddie is in front of Vera, and there are 6 customers between Eddie and Vera. How many customers are in the queue in total?
+      </div>
+    </section>
+
+    <!-- 雙軌視覺舞台：左＝具象文具店排隊舞台，右＝✏️ 實戰鉛筆算草紙 -->
+    <div id="dualStage">
+      <div id="startOverlay">
+        <button id="startBigBtn" type="button">▶ 撳一下開始（廣東話實戰解題）</button>
+      </div>
+
+      <!-- 軌道 A：具象理解舞台（文具店排隊） -->
+      <div class="track-card">
+        <div class="track-head">
+          <span>🎬 具象理解舞台（文具店排隊）</span>
+          <span class="track-sub">先分兩段草擬 → 讀到中間間隔再填入</span>
+        </div>
+        <svg id="sceneA" class="track-svg" viewBox="0 0 960 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="文具店排隊計數動畫">
+          <defs>
+            <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f2f6fb"/>
+              <stop offset="100%" stop-color="#e4edf6"/>
+            </linearGradient>
+            <radialGradient id="penGradA" cx="35%" cy="30%" r="65%">
+              <stop offset="0%" stop-color="#7ec4ff"/>
+              <stop offset="45%" stop-color="#0066cc"/>
+              <stop offset="100%" stop-color="#003d80"/>
+            </radialGradient>
+            <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="4" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <!-- 文具店牆身與地板 -->
+          <rect x="0" y="0" width="960" height="440" fill="#fbfdff"/>
+          <rect x="14" y="274" width="932" height="40" rx="8" fill="url(#floorGrad)" stroke="#d3e0ee" stroke-width="1.5"/>
+          <line x1="106" y1="294" x2="928" y2="294" stroke="#c3d5e8" stroke-width="2" stroke-dasharray="8 6"/>
+
+          <!-- 頂部方向標示 -->
+          <g id="dirBar" opacity="1">
+            <rect x="24" y="12" width="174" height="30" rx="15" fill="#e6f7fb" stroke="#0aa5c9" stroke-width="1.6"/>
+            <text x="111" y="32" text-anchor="middle" font-size="15" font-weight="800" fill="#077792">◀ 前面（收銀處）</text>
+            <line x1="210" y1="27" x2="770" y2="27" stroke="#d5e2ee" stroke-width="2" stroke-dasharray="6 6"/>
+            <rect x="782" y="12" width="154" height="30" rx="15" fill="#e8f7ee" stroke="#2f9e57" stroke-width="1.6"/>
+            <text x="859" y="32" text-anchor="middle" font-size="15" font-weight="800" fill="#1e713c">後面（隊尾）▶</text>
+          </g>
+
+          <!-- 片尾慶祝橫幅 -->
+          <g id="celBanner" opacity="0">
+            <rect x="200" y="8" width="560" height="40" rx="20" fill="#fff1e6" stroke="#e8541f" stroke-width="2.5"/>
+            <text x="480" y="34" text-anchor="middle" font-size="21" font-weight="900" fill="#e8541f">🎉 啱晒！一共有 30 位顧客在排隊！ 🎉</text>
+          </g>
+
+          <!-- 文具店收銀處（具象場景地標） -->
+          <g id="storeCounter">
+            <!-- 招牌 -->
+            <rect x="18" y="84" width="84" height="34" rx="8" fill="#3b6ea5" stroke="#244b75" stroke-width="2"/>
+            <text x="60" y="106" text-anchor="middle" font-size="15" font-weight="900" fill="#ffffff">✏️ 文具店</text>
+            <!-- 貨架小鉛筆裝飾 -->
+            <rect x="24" y="130" width="72" height="58" rx="6" fill="#fff8eb" stroke="#d8c39e" stroke-width="1.5"/>
+            <rect x="34" y="142" width="10" height="36" rx="2" fill="#f5a623"/>
+            <rect x="50" y="146" width="10" height="32" rx="2" fill="#4e8cb5"/>
+            <rect x="66" y="138" width="10" height="40" rx="2" fill="#e8467c"/>
+            <!-- 收銀枱 -->
+            <rect x="18" y="216" width="84" height="68" rx="7" fill="#dfb882" stroke="#b38247" stroke-width="2"/>
+            <rect x="28" y="200" width="38" height="18" rx="3" fill="#4f6478"/>
+            <text x="60" y="256" text-anchor="middle" font-size="13.5" font-weight="900" fill="#6b4519">收銀處</text>
+          </g>
+
+          <!-- 未知空隙標示（未讀到「艾迪和薇兒之間有 6 位顧客」前） -->
+          <g id="gapBoxA" opacity="0">
+            <rect x="358" y="156" width="144" height="114" rx="14" fill="#fff7e6" stroke="#d9941e" stroke-width="2.4" stroke-dasharray="7 5"/>
+            <text x="430" y="206" text-anchor="middle" font-size="32" font-weight="900" fill="#c97b00">?</text>
+            <text x="430" y="234" text-anchor="middle" font-size="14" font-weight="800" fill="#9c6200">未知距離</text>
+            <line id="gapSlashA" x1="374" y1="256" x2="486" y2="168" stroke="#d64545" stroke-width="5" stroke-linecap="round" stroke-dasharray="150" stroke-dashoffset="150"/>
+          </g>
+
+          <!-- 區域高亮層（五大專屬色三部曲） -->
+          <g id="regionsLayer"></g>
+
+          <!-- 中間間隔 6 位提示 -->
+          <g id="midBanner" opacity="0">
+            <path d="M 358 134 L 358 144 M 358 139 L 504 139 M 504 134 L 504 144" fill="none" stroke="#c2255c" stroke-width="2.4" stroke-linecap="round"/>
+            <rect x="364" y="102" width="134" height="26" rx="13" fill="#fde9f0" stroke="#e8467c" stroke-width="1.8"/>
+            <text x="431" y="120" text-anchor="middle" font-size="13.5" font-weight="800" fill="#ad1f52">中間 6 位顧客</text>
+          </g>
+
+          <!-- 30 位具象顧客公仔層 -->
+          <g id="peopleLayer"></g>
+
+          <!-- 隊伍下方區段標籤 -->
+          <g id="zoneLabelsLayer"></g>
+
+          <!-- 單層圓圈數字徽章層 -->
+          <g id="badgesLayer"></g>
+
+          <!-- 忠實作答區（括號填數） -->
+          <g id="answerArea">
+            <rect x="190" y="366" width="580" height="58" rx="16" fill="#f5f9ff" stroke="#cfdceb" stroke-width="1.8"/>
+            <text x="480" y="405" text-anchor="middle" font-size="29" font-weight="800" fill="#1f2d3d" font-family="'Songti TC','PingFang TC',serif">
+              一共有（　　　）位顧客在排隊。
+            </text>
+            <circle id="ansGlowRing" cx="445" cy="395" r="28" fill="none" stroke="#2f9e57" stroke-width="4" opacity="0"/>
+            <text id="ansValue" x="445" y="407" text-anchor="middle" font-size="36" font-weight="900" fill="#e8541f" opacity="0">30</text>
+          </g>
+
+          <!-- 彩紙慶祝層 -->
+          <g id="confettiLayer"></g>
+
+          <!-- 視線嚮導筆尖（軌道 A） -->
+          <g id="penA" opacity="0">
+            <ellipse cx="2" cy="14" rx="10" ry="4.5" fill="rgba(0,40,100,.18)"/>
+            <circle cx="0" cy="0" r="10.5" fill="url(#penGradA)" stroke="#ffffff" stroke-width="2"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- 軌道 B：✏️ 實戰鉛筆算草紙（極簡：8_  E  6_  V  14_） -->
+      <div class="track-card paper-card">
+        <div class="track-head">
+          <span>✏️ 實戰鉛筆算草紙</span>
+          <span class="track-sub">極簡代號・筆尖最短路徑</span>
+        </div>
+        <svg id="sceneB" class="track-svg" viewBox="0 0 560 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="鉛筆算草紙最短筆劃速記">
+          <defs>
+            <pattern id="gridPat" width="28" height="28" patternUnits="userSpaceOnUse">
+              <path d="M 28 0 L 0 0 0 28" fill="none" stroke="#efe6cf" stroke-width="1"/>
+            </pattern>
+            <radialGradient id="penGradB" cx="35%" cy="30%" r="65%">
+              <stop offset="0%" stop-color="#7ec4ff"/>
+              <stop offset="45%" stop-color="#0066cc"/>
+              <stop offset="100%" stop-color="#003d80"/>
+            </radialGradient>
+          </defs>
+
+          <rect x="0" y="0" width="560" height="440" fill="#fffdf5"/>
+          <rect x="0" y="0" width="560" height="440" fill="url(#gridPat)"/>
+          <line x1="34" y1="0" x2="34" y2="440" stroke="#f2c4c4" stroke-width="1.6"/>
+
+          <!-- 角落極簡對照表（零迷失） -->
+          <g id="scLegend">
+            <g id="legE" opacity="0">
+              <rect x="336" y="14" width="96" height="26" rx="13" fill="#fff0e1" stroke="#f4711f" stroke-width="1.4"/>
+              <text x="384" y="32" text-anchor="middle" font-size="14" font-weight="900" fill="#c84b00">E = 艾迪</text>
+            </g>
+            <g id="legV" opacity="0">
+              <rect x="442" y="14" width="98" height="26" rx="13" fill="#f3eaff" stroke="#8d5bd6" stroke-width="1.4"/>
+              <text x="491" y="32" text-anchor="middle" font-size="14" font-weight="900" fill="#5d2fa8">V = 薇兒</text>
+            </g>
+          </g>
+
+          <!-- 第 0 步：極簡方向線（前 ◀ ——— ▶ 後） -->
+          <g id="scDir" opacity="0">
+            <text x="72" y="70" text-anchor="middle" font-size="15" font-weight="800" fill="#087c98">前</text>
+            <path id="scDirLine" d="M 96 64 L 464 64" fill="none" stroke="#36414f" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="380" stroke-dashoffset="380"/>
+            <path d="M 106 57 L 94 64 L 106 71" fill="none" stroke="#36414f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 454 57 L 466 64 L 454 71" fill="none" stroke="#36414f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="488" y="70" text-anchor="middle" font-size="15" font-weight="800" fill="#217840">後</text>
+          </g>
+
+          <!-- 草稿碎片一：8 (快底線) ＋ E -->
+          <g id="scFragLeft" opacity="0">
+            <rect id="scFrontHi" x="56" y="132" width="68" height="58" rx="10" fill="#0aa5c9" opacity="0.16"/>
+            <text id="scFrontNum" x="90" y="172" text-anchor="middle" font-size="36" font-weight="900" fill="#077792" opacity="0">8</text>
+            <path id="scFrontUL" d="M 66 184 Q 90 190 114 184" fill="none" stroke="#36414f" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="60" stroke-dashoffset="60"/>
+
+            <circle id="scEddieHi" cx="170" cy="160" r="26" fill="#f4711f" opacity="0.18"/>
+            <text id="scEddieChar" x="170" y="172" text-anchor="middle" font-size="34" font-weight="900" fill="#c84b00" opacity="0">E</text>
+            <g id="scEddieOne" opacity="0">
+              <text x="170" y="216" text-anchor="middle" font-size="20" font-weight="900" fill="#f4711f">↑ 1</text>
+            </g>
+          </g>
+
+          <!-- 中間未知空隙「?」與一筆快斜線「/」 -->
+          <g id="scGap" opacity="0">
+            <text x="278" y="172" text-anchor="middle" font-size="36" font-weight="900" fill="#c97b00">?</text>
+            <line id="scGapSlash" x1="256" y1="186" x2="300" y2="136" stroke="#d64545" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="80" stroke-dashoffset="80"/>
+          </g>
+
+          <!-- 中間 6 位顧客速記：|  6_  | -->
+          <g id="scMid" opacity="0">
+            <line id="scDiv1" x1="216" y1="128" x2="216" y2="196" stroke="#e8467c" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="80" stroke-dashoffset="80"/>
+            <rect id="scMidHi" x="236" y="132" width="84" height="58" rx="10" fill="#e8467c" opacity="0.16"/>
+            <text id="scMidNum" x="278" y="172" text-anchor="middle" font-size="36" font-weight="900" fill="#ad1f52" opacity="0">6</text>
+            <path id="scMidUL" d="M 252 184 Q 278 190 304 184" fill="none" stroke="#36414f" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="60" stroke-dashoffset="60"/>
+            <text id="scMidSub" x="278" y="216" text-anchor="middle" font-size="14" font-weight="900" fill="#ad1f52" opacity="0">中間</text>
+            <line id="scDiv2" x1="340" y1="128" x2="340" y2="196" stroke="#e8467c" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="80" stroke-dashoffset="80"/>
+          </g>
+
+          <!-- 草稿碎片二：V ＋ 14 (快底線) -->
+          <g id="scFragRight" opacity="0">
+            <circle id="scVeraHi" cx="386" cy="160" r="26" fill="#8d5bd6" opacity="0.18"/>
+            <text id="scVeraChar" x="386" y="172" text-anchor="middle" font-size="34" font-weight="900" fill="#5d2fa8" opacity="0">V</text>
+            <g id="scVeraOne" opacity="0">
+              <text x="386" y="216" text-anchor="middle" font-size="20" font-weight="900" fill="#8d5bd6">↑ 1</text>
+            </g>
+
+            <rect id="scBackHi" x="432" y="132" width="80" height="58" rx="10" fill="#2f9e57" opacity="0.16"/>
+            <text id="scBackNum" x="472" y="172" text-anchor="middle" font-size="36" font-weight="900" fill="#1e713c" opacity="0">14</text>
+            <path id="scBackUL" d="M 442 184 Q 472 190 502 184" fill="none" stroke="#36414f" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="70" stroke-dashoffset="70"/>
+          </g>
+
+          <!-- 極簡速度提示條 -->
+          <g id="scTip" opacity="0">
+            <rect x="52" y="242" width="470" height="30" rx="10" fill="#f7efda" stroke="#dfc996" stroke-width="1.3"/>
+            <text id="scTipText" x="287" y="262" text-anchor="middle" font-size="14" font-weight="800" fill="#6b4e16">
+              ⚡ 30 個人唔使畫公仔！寫 8、E、6、V、14，5 秒搞掂！
+            </text>
+          </g>
+
+          <!-- 草稿紙底部手寫算式區（8 + 1 + 6 + 1 + 14 = 30） -->
+          <g id="scEqArea">
+            <line x1="50" y1="292" x2="526" y2="292" stroke="#e2d5b5" stroke-width="1.5" stroke-dasharray="5 5"/>
+            <text x="54" y="322" font-size="15" font-weight="800" fill="#7a6845">算式：</text>
+            <g font-size="30" font-weight="900" font-family="'PingFang TC','Microsoft JhengHei',sans-serif">
+              <text id="se0"  x="76"  y="372" text-anchor="middle" fill="#0aa5c9" opacity="0">8</text>
+              <text id="se1"  x="110" y="372" text-anchor="middle" fill="#5a6b7d" opacity="0">+</text>
+              <text id="se2"  x="144" y="372" text-anchor="middle" fill="#f4711f" opacity="0">1</text>
+              <text id="se3"  x="178" y="372" text-anchor="middle" fill="#5a6b7d" opacity="0">+</text>
+              <text id="se4"  x="212" y="372" text-anchor="middle" fill="#e8467c" opacity="0">6</text>
+              <text id="se5"  x="246" y="372" text-anchor="middle" fill="#5a6b7d" opacity="0">+</text>
+              <text id="se6"  x="280" y="372" text-anchor="middle" fill="#8d5bd6" opacity="0">1</text>
+              <text id="se7"  x="314" y="372" text-anchor="middle" fill="#5a6b7d" opacity="0">+</text>
+              <text id="se8"  x="358" y="372" text-anchor="middle" fill="#2f9e57" opacity="0">14</text>
+              <text id="se9"  x="408" y="372" text-anchor="middle" fill="#5a6b7d" opacity="0">=</text>
+              <text id="se10" x="466" y="374" text-anchor="middle" fill="#e8541f" font-size="36" opacity="0">30</text>
+            </g>
+            <line id="scAnsUL1" x1="436" y1="386" x2="496" y2="386" stroke="#e8541f" stroke-width="3" stroke-dasharray="70" stroke-dashoffset="70"/>
+            <line id="scAnsUL2" x1="436" y1="393" x2="496" y2="393" stroke="#e8541f" stroke-width="3" stroke-dasharray="70" stroke-dashoffset="70"/>
+          </g>
+
+          <!-- 視線嚮導筆尖（軌道 B） -->
+          <g id="penB" opacity="0">
+            <ellipse cx="2" cy="14" rx="9" ry="4" fill="rgba(0,40,100,.18)"/>
+            <circle cx="0" cy="0" r="9.5" fill="url(#penGradB)" stroke="#ffffff" stroke-width="2"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 互動小提問（「停一停，估一估」） -->
+    <section id="quizBox" aria-live="polite">
+      <div class="quiz-head">
+        <span class="quiz-tag">🤔 停一停，估一估</span>
+        <button class="quiz-skip" id="quizSkipBtn" type="button">跳過繼續 ▶</button>
+      </div>
+      <div class="quiz-q" id="quizQuestion"></div>
+      <div class="quiz-opts" id="quizOptions"></div>
+      <div class="quiz-fb" id="quizFeedback"></div>
+    </section>
+
+    <!-- 結尾慶祝口訣 ＋ ✨ 高手秒殺思維 ＋ 🎯 挑戰類似題 -->
+    <section id="celebrateBar">
+      <div class="motto-wrap">
+        <div class="motto-title">💡 考場實戰口訣</div>
+        <div class="motto-text">「講『前面、中間、後面』全部唔包主角！記得加埋兩位主角！」</div>
+      </div>
+      <div class="cel-btns">
+        <button id="btnProTip" type="button">✨ 高手秒殺思維</button>
+        <button id="btnChallenge" type="button">🎯 挑戰類似題</button>
+      </div>
+    </section>
+
+    <!-- ✨ 高手秒殺思維（拉馬努金式湊十配對心算：8 + (E+V) = 10，6 + 14 = 20 → 30！） -->
+    <section id="proTipCard" aria-live="polite">
+      <div class="pro-head">
+        <span class="pro-title">✨ 高手秒殺思維：湊十配對・一秒心算（零進位失誤！）</span>
+        <div class="pro-acts">
+          <button class="pro-btn" id="btnProSpeak" type="button">🔊 聽廣東話講解</button>
+          <button class="pro-btn" id="btnProClose" type="button">收起 ✕</button>
+        </div>
+      </div>
+      <div class="pro-desc">
+        五個數 <strong>8 + 1 + 6 + 1 + 14</strong> 唔使由左到右慢慢進位！高手一眼搵「好朋友湊整十」：先將兩位主角 <strong>E + V = 2</strong> 配前面 <strong>8</strong>，啱啱湊成 <strong>10</strong>；中間 <strong>6</strong> 配後面 <strong>14</strong>，啱啱湊成 <strong>20</strong>！心算 <strong>10 + 20 = 30</strong>，一秒秒殺又唔會計錯！
+      </div>
+      <svg id="proSvg" viewBox="0 0 780 176" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="高手湊十配對示意圖">
+        <!-- 上方拱橋：8 + (1+1) = 10 -->
+        <path d="M 104 68 C 104 16, 356 16, 356 68" fill="none" stroke="#f4711f" stroke-width="3.2" stroke-dasharray="6 4"/>
+        <path d="M 192 68 C 192 38, 356 38, 356 68" fill="none" stroke="#f4711f" stroke-width="2.4" stroke-dasharray="4 4"/>
+        <rect x="172" y="8" width="124" height="28" rx="14" fill="#fff0e1" stroke="#f4711f" stroke-width="2"/>
+        <text x="234" y="27" text-anchor="middle" font-size="16" font-weight="900" fill="#c84b00">湊成 10！</text>
+
+        <!-- 五個數字方塊 -->
+        <rect x="74" y="70" width="60" height="44" rx="10" fill="#e0f7fc" stroke="#0aa5c9" stroke-width="2.2"/>
+        <text x="104" y="102" text-anchor="middle" font-size="28" font-weight="900" fill="#077792">8</text>
+
+        <text x="148" y="100" text-anchor="middle" font-size="22" font-weight="900" fill="#5a6b7d">+</text>
+
+        <rect x="162" y="70" width="60" height="44" rx="10" fill="#fff0e1" stroke="#f4711f" stroke-width="2.2"/>
+        <text x="192" y="102" text-anchor="middle" font-size="24" font-weight="900" fill="#c84b00">1(E)</text>
+
+        <text x="236" y="100" text-anchor="middle" font-size="22" font-weight="900" fill="#5a6b7d">+</text>
+
+        <rect x="250" y="70" width="60" height="44" rx="10" fill="#fde9f0" stroke="#e8467c" stroke-width="2.2"/>
+        <text x="280" y="102" text-anchor="middle" font-size="28" font-weight="900" fill="#ad1f52">6</text>
+
+        <text x="324" y="100" text-anchor="middle" font-size="22" font-weight="900" fill="#5a6b7d">+</text>
+
+        <rect x="338" y="70" width="60" height="44" rx="10" fill="#f3eaff" stroke="#8d5bd6" stroke-width="2.2"/>
+        <text x="368" y="102" text-anchor="middle" font-size="24" font-weight="900" fill="#5d2fa8">1(V)</text>
+
+        <text x="412" y="100" text-anchor="middle" font-size="22" font-weight="900" fill="#5a6b7d">+</text>
+
+        <rect x="426" y="70" width="68" height="44" rx="10" fill="#e4f8ec" stroke="#2f9e57" stroke-width="2.2"/>
+        <text x="460" y="102" text-anchor="middle" font-size="28" font-weight="900" fill="#1e713c">14</text>
+
+        <!-- 下方拱橋：6 + 14 = 20 -->
+        <path d="M 280 116 C 280 156, 460 156, 460 116" fill="none" stroke="#2f9e57" stroke-width="3.2" stroke-dasharray="6 4"/>
+        <rect x="308" y="140" width="124" height="28" rx="14" fill="#e4f8ec" stroke="#2f9e57" stroke-width="2"/>
+        <text x="370" y="159" text-anchor="middle" font-size="16" font-weight="900" fill="#1e713c">湊成 20！</text>
+
+        <!-- 右邊秒殺結果 -->
+        <text x="530" y="102" text-anchor="middle" font-size="28" font-weight="900" fill="#5a6b7d">⇒</text>
+        <rect x="562" y="64" width="194" height="56" rx="16" fill="#fff1eb" stroke="#e8541f" stroke-width="2.6"/>
+        <text x="659" y="102" text-anchor="middle" font-size="28" font-weight="900" fill="#e8541f">10 + 20 = 30</text>
+      </svg>
+    </section>
+
+    <!-- 挑戰類似題面板 -->
+    <section id="practiceView">
+      <div class="pr-top">
+        <span class="pr-title">🎯 挑戰類似題（考場實戰）</span>
+        <div class="pr-actions">
+          <button class="pr-mini-btn hint-btn" id="prHintBtn" type="button">✏️ 睇草稿提示</button>
+          <button class="pr-mini-btn" id="prNewBtn" type="button">🎲 再抽一題</button>
+          <button class="pr-mini-btn" id="prBackBtn" type="button">⬅ 返回原題動畫</button>
+        </div>
+      </div>
+      <div class="pr-q" id="prQuestion"></div>
+      <div id="prHintWrap">
+        <div class="pr-hint-lbl">✏️ 最短筆劃草稿提示（E = 艾迪，V = 薇兒，記得計埋 E 同 V！）：</div>
+        <svg id="prScratchSvg" viewBox="0 0 640 124" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div id="prVerifyWrap">
+        <svg id="prVerifySvg" viewBox="0 0 960 190" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="pr-opts" id="prOpts"></div>
+      <div id="prFeedback"></div>
+    </section>
+  </main>
+
+  <!-- 底部固定停靠區：讀題／解題視覺分界字幕 ＋ 同色算式條 ＋ 大觸控掣 -->
+  <footer id="dock">
+    <div class="dock-inner">
+      <div id="narrBox">
+        <span class="narr-think">撳中間藍色掣開始，順住讀原題，學用 E、V 極簡草稿 5 秒搞掂 30 人排隊題！</span>
+      </div>
+      <div class="dock-bottom">
+        <div id="calcBar" aria-label="解題算草區"></div>
+        <div class="ctrl-row">
+          <button class="tool-btn" id="btnMute" type="button" title="靜音／開聲">🔊</button>
+          <button class="tool-btn" id="btnSpeed" type="button" title="切換語速與動畫速度">🚶 正常</button>
+          <button class="nav-btn" id="btnPrev" type="button" title="上一步">⏮</button>
+          <button id="btnPlay" type="button" title="播放／暫停">▶</button>
+          <button class="nav-btn" id="btnNext" type="button" title="下一步">⏭</button>
+          <button class="nav-btn" id="btnReplay" type="button" title="重新播放">🔄</button>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   §1  集中 CONFIG（題目參數、代號 E/V、廣東話異讀映射表、步驟）
+   ============================================================ */
+var CONFIG = {
+  frontCount: 8,
+  midCount: 6,
+  backCount: 14,
+  total: 30,
+  codes: { eddie: 'E', vera: 'V' },
+  // 廣東話異讀字情境映射表（字幕保正字，TTS 轉必讀準之同音字）
+  HETERO_MAP: [
+    ['畫條', '劃條'],
+    ['畫一', '劃一'],
+    ['畫個', '劃個'],
+    ['畫線', '劃線'],
+    ['畫底線', '劃底線'],
+    ['畫公仔', '劃公仔'],
+    ['畫人', '劃人'],
+    ['畫晒', '劃晒'],
+    ['唔畫', '唔劃'],
+    ['數一次', '嫂一次'],
+    ['數到', '嫂到']
+  ],
+  colors: {
+    front: '#0aa5c9',
+    frontDark: '#077792',
+    eddie: '#f4711f',
+    eddieDark: '#b84c0a',
+    mid: '#e8467c',
+    midDark: '#ad1f52',
+    vera: '#8d5bd6',
+    veraDark: '#6135a6',
+    back: '#2f9e57',
+    backDark: '#1e713c',
+    ans: '#e8541f'
+  },
+  trackA: {
+    floorY: 286,
+    // 分離草擬態：前 8 (0..7) + 艾迪 (8) 喺左；薇兒 (15) + 後 14 (16..29) 喺右
+    sepLeftX0: 118, sepDx: 23,
+    sepEddieX: 312,
+    sepVeraX: 540,
+    sepBackX0: 574,
+    // 拼合終態：前 8 (124..299)、E (334)、中 6 (369..494)、V (529)、後 14 (564..889)
+    snapFrontX0: 124, snapDx: 25,
+    snapEddieX: 334,
+    snapMidX0: 369,
+    snapVeraX: 529,
+    snapBackX0: 564
+  },
+  trackB: {
+    leftSepDx: -8,
+    rightSepDx: 8
+  },
+  flash: { cycles: 3, hi: 0.78, lo: 0.06, settle: 0.24 },
+  phases: [
+    { id: 0, label: '1. 定方向', firstStep: 0 },
+    { id: 1, label: '2. 記左段', firstStep: 1 },
+    { id: 2, label: '3. 記右段', firstStep: 3 },
+    { id: 3, label: '4. 填中間 6 位', firstStep: 5 },
+    { id: 4, label: '5. 五段列式', firstStep: 6 },
+    { id: 5, label: '6. 寫答案', firstStep: 12 }
+  ],
+  calcTokens: [
+    { txt: '8', cls: 't-front' },
+    { txt: '+', cls: 'op' },
+    { txt: '1', cls: 't-eddie' },
+    { txt: '+', cls: 'op' },
+    { txt: '6', cls: 't-mid' },
+    { txt: '+', cls: 'op' },
+    { txt: '1', cls: 't-vera' },
+    { txt: '+', cls: 'op' },
+    { txt: '14', cls: 't-back' },
+    { txt: '=', cls: 'op' },
+    { txt: '30', cls: 't-ans' }
+  ],
+  proTipTTS: '高手秒殺思維，湊十配對！五個數唔使慢慢進位。兩位主角 E 加 V 等於 2，配前面 8，啱啱湊成 10！中間 6 配後面 14，啱啱湊成 20！10 加 20 等於 30，一秒心算唔會計錯！',
+  quizzes: [
+    {
+      question: '望住右邊草稿，點列算式先唔會計漏艾迪 E 同薇兒 V？',
+      options: [
+        { label: '8 + 6 + 14', correct: false, fb: '💡 漏咗排緊隊嘅艾迪 E 同薇兒 V（2 位）喎！再揀過。' },
+        { label: '8 + 1 + 6 + 1 + 14', correct: true, fb: '🎉 啱晒！計埋 E 同 V 兩個主角，一個都冇漏！' },
+        { label: '8 + 1 + 6 + 14', correct: false, fb: '💡 爭 1 位！有 E 同 V 兩個主角，要加兩個 1 呀，再試吓。' }
+      ]
+    },
+    {
+      question: '8 + 1 + 6 + 1 + 14，一共有幾多位顧客在排隊？',
+      options: [
+        { label: '28 位', correct: false, fb: '💡 28 係 8 + 6 + 14，漏咗 E 同 V 兩位主角！再計多次。' },
+        { label: '29 位', correct: false, fb: '💡 爭 1 位！8 + 1 + 6 + 1 = 16，16 + 14 係幾多？' },
+        { label: '30 位', correct: true, fb: '🎉 完全正確！16 + 14 = 30 位顧客！' }
+      ]
+    }
+  ]
+};
+
+var NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs, parent){
+  var el = document.createElementNS(NS, tag);
+  if (attrs) Object.keys(attrs).forEach(function(k){ el.setAttribute(k, attrs[k]); });
+  if (parent) parent.appendChild(el);
+  return el;
+}
+function clamp(v, a, b){ return v < a ? a : (v > b ? b : v); }
+function easeOutCubic(p){ return 1 - Math.pow(1 - clamp(p,0,1), 3); }
+function easeIO(p){ p = clamp(p,0,1); return p < 0.5 ? 4*p*p*p : 1 - Math.pow(-2*p+2, 3)/2; }
+function backOut(p){ p = clamp(p,0,1); var s = 1.65; p -= 1; return p*p*((s+1)*p + s) + 1; }
+function lerp(a, b, q){ return a + (b - a) * q; }
+
+function trilogyFillAlpha(p){
+  if (p <= 0) return 0;
+  if (p >= 0.72) return CONFIG.flash.settle;
+  var local = (p / 0.72) * CONFIG.flash.cycles;
+  var frac = local - Math.floor(local);
+  return frac < 0.54 ? CONFIG.flash.hi : CONFIG.flash.lo;
+}
+
+/* ============================================================
+   §2  Web Audio 輕音效 ＋ 廣東話 TTS 引擎（含異讀字分軌校準）
+   ============================================================ */
+var audioCtx = null;
+var muted = false;
+var speedRate = 1.0;
+var hkVoice = null;
+var speechDone = true;
+var speechSerial = 0;
+
+function ensureAudioCtx(){
+  if (!audioCtx) {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) { try { audioCtx = new AC(); } catch(e){} }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    try { audioCtx.resume(); } catch(e){}
+  }
+  return audioCtx;
+}
+
+function playSfx(type){
+  if (muted) return;
+  var ctx = ensureAudioCtx();
+  if (!ctx) return;
+  var now = ctx.currentTime;
+  try {
+    if (type === 'pop') {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(390, now);
+      o.frequency.exponentialRampToValueAtTime(670, now + 0.08);
+      g.gain.setValueAtTime(0.001, now);
+      g.gain.linearRampToValueAtTime(0.11, now + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(now); o.stop(now + 0.1);
+    } else if (type === 'whoosh') {
+      var o2 = ctx.createOscillator(), g2 = ctx.createGain();
+      o2.type = 'triangle';
+      o2.frequency.setValueAtTime(520, now);
+      o2.frequency.exponentialRampToValueAtTime(220, now + 0.12);
+      g2.gain.setValueAtTime(0.06, now);
+      g2.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+      o2.connect(g2); g2.connect(ctx.destination);
+      o2.start(now); o2.stop(now + 0.14);
+    } else if (type === 'ding') {
+      [523.25, 659.25, 783.99].forEach(function(freq, i){
+        var o3 = ctx.createOscillator(), g3 = ctx.createGain();
+        o3.type = 'sine';
+        o3.frequency.setValueAtTime(freq, now + i * 0.055);
+        g3.gain.setValueAtTime(0.001, now + i * 0.055);
+        g3.gain.linearRampToValueAtTime(0.11, now + i * 0.055 + 0.015);
+        g3.gain.exponentialRampToValueAtTime(0.001, now + i * 0.055 + 0.24);
+        o3.connect(g3); g3.connect(ctx.destination);
+        o3.start(now + i * 0.055); o3.stop(now + i * 0.055 + 0.26);
+      });
+    } else if (type === 'wrong') {
+      var o4 = ctx.createOscillator(), g4 = ctx.createGain();
+      o4.type = 'sine';
+      o4.frequency.setValueAtTime(240, now);
+      o4.frequency.linearRampToValueAtTime(185, now + 0.16);
+      g4.gain.setValueAtTime(0.1, now);
+      g4.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      o4.connect(g4); g4.connect(ctx.destination);
+      o4.start(now); o4.stop(now + 0.19);
+    } else if (type === 'cheer') {
+      [523.25, 659.25, 783.99, 1046.5].forEach(function(freq, i){
+        var o5 = ctx.createOscillator(), g5 = ctx.createGain();
+        o5.type = 'triangle';
+        o5.frequency.setValueAtTime(freq, now + i * 0.09);
+        g5.gain.setValueAtTime(0.001, now + i * 0.09);
+        g5.gain.linearRampToValueAtTime(0.13, now + i * 0.09 + 0.02);
+        g5.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.38);
+        o5.connect(g5); g5.connect(ctx.destination);
+        o5.start(now + i * 0.09); o5.stop(now + i * 0.09 + 0.4);
+      });
+    }
+  } catch(e){}
+}
+
+function pickHKVoice(){
+  if (!('speechSynthesis' in window)) return null;
+  var vs = speechSynthesis.getVoices() || [];
+  return vs.find(function(x){ return /^zh[-_]HK/i.test(x.lang); })
+      || vs.find(function(x){ return /yue|cantonese|hong\s*kong/i.test(x.lang + ' ' + x.name); })
+      || vs.find(function(x){ return /^zh/i.test(x.lang); })
+      || null;
+}
+if ('speechSynthesis' in window) {
+  hkVoice = pickHKVoice();
+  speechSynthesis.onvoiceschanged = function(){ hkVoice = pickHKVoice(); };
+}
+
+function cleanForTTS(text){
+  var s = String(text || '');
+  for (var i = 0; i < CONFIG.HETERO_MAP.length; i++) {
+    s = s.split(CONFIG.HETERO_MAP[i][0]).join(CONFIG.HETERO_MAP[i][1]);
+  }
+  return s
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F]/gu, '')
+    .replace(/[\[\]|←→]/g, ' ')
+    .replace(/[「」『』（）()]/g, '，')
+    .replace(/＋|\+/g, '加')
+    .replace(/−|-/g, '減')
+    .replace(/×/g, '乘')
+    .replace(/÷/g, '除')
+    .replace(/=/g, '等於')
+    .replace(/——|—/g, '，')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function stopSpeech(){
+  speechSerial++;
+  speechDone = true;
+  if ('speechSynthesis' in window) {
+    try { speechSynthesis.cancel(); } catch(e){}
+  }
+}
+
+function speakCantonese(text, onFinished){
+  stopSpeech();
+  var mySerial = ++speechSerial;
+  if (muted || !('speechSynthesis' in window)) {
+    speechDone = true;
+    if (onFinished) onFinished();
+    return;
+  }
+  var clean = cleanForTTS(text);
+  if (!clean) {
+    speechDone = true;
+    if (onFinished) onFinished();
+    return;
+  }
+  speechDone = false;
+  try {
+    var u = new SpeechSynthesisUtterance(clean);
+    u.lang = 'zh-HK';
+    u.rate = speedRate;
+    u.pitch = 1.04;
+    if (!hkVoice) hkVoice = pickHKVoice();
+    if (hkVoice) u.voice = hkVoice;
+    u.onend = function(){
+      if (mySerial === speechSerial) { speechDone = true; if (onFinished) onFinished(); }
+    };
+    u.onerror = function(){
+      if (mySerial === speechSerial) { speechDone = true; if (onFinished) onFinished(); }
+    };
+    speechSynthesis.speak(u);
+  } catch(e){
+    speechDone = true;
+    if (onFinished) onFinished();
+  }
+}
+
+/* ============================================================
+   §3  軌道 A（文具店 30 位具象顧客公仔：普通顧客 / 艾迪 E / 薇兒 V）
+   ============================================================ */
+var regionsLayer = document.getElementById('regionsLayer');
+var peopleLayer = document.getElementById('peopleLayer');
+var zoneLabelsLayer = document.getElementById('zoneLabelsLayer');
+var badgesLayer = document.getElementById('badgesLayer');
+var confettiLayer = document.getElementById('confettiLayer');
+var penA = document.getElementById('penA');
+var penB = document.getElementById('penB');
+var midBanner = document.getElementById('midBanner');
+var gapBoxA = document.getElementById('gapBoxA');
+var gapSlashA = document.getElementById('gapSlashA');
+var dirBar = document.getElementById('dirBar');
+var celBanner = document.getElementById('celBanner');
+var ansGlowRing = document.getElementById('ansGlowRing');
+var ansValue = document.getElementById('ansValue');
+
+function sepPersonX(idx){
+  var A = CONFIG.trackA;
+  if (idx < 8) return A.sepLeftX0 + idx * A.sepDx;
+  if (idx === 8) return A.sepEddieX;
+  if (idx < 15) return snapPersonX(idx);
+  if (idx === 15) return A.sepVeraX;
+  return A.sepBackX0 + (idx - 16) * A.sepDx;
+}
+function snapPersonX(idx){
+  var A = CONFIG.trackA;
+  if (idx < 8) return A.snapFrontX0 + idx * A.snapDx;
+  if (idx === 8) return A.snapEddieX;
+  if (idx < 15) return A.snapMidX0 + (idx - 9) * A.snapDx;
+  if (idx === 15) return A.snapVeraX;
+  return A.snapBackX0 + (idx - 16) * A.snapDx;
+}
+
+/* 具象人物公仔（圓頭＋有色衫＋帽/蝴蝶結＋名牌） */
+function buildPersonNode(idx, kind, parent){
+  var g = svgEl('g', { opacity: '0' }, parent);
+  var inner = svgEl('g', {}, g);
+
+  if (kind === 'eddie') {
+    // 艾迪 E（戴橙帽＋較高身＋名牌 E）
+    svgEl('ellipse', { cx: 0, cy: 2, rx: 14, ry: 4, fill: 'rgba(20,40,70,.16)' }, inner);
+    // 腳
+    svgEl('line', { x1: -5, y1: -16, x2: -6, y2: 0, stroke: '#334155', 'stroke-width': '3.5', 'stroke-linecap': 'round' }, inner);
+    svgEl('line', { x1: 5, y1: -16, x2: 6, y2: 0, stroke: '#334155', 'stroke-width': '3.5', 'stroke-linecap': 'round' }, inner);
+    // 橙色衫身
+    svgEl('path', { d: 'M -13 -16 L -11 -52 C -11 -58, 11 -58, 11 -52 L 13 -16 Z', fill: '#f4711f', stroke: '#b84c0a', 'stroke-width': '2' }, inner);
+    var tE = svgEl('text', { x: 0, y: -29, 'text-anchor': 'middle', 'font-size': '15', 'font-weight': '900', fill: '#ffffff' }, inner);
+    tE.textContent = 'E';
+    // 頭
+    svgEl('circle', { cx: 0, cy: -69, r: 12, fill: '#ffe0bd', stroke: '#d4a373', 'stroke-width': '1.6' }, inner);
+    // 眼（望向左面收銀處）
+    svgEl('circle', { cx: -4.5, cy: -69, r: 1.5, fill: '#222' }, inner);
+    svgEl('circle', { cx: 1.5, cy: -69, r: 1.5, fill: '#222' }, inner);
+    // 棒球帽（橙色帽簷指向前面收銀處）
+    svgEl('path', { d: 'M -12 -74 C -12 -86, 12 -86, 12 -74 Z', fill: '#f4711f', stroke: '#b84c0a', 'stroke-width': '1.5' }, inner);
+    svgEl('path', { d: 'M -19 -74 L 12 -74', stroke: '#b84c0a', 'stroke-width': '3', 'stroke-linecap': 'round' }, inner);
+  } else if (kind === 'vera') {
+    // 薇兒 V（紫裙＋粉紫蝴蝶結＋名牌 V）
+    svgEl('ellipse', { cx: 0, cy: 2, rx: 14, ry: 4, fill: 'rgba(20,40,70,.16)' }, inner);
+    svgEl('line', { x1: -5, y1: -15, x2: -6, y2: 0, stroke: '#334155', 'stroke-width': '3.5', 'stroke-linecap': 'round' }, inner);
+    svgEl('line', { x1: 5, y1: -15, x2: 6, y2: 0, stroke: '#334155', 'stroke-width': '3.5', 'stroke-linecap': 'round' }, inner);
+    // 紫色連身裙
+    svgEl('path', { d: 'M -14 -14 L -9 -52 C -9 -58, 9 -58, 9 -52 L 14 -14 Z', fill: '#8d5bd6', stroke: '#5d2fa8', 'stroke-width': '2' }, inner);
+    var tV = svgEl('text', { x: 0, y: -28, 'text-anchor': 'middle', 'font-size': '15', 'font-weight': '900', fill: '#ffffff' }, inner);
+    tV.textContent = 'V';
+    // 頭＋短馬尾
+    svgEl('circle', { cx: 12, cy: -71, r: 5.5, fill: '#4a3728' }, inner);
+    svgEl('circle', { cx: 0, cy: -69, r: 12, fill: '#ffe0bd', stroke: '#d4a373', 'stroke-width': '1.6' }, inner);
+    svgEl('path', { d: 'M -11 -74 C -8 -84, 11 -84, 12 -71 C 7 -77, -6 -77, -11 -74 Z', fill: '#4a3728' }, inner);
+    svgEl('circle', { cx: -4.5, cy: -68, r: 1.5, fill: '#222' }, inner);
+    svgEl('circle', { cx: 1.5, cy: -68, r: 1.5, fill: '#222' }, inner);
+    // 頭頂小蝴蝶結
+    svgEl('polygon', { points: '5,-79 12,-84 11,-75', fill: '#e8467c' }, inner);
+    svgEl('polygon', { points: '5,-79 -1,-84 0,-75', fill: '#e8467c' }, inner);
+    svgEl('circle', { cx: 5, cy: -79, r: 2.2, fill: '#ff85a8' }, inner);
+  } else {
+    // 普通顧客公仔（緊湊清晰，同區同色衫）
+    var shirt = kind === 'front' ? '#38b6d4' : (kind === 'mid' ? '#ee6b96' : '#43b56c');
+    var stroke = kind === 'front' ? '#077792' : (kind === 'mid' ? '#ad1f52' : '#1e713c');
+    svgEl('ellipse', { cx: 0, cy: 2, rx: 9.5, ry: 3, fill: 'rgba(20,40,70,.14)' }, inner);
+    svgEl('line', { x1: -3.5, y1: -14, x2: -4, y2: 0, stroke: '#475569', 'stroke-width': '2.6', 'stroke-linecap': 'round' }, inner);
+    svgEl('line', { x1: 3.5, y1: -14, x2: 4, y2: 0, stroke: '#475569', 'stroke-width': '2.6', 'stroke-linecap': 'round' }, inner);
+    svgEl('path', { d: 'M -9 -14 L -8 -44 C -8 -49, 8 -49, 8 -44 L 9 -14 Z', fill: shirt, stroke: stroke, 'stroke-width': '1.6' }, inner);
+    svgEl('circle', { cx: 0, cy: -58, r: 8.8, fill: '#ffe4c4', stroke: '#d4a373', 'stroke-width': '1.4' }, inner);
+    svgEl('circle', { cx: -3.2, cy: -58, r: 1.2, fill: '#222' }, inner);
+  }
+  return { g: g, inner: inner, sepX: sepPersonX(idx), snapX: snapPersonX(idx), baseY: CONFIG.trackA.floorY, kind: kind };
+}
+
+var people = [];
+for (var pi = 0; pi < 30; pi++) {
+  var pk = pi < 8 ? 'front' : (pi === 8 ? 'eddie' : (pi < 15 ? 'mid' : (pi === 15 ? 'vera' : 'back')));
+  people.push(buildPersonNode(pi, pk, peopleLayer));
+}
+
+/* 五大專屬色區域高亮三部曲 */
+var regionDefs = {
+  front: { x: snapPersonX(0) - 16, y: 174, w: snapPersonX(7) - snapPersonX(0) + 32, h: 120, color: CONFIG.colors.front, stroke: CONFIG.colors.frontDark },
+  eddie: { x: snapPersonX(8) - 20, y: 162, w: 40, h: 132, color: CONFIG.colors.eddie, stroke: CONFIG.colors.eddieDark },
+  mid:   { x: snapPersonX(9) - 16, y: 174, w: snapPersonX(14) - snapPersonX(9) + 32, h: 120, color: CONFIG.colors.mid, stroke: CONFIG.colors.midDark },
+  vera:  { x: snapPersonX(15) - 20, y: 162, w: 40, h: 132, color: CONFIG.colors.vera, stroke: CONFIG.colors.veraDark },
+  back:  { x: snapPersonX(16) - 16, y: 174, w: snapPersonX(29) - snapPersonX(16) + 32, h: 120, color: CONFIG.colors.back, stroke: CONFIG.colors.backDark }
+};
+var regionNodes = {};
+Object.keys(regionDefs).forEach(function(k){
+  var d = regionDefs[k];
+  var g = svgEl('g', {}, regionsLayer);
+  var fill = svgEl('rect', { x: d.x, y: d.y, width: d.w, height: d.h, rx: 12, fill: d.color, opacity: 0 }, g);
+  var perim = 2 * (d.w + d.h);
+  var box = svgEl('rect', {
+    x: d.x, y: d.y, width: d.w, height: d.h, rx: 12,
+    fill: 'none', stroke: d.stroke, 'stroke-width': '3',
+    'stroke-dasharray': perim, 'stroke-dashoffset': perim, opacity: 0
+  }, g);
+  regionNodes[k] = { def: d, fill: fill, box: box, perim: perim };
+});
+
+function makeZoneLabel(txt, bg, stroke, textCol){
+  var g = svgEl('g', { opacity: 0 }, zoneLabelsLayer);
+  var w = Math.max(54, txt.length * 13.5 + 18);
+  svgEl('rect', { x: -w/2, y: -13, width: w, height: 26, rx: 13, fill: bg, stroke: stroke, 'stroke-width': '1.6' }, g);
+  var t = svgEl('text', { x: 0, y: 4.5, 'text-anchor': 'middle', 'font-size': '13.5', 'font-weight': '800', fill: textCol }, g);
+  t.textContent = txt;
+  return g;
+}
+var zoneLabels = {
+  front: makeZoneLabel('前面 8 位', '#e3f7fc', '#0aa5c9', '#077792'),
+  eddie: makeZoneLabel('艾迪 E', '#fff0e4', '#f4711f', '#c24c07'),
+  mid:   makeZoneLabel('中間 6 位', '#fde9f0', '#e8467c', '#ad1f52'),
+  vera:  makeZoneLabel('薇兒 V', '#f2e8ff', '#8d5bd6', '#6135a6'),
+  back:  makeZoneLabel('後面 14 位', '#e4f7eb', '#2f9e57', '#1e713c')
+};
+function placeZoneLabel(el, cx, y, op){
+  el.setAttribute('opacity', String(op));
+  el.setAttribute('transform', 'translate(' + cx.toFixed(1) + ',' + y.toFixed(1) + ')');
+}
+
+function makeBadgeNode(text, color){
+  var g = svgEl('g', { opacity: 0 }, badgesLayer);
+  svgEl('circle', { cx: 0, cy: 0, r: 15, fill: color, stroke: '#ffffff', 'stroke-width': '2.4' }, g);
+  var t = svgEl('text', { x: 0, y: 5.2, 'text-anchor': 'middle', 'font-size': '14', 'font-weight': '900', fill: '#ffffff' }, g);
+  t.textContent = text;
+  return g;
+}
+var badgeFrontCount = makeBadgeNode('8', CONFIG.colors.frontDark);
+var badgeEddieCount = makeBadgeNode('1', CONFIG.colors.eddie);
+var badgeMidCount   = makeBadgeNode('6', CONFIG.colors.midDark);
+var badgeVeraCount  = makeBadgeNode('1', CONFIG.colors.vera);
+var badgeBackCount  = makeBadgeNode('14', CONFIG.colors.backDark);
+// 先教後快示範小徽章（前 2 位、中 2 位、後 2 位）
+var demoBadgesF = [makeBadgeNode('1', CONFIG.colors.front), makeBadgeNode('2', CONFIG.colors.front), makeBadgeNode('8', CONFIG.colors.frontDark)];
+var demoBadgesM = [makeBadgeNode('1', CONFIG.colors.mid), makeBadgeNode('2', CONFIG.colors.mid), makeBadgeNode('6', CONFIG.colors.midDark)];
+var demoBadgesB = [makeBadgeNode('1', CONFIG.colors.back), makeBadgeNode('2', CONFIG.colors.back), makeBadgeNode('14', CONFIG.colors.backDark)];
+
+var confettiItems = [];
+var confCols = ['#f4711f','#0aa5c9','#8d5bd6','#f0a500','#e8467c','#2f9e57','#0066cc'];
+for (var ci = 0; ci < 28; ci++) {
+  var rect = svgEl('rect', { width: 9, height: 14, rx: 2, fill: confCols[ci % confCols.length], opacity: 0 }, confettiLayer);
+  confettiItems.push({
+    el: rect,
+    x0: 130 + ((ci * 73) % 700),
+    y0: 42 + ((ci * 31) % 60),
+    vx: ((ci % 2 === 0 ? 1 : -1) * (40 + (ci * 17) % 140)),
+    vy: -65 - ((ci * 29) % 120),
+    rot0: (ci * 47) % 360,
+    vr: (ci % 2 === 0 ? 1 : -1) * (180 + (ci * 23) % 240)
+  });
+}
+
+/* ============================================================
+   §4  軌道 B DOM 參考 ＋ 題目代號上標 ＋ 進度條 ＋ 算式條
+   ============================================================ */
+var legE = document.getElementById('legE');
+var legV = document.getElementById('legV');
+var supE1 = document.getElementById('supE1');
+var supE2 = document.getElementById('supE2');
+var supV1 = document.getElementById('supV1');
+var supV2 = document.getElementById('supV2');
+
+var scDir = document.getElementById('scDir');
+var scDirLine = document.getElementById('scDirLine');
+var scFragLeft = document.getElementById('scFragLeft');
+var scFrontHi = document.getElementById('scFrontHi');
+var scFrontNum = document.getElementById('scFrontNum');
+var scFrontUL = document.getElementById('scFrontUL');
+var scEddieHi = document.getElementById('scEddieHi');
+var scEddieChar = document.getElementById('scEddieChar');
+var scEddieOne = document.getElementById('scEddieOne');
+
+var scGap = document.getElementById('scGap');
+var scGapSlash = document.getElementById('scGapSlash');
+
+var scMid = document.getElementById('scMid');
+var scDiv1 = document.getElementById('scDiv1');
+var scDiv2 = document.getElementById('scDiv2');
+var scMidHi = document.getElementById('scMidHi');
+var scMidNum = document.getElementById('scMidNum');
+var scMidUL = document.getElementById('scMidUL');
+var scMidSub = document.getElementById('scMidSub');
+
+var scFragRight = document.getElementById('scFragRight');
+var scVeraHi = document.getElementById('scVeraHi');
+var scVeraChar = document.getElementById('scVeraChar');
+var scVeraOne = document.getElementById('scVeraOne');
+var scBackHi = document.getElementById('scBackHi');
+var scBackNum = document.getElementById('scBackNum');
+var scBackUL = document.getElementById('scBackUL');
+
+var scTip = document.getElementById('scTip');
+var scTipText = document.getElementById('scTipText');
+var scEqEls = [];
+for (var sei = 0; sei < 11; sei++) scEqEls.push(document.getElementById('se' + sei));
+var scAnsUL1 = document.getElementById('scAnsUL1');
+var scAnsUL2 = document.getElementById('scAnsUL2');
+
+var qSegEls = [];
+for (var qi = 0; qi < 5; qi++) qSegEls.push(document.getElementById('qseg-' + qi));
+
+var phasesEl = document.getElementById('phases');
+var phaseBtns = CONFIG.phases.map(function(ph){
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'ph-pill';
+  btn.textContent = ph.label;
+  btn.addEventListener('click', function(){
+    ensureAudioCtx();
+    exitPracticeMode();
+    hideProTip();
+    hideStartOverlay();
+    jumpToStep(ph.firstStep, true);
+  });
+  phasesEl.appendChild(btn);
+  return btn;
+});
+
+var calcBar = document.getElementById('calcBar');
+var calcTokEls = CONFIG.calcTokens.map(function(tk){
+  var sp = document.createElement('span');
+  sp.className = 'ctok ' + tk.cls;
+  sp.textContent = tk.txt;
+  calcBar.appendChild(sp);
+  return sp;
+});
+
+/* ============================================================
+   §5  純函數視覺輔助
+   ============================================================ */
+function setPersonAt(b, x, y, scale, op, bounceP, glow){
+  b.g.setAttribute('opacity', String(op));
+  b.g.setAttribute('transform', 'translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ') scale(' + scale.toFixed(3) + ')');
+  var k = bounceP > 0 ? (1 + 0.14 * Math.sin(clamp(bounceP,0,1) * Math.PI)) : 1;
+  var lift = bounceP > 0 ? (-7 * Math.sin(clamp(bounceP,0,1) * Math.PI)) : 0;
+  b.inner.setAttribute('transform', 'translate(0,' + lift.toFixed(1) + ') scale(' + k.toFixed(3) + ')');
+  b.inner.setAttribute('filter', glow ? 'url(#softGlow)' : '');
+}
+
+function setPersonLandAt(b, targetX, p, fromDx, fromDy){
+  if (p <= 0) { setPersonAt(b, targetX + fromDx, b.baseY + fromDy, 0.35, 0, 0, false); return; }
+  var q = easeOutCubic(p);
+  var x = targetX + fromDx * (1 - q);
+  var y = b.baseY + fromDy * (1 - q) - Math.sin(clamp(p,0,1) * Math.PI) * 24;
+  var sc = 0.40 + 0.60 * backOut(Math.min(1, p * 1.12));
+  setPersonAt(b, x, y, sc, clamp(p * 3.5, 0, 1), 0, false);
+}
+
+function setRegionState(key, mode, p){
+  var r = regionNodes[key];
+  if (mode === 'hidden') {
+    r.fill.setAttribute('opacity', '0');
+    r.box.setAttribute('opacity', '0');
+    r.box.setAttribute('stroke-dashoffset', String(r.perim));
+  } else if (mode === 'settled') {
+    r.fill.setAttribute('opacity', String(CONFIG.flash.settle));
+    r.box.setAttribute('opacity', '0.86');
+    r.box.setAttribute('stroke-dashoffset', '0');
+  } else if (mode === 'anim') {
+    var drawP = clamp(p / 0.34, 0, 1);
+    r.box.setAttribute('opacity', drawP > 0 ? '1' : '0');
+    r.box.setAttribute('stroke-dashoffset', String((r.perim * (1 - drawP)).toFixed(1)));
+    var flashP = clamp((p - 0.28) / 0.72, 0, 1);
+    r.fill.setAttribute('opacity', String(trilogyFillAlpha(flashP).toFixed(3)));
+  }
+}
+
+function setBadgeAt(el, x, y, p, fadeOutP){
+  if (p <= 0 || fadeOutP >= 1) {
+    el.setAttribute('opacity', '0');
+    el.setAttribute('transform', 'translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ') scale(0.01)');
+    return;
+  }
+  var sc = 0.25 + 0.75 * backOut(Math.min(1, p));
+  var op = clamp(p * 3, 0, 1) * (1 - clamp(fadeOutP || 0, 0, 1));
+  el.setAttribute('opacity', op.toFixed(3));
+  el.setAttribute('transform', 'translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ') scale(' + sc.toFixed(3) + ')');
+}
+
+function setActivePen(track, x, y){
+  if (track === 'A') {
+    penA.setAttribute('opacity', '1');
+    penA.setAttribute('transform', 'translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ')');
+    penB.setAttribute('opacity', '0');
+  } else if (track === 'B') {
+    penA.setAttribute('opacity', '0');
+    penB.setAttribute('opacity', '1');
+    penB.setAttribute('transform', 'translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ')');
+  } else {
+    penA.setAttribute('opacity', '0');
+    penB.setAttribute('opacity', '0');
+  }
+}
+
+function setHighlightSeg(activeSegIdx){
+  for (var i = 0; i < qSegEls.length; i++) {
+    qSegEls[i].className = 'q-seg';
+    if (i < activeSegIdx) qSegEls[i].classList.add('read-done');
+    else if (i === activeSegIdx) qSegEls[i].classList.add('active-' + i);
+  }
+}
+
+function setEqShown(count, pulseIndices){
+  for (var i = 0; i < calcTokEls.length; i++) {
+    var shown = i < count;
+    calcTokEls[i].classList.toggle('show', shown);
+    calcTokEls[i].classList.toggle('pulse', shown && pulseIndices && pulseIndices.indexOf(i) >= 0);
+    scEqEls[i].setAttribute('opacity', shown ? '1' : '0');
+  }
+}
+
+/* ============================================================
+   §6  步驟定義（15 步：原句一字不漏讀題 ＋ 讀題／解題界線詞 ＋ 精簡快狠準思路）
+   ============================================================ */
+var STEPS = [
+  {
+    phase: 0, seg: 0, dur: 3.4, sfx: 'pop',
+    lead: '題目寫住：', quote: '艾迪和薇兒在文具店排隊買文具，',
+    think: '即刻畫條箭咀，左前右後。'
+  },
+  {
+    phase: 1, seg: 1, dur: 4.0, sfx: 'pop',
+    lead: '題目話：', quote: '艾迪的前面有 8 位顧客，',
+    think: '先擺艾迪，前面排 8 位顧客。'
+  },
+  {
+    phase: 1, seg: 1, dur: 3.4, sfx: 'ding',
+    think: '草稿唔畫公仔！艾迪寫 E，前面寫 8 畫底線，兩秒搞掂。'
+  },
+  {
+    phase: 2, seg: 2, dur: 4.2, sfx: 'pop',
+    lead: '題目話：', quote: '薇兒的後面有 14 位顧客。',
+    think: '仲未講點連埋，中間留空位；右邊擺薇兒同後面 14 位。'
+  },
+  {
+    phase: 2, seg: 2, dur: 3.4, sfx: 'ding',
+    think: '草稿中間寫問號，右邊薇兒寫 V，後面寫 14 畫底線。'
+  },
+  {
+    phase: 3, seg: 3, dur: 4.8, sfx: 'whoosh',
+    lead: '題目指明：', quote: '艾迪在薇兒的前面，艾迪和薇兒之間有 6 位顧客。',
+    think: '刪走問號！中間排入 6 位顧客，草稿中間寫 6 畫底線。'
+  },
+  {
+    phase: 4, seg: 4, dur: 3.0, sfx: 'pop', quizIdx: 0,
+    lead: '題目問：', quote: '那麼一共有多少位顧客在排隊？',
+    think: '停一停：望住草稿，點列算式先唔會計漏主角？'
+  },
+  {
+    phase: 4, seg: 4, dur: 2.8, sfx: 'ding',
+    think: '啱晒！由左到右計：前面 8 位，先寫 8。'
+  },
+  {
+    phase: 4, seg: 4, dur: 2.6, sfx: 'ding',
+    think: '艾迪 E 都排緊隊，算式加 1。'
+  },
+  {
+    phase: 4, seg: 4, dur: 2.8, sfx: 'ding',
+    think: '中間 6 位顧客，再加 6。'
+  },
+  {
+    phase: 4, seg: 4, dur: 2.6, sfx: 'ding',
+    think: '薇兒 V 都係顧客，再加 1。'
+  },
+  {
+    phase: 4, seg: 4, dur: 2.8, sfx: 'ding',
+    think: '最後後面 14 位，加 14。五部分齊晒！'
+  },
+  {
+    phase: 5, seg: 4, dur: 2.6, sfx: 'pop', quizIdx: 1,
+    think: '停一停，計一計：8 + 1 + 6 + 1 + 14 係幾多？'
+  },
+  {
+    phase: 5, seg: 4, dur: 3.6, sfx: 'ding',
+    think: '啱晒！8 + 1 + 6 + 1 = 16，16 + 14 = 30！填答案 30！'
+  },
+  {
+    phase: 5, seg: 4, dur: 4.2, sfx: 'cheer',
+    think: '🎉 答案係 30！口訣：前面中間後面唔包主角，記得加埋兩位主角！'
+  }
+];
+
+function stepFullTTS(st){
+  if (st.tts) return st.tts;
+  if (st.quote) return (st.lead || '') + st.quote + ' ' + st.think;
+  return st.think;
+}
+
+function renderNarrBox(st){
+  var box = document.getElementById('narrBox');
+  box.innerHTML = '';
+  if (st.quote) {
+    if (st.lead) {
+      var spL = document.createElement('span');
+      spL.className = 'narr-lead';
+      spL.textContent = st.lead;
+      box.appendChild(spL);
+    }
+    var spQ = document.createElement('span');
+    spQ.className = 'narr-quote';
+    spQ.textContent = '「' + st.quote + '」';
+    box.appendChild(spQ);
+
+    var spSep = document.createElement('span');
+    spSep.className = 'narr-sep';
+    spSep.textContent = '→';
+    box.appendChild(spSep);
+  }
+  var spT = document.createElement('span');
+  spT.className = 'narr-think';
+  spT.textContent = st.think;
+  box.appendChild(spT);
+}
+
+/* ============================================================
+   §7  核心純函數雙軌渲染器：applyState(idx, p)
+   ============================================================ */
+function applyState(idx, p){
+  p = clamp(p, 0, 1);
+  setHighlightSeg(STEPS[idx].seg);
+
+  var showSupE = (idx >= 2);
+  var showSupV = (idx >= 4);
+  supE1.classList.toggle('show', showSupE);
+  supE2.classList.toggle('show', showSupE && idx >= 5);
+  supV1.classList.toggle('show', showSupV);
+  supV2.classList.toggle('show', showSupV && idx >= 5);
+  legE.setAttribute('opacity', showSupE ? '1' : '0');
+  legV.setAttribute('opacity', showSupV ? '1' : '0');
+
+  // 1. 徹底重設軌道 A
+  dirBar.setAttribute('opacity', idx === 14 ? String(Math.max(0, 1 - p * 3)) : '1');
+  celBanner.setAttribute('opacity', idx === 14 ? String(clamp(p * 2.8, 0, 1)) : '0');
+  gapBoxA.setAttribute('opacity', '0');
+  gapSlashA.setAttribute('stroke-dashoffset', '150');
+  midBanner.setAttribute('opacity', '0');
+  ansGlowRing.setAttribute('opacity', '0');
+  ansValue.setAttribute('opacity', '0');
+
+  placeZoneLabel(zoneLabels.front, 0, 336, 0);
+  placeZoneLabel(zoneLabels.eddie, 0, 336, 0);
+  placeZoneLabel(zoneLabels.mid, 0, 336, 0);
+  placeZoneLabel(zoneLabels.vera, 0, 336, 0);
+  placeZoneLabel(zoneLabels.back, 0, 336, 0);
+
+  setRegionState('front', 'hidden', 0);
+  setRegionState('eddie', 'hidden', 0);
+  setRegionState('mid', 'hidden', 0);
+  setRegionState('vera', 'hidden', 0);
+  setRegionState('back', 'hidden', 0);
+
+  for (var i = 0; i < 30; i++) setPersonAt(people[i], people[i].sepX, people[i].baseY, 0.35, 0, 0, false);
+  demoBadgesF.forEach(function(b){ setBadgeAt(b, 0, 154, 0, 0); });
+  demoBadgesM.forEach(function(b){ setBadgeAt(b, 0, 154, 0, 0); });
+  demoBadgesB.forEach(function(b){ setBadgeAt(b, 0, 154, 0, 0); });
+  setBadgeAt(badgeFrontCount, (snapPersonX(0)+snapPersonX(7))/2, 156, 0, 0);
+  setBadgeAt(badgeEddieCount, snapPersonX(8), 144, 0, 0);
+  setBadgeAt(badgeMidCount,   (snapPersonX(9)+snapPersonX(14))/2, 156, 0, 0);
+  setBadgeAt(badgeVeraCount,  snapPersonX(15), 144, 0, 0);
+  setBadgeAt(badgeBackCount,  (snapPersonX(16)+snapPersonX(29))/2, 156, 0, 0);
+  confettiItems.forEach(function(c){ c.el.setAttribute('opacity', '0'); });
+
+  // 徹底重設軌道 B
+  scDir.setAttribute('opacity', '0');
+  scDirLine.setAttribute('stroke-dashoffset', '380');
+  scFragLeft.setAttribute('opacity', '0');
+  scFragLeft.setAttribute('transform', 'translate(' + CONFIG.trackB.leftSepDx + ',0)');
+  scFrontHi.setAttribute('opacity', '0.16');
+  scFrontNum.setAttribute('opacity', '0');
+  scFrontUL.setAttribute('stroke-dashoffset', '60');
+  scEddieHi.setAttribute('opacity', '0.18');
+  scEddieChar.setAttribute('opacity', '0');
+  scEddieOne.setAttribute('opacity', '0');
+
+  scGap.setAttribute('opacity', '0');
+  scGapSlash.setAttribute('stroke-dashoffset', '80');
+
+  scMid.setAttribute('opacity', '0');
+  scDiv1.setAttribute('stroke-dashoffset', '80');
+  scDiv2.setAttribute('stroke-dashoffset', '80');
+  scMidHi.setAttribute('opacity', '0.16');
+  scMidNum.setAttribute('opacity', '0');
+  scMidUL.setAttribute('stroke-dashoffset', '60');
+  scMidSub.setAttribute('opacity', '0');
+
+  scFragRight.setAttribute('opacity', '0');
+  scFragRight.setAttribute('transform', 'translate(' + CONFIG.trackB.rightSepDx + ',0)');
+  scVeraHi.setAttribute('opacity', '0.18');
+  scVeraChar.setAttribute('opacity', '0');
+  scVeraOne.setAttribute('opacity', '0');
+  scBackHi.setAttribute('opacity', '0.16');
+  scBackNum.setAttribute('opacity', '0');
+  scBackUL.setAttribute('stroke-dashoffset', '70');
+
+  scTip.setAttribute('opacity', '0');
+  scAnsUL1.setAttribute('stroke-dashoffset', '70');
+  scAnsUL2.setAttribute('stroke-dashoffset', '70');
+
+  var penTrack = 'none', penX = 0, penY = 0;
+  var eqCount = 0, pulseIdx = [];
+
+  var snapQ = 0;
+  if (idx === 5) snapQ = easeIO(clamp((p - 0.36) / 0.24, 0, 1));
+  else if (idx > 5) snapQ = 1;
+  function curPX(pIdx){ return lerp(people[pIdx].sepX, people[pIdx].snapX, snapQ); }
+
+  // ===== Step 0：畫方向線 =====
+  if (idx === 0) {
+    scDir.setAttribute('opacity', String(clamp(p * 3, 0, 1)));
+    var drawDir = clamp((p - 0.14) / 0.68, 0, 1);
+    scDirLine.setAttribute('stroke-dashoffset', String((380 * (1 - drawDir)).toFixed(1)));
+    penTrack = 'B'; penX = lerp(96, 464, drawDir); penY = 64;
+  } else {
+    scDir.setAttribute('opacity', '1');
+    scDirLine.setAttribute('stroke-dashoffset', '0');
+  }
+
+  // ===== Step 1：左段（艾迪 E ＋ 前面 8 位先慢後快） =====
+  if (idx === 1) {
+    var pE = clamp(p / 0.22, 0, 1);
+    setPersonLandAt(people[8], people[8].sepX, pE, 0, -90);
+    placeZoneLabel(zoneLabels.eddie, people[8].sepX, 336, clamp((pE - 0.5)*2, 0, 1));
+    // 先教後快：頭 2 位慢，後 6 位快
+    var fStart = [0.22, 0.38, 0.54, 0.60, 0.66, 0.72, 0.78, 0.84];
+    var fDur   = [0.16, 0.16, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12];
+    penTrack = 'A'; penX = people[8].sepX; penY = 180;
+    for (var fi = 0; fi < 8; fi++) {
+      var pf = clamp((p - fStart[fi]) / fDur[fi], 0, 1);
+      setPersonLandAt(people[fi], people[fi].sepX, pf, -50, -70);
+      if (pf > 0 && pf < 1) { penX = people[fi].sepX; penY = 195; }
+    }
+    setBadgeAt(demoBadgesF[0], people[0].sepX, 200, clamp((p - 0.30)/0.14, 0, 1), clamp((p - 0.80)/0.14, 0, 1));
+    setBadgeAt(demoBadgesF[1], people[1].sepX, 200, clamp((p - 0.46)/0.14, 0, 1), clamp((p - 0.80)/0.14, 0, 1));
+    setBadgeAt(demoBadgesF[2], (people[0].sepX + people[7].sepX)/2, 186, clamp((p - 0.84)/0.14, 0, 1), 0);
+    placeZoneLabel(zoneLabels.front, (people[0].sepX + people[7].sepX)/2, 336, clamp((p - 0.84)/0.16, 0, 1));
+  } else if (idx >= 2) {
+    for (var fl = 0; fl <= 8; fl++) setPersonAt(people[fl], curPX(fl), CONFIG.trackA.floorY, 1, 1, 0, false);
+    placeZoneLabel(zoneLabels.front, (curPX(0)+curPX(7))/2, 336, 1);
+    placeZoneLabel(zoneLabels.eddie, curPX(8), 336, 1);
+  }
+
+  // ===== Step 2：草稿寫 E 與 8_ =====
+  if (idx === 2) {
+    scFragLeft.setAttribute('opacity', '1');
+    scTip.setAttribute('opacity', String(clamp((p - 0.18)*2.5, 0, 1)));
+    scTipText.textContent = '⚡ E 代表 Eddie（艾迪），前面寫 8 畫底線，2 秒寫完！';
+    setBadgeAt(demoBadgesF[2], (people[0].sepX + people[7].sepX)/2, 186, 1, clamp(p / 0.25, 0, 1));
+
+    var pWE = clamp(p / 0.42, 0, 1);
+    scEddieChar.setAttribute('opacity', String(clamp(pWE * 1.6, 0, 1)));
+    var pW8 = clamp((p - 0.44) / 0.24, 0, 1);
+    var pUL8 = clamp((p - 0.64) / 0.30, 0, 1);
+    scFrontNum.setAttribute('opacity', String(pW8));
+    scFrontUL.setAttribute('stroke-dashoffset', String((60 * (1 - pUL8)).toFixed(1)));
+
+    if (p < 0.44) {
+      setPersonAt(people[8], curPX(8), CONFIG.trackA.floorY, 1, 1, Math.sin(pWE * Math.PI) * 0.75, true);
+      penTrack = 'B'; penX = 162; penY = 160;
+    } else {
+      var b8 = Math.sin(clamp((p - 0.44)/0.56, 0, 1) * Math.PI);
+      for (var fb = 0; fb < 8; fb++) setPersonAt(people[fb], curPX(fb), CONFIG.trackA.floorY, 1, 1, b8 * 0.55, true);
+      penTrack = 'B'; penX = lerp(58, 106, pUL8); penY = p < 0.64 ? 162 : 186;
+    }
+  } else if (idx >= 3) {
+    scFragLeft.setAttribute('opacity', '1');
+    scFrontNum.setAttribute('opacity', '1');
+    scFrontUL.setAttribute('stroke-dashoffset', '0');
+    scEddieChar.setAttribute('opacity', '1');
+    scFragLeft.setAttribute('transform', 'translate(' + (CONFIG.trackB.leftSepDx * (1 - snapQ)).toFixed(1) + ',0)');
+  }
+
+  // ===== Step 3：右段（中間留 ? 空隙；薇兒 V ＋ 後面 14 位先慢後快） =====
+  if (idx === 3) {
+    gapBoxA.setAttribute('opacity', String(clamp(p * 4, 0, 1)));
+    var pV = clamp((p - 0.06) / 0.20, 0, 1);
+    setPersonLandAt(people[15], people[15].sepX, pV, 0, -90);
+    placeZoneLabel(zoneLabels.vera, people[15].sepX, 336, clamp((pV - 0.5)*2, 0, 1));
+    penTrack = 'A'; penX = people[15].sepX; penY = 180;
+    for (var bi = 0; bi < 14; bi++) {
+      var stB = bi < 2 ? (0.26 + bi * 0.14) : (0.54 + (bi - 2) * 0.032);
+      var duB = bi < 2 ? 0.14 : 0.10;
+      var pb = clamp((p - stB) / duB, 0, 1);
+      setPersonLandAt(people[16 + bi], people[16 + bi].sepX, pb, 45, -70);
+      if (pb > 0 && pb < 1) { penX = people[16 + bi].sepX; penY = 195; }
+    }
+    setBadgeAt(demoBadgesB[0], people[16].sepX, 200, clamp((p - 0.34)/0.12, 0, 1), clamp((p - 0.82)/0.12, 0, 1));
+    setBadgeAt(demoBadgesB[1], people[17].sepX, 200, clamp((p - 0.48)/0.12, 0, 1), clamp((p - 0.82)/0.12, 0, 1));
+    setBadgeAt(demoBadgesB[2], (people[16].sepX + people[29].sepX)/2, 186, clamp((p - 0.86)/0.12, 0, 1), 0);
+    placeZoneLabel(zoneLabels.back, (people[16].sepX + people[29].sepX)/2, 336, clamp((p - 0.86)/0.14, 0, 1));
+  } else if (idx >= 4) {
+    for (var fr = 15; fr < 30; fr++) setPersonAt(people[fr], curPX(fr), CONFIG.trackA.floorY, 1, 1, 0, false);
+    placeZoneLabel(zoneLabels.vera, curPX(15), 336, 1);
+    placeZoneLabel(zoneLabels.back, (curPX(16)+curPX(29))/2, 336, 1);
+    if (idx === 4) gapBoxA.setAttribute('opacity', '1');
+  }
+
+  // ===== Step 4：草稿寫「?」＋ 右段 V 與 14_ =====
+  if (idx === 4) {
+    scGap.setAttribute('opacity', String(clamp(p * 3.5, 0, 1)));
+    scFragRight.setAttribute('opacity', '1');
+    scTip.setAttribute('opacity', '1');
+    scTipText.textContent = '⚡ V 代表 Vera（薇兒），只寫 1 筆！後面寫 14 畫底線！';
+    setBadgeAt(demoBadgesB[2], (people[16].sepX + people[29].sepX)/2, 186, 1, clamp(p / 0.25, 0, 1));
+
+    var pWV = clamp((p - 0.14) / 0.34, 0, 1);
+    scVeraChar.setAttribute('opacity', String(clamp(pWV * 1.6, 0, 1)));
+    var pW14 = clamp((p - 0.50) / 0.22, 0, 1);
+    var pUL14 = clamp((p - 0.68) / 0.28, 0, 1);
+    scBackNum.setAttribute('opacity', String(pW14));
+    scBackUL.setAttribute('stroke-dashoffset', String((70 * (1 - pUL14)).toFixed(1)));
+
+    if (p < 0.50) {
+      setPersonAt(people[15], curPX(15), CONFIG.trackA.floorY, 1, 1, Math.sin(pWV * Math.PI) * 0.75, true);
+      penTrack = 'B'; penX = 394; penY = 160;
+    } else {
+      var b14 = Math.sin(clamp((p - 0.50)/0.50, 0, 1) * Math.PI);
+      for (var bb = 16; bb < 30; bb++) setPersonAt(people[bb], curPX(bb), CONFIG.trackA.floorY, 1, 1, b14 * 0.55, true);
+      penTrack = 'B'; penX = lerp(450, 510, pUL14); penY = p < 0.68 ? 162 : 186;
+    }
+  } else if (idx >= 5) {
+    scFragRight.setAttribute('opacity', '1');
+    scVeraChar.setAttribute('opacity', '1');
+    scBackNum.setAttribute('opacity', '1');
+    scBackUL.setAttribute('stroke-dashoffset', '0');
+    scFragRight.setAttribute('transform', 'translate(' + (CONFIG.trackB.rightSepDx * (1 - snapQ)).toFixed(1) + ',0)');
+  }
+
+  // ===== Step 5：關鍵句（刪走 ? → 消失後排入中間 6 位＋草稿中間寫 6_） =====
+  if (idx === 5) {
+    scTip.setAttribute('opacity', '1');
+    scTipText.textContent = '⚡ 刪走問號，中間補 6 位！30 人草稿唔夠 12 筆寫晒！';
+    var slashP = clamp(p / 0.24, 0, 1);
+    var gapFade = clamp(1 - (p - 0.24) / 0.12, 0, 1);
+    gapBoxA.setAttribute('opacity', String(gapFade));
+    gapSlashA.setAttribute('stroke-dashoffset', String((150 * (1 - slashP)).toFixed(1)));
+    scGap.setAttribute('opacity', String(gapFade));
+    scGapSlash.setAttribute('stroke-dashoffset', String((80 * (1 - slashP)).toFixed(1)));
+
+    // 0.42 起 ? 已完全消失：中間 6 位顧客飛入 (0.42..0.76)
+    var mStart = [0.42, 0.50, 0.58, 0.62, 0.66, 0.70];
+    var mDur   = [0.12, 0.12, 0.09, 0.09, 0.09, 0.09];
+    for (var mi = 0; mi < 6; mi++) {
+      var pm = clamp((p - mStart[mi]) / mDur[mi], 0, 1);
+      setPersonLandAt(people[9 + mi], snapPersonX(9 + mi), pm, 0, -90);
+    }
+    setBadgeAt(demoBadgesM[0], snapPersonX(9), 200, clamp((p - 0.48)/0.10, 0, 1), clamp((p - 0.74)/0.10, 0, 1));
+    setBadgeAt(demoBadgesM[1], snapPersonX(10), 200, clamp((p - 0.56)/0.10, 0, 1), clamp((p - 0.74)/0.10, 0, 1));
+    setBadgeAt(demoBadgesM[2], (snapPersonX(9)+snapPersonX(14))/2, 186, clamp((p - 0.74)/0.12, 0, 1), 0);
+    placeZoneLabel(zoneLabels.mid, (snapPersonX(9)+snapPersonX(14))/2, 336, clamp((p - 0.74)/0.16, 0, 1));
+    midBanner.setAttribute('opacity', String(clamp((p - 0.76)/0.18, 0, 1)));
+
+    var scMidP = clamp((p - 0.72) / 0.26, 0, 1);
+    if (scMidP > 0) {
+      scMid.setAttribute('opacity', '1');
+      scDiv1.setAttribute('stroke-dashoffset', String((80 * (1 - clamp(scMidP / 0.35, 0, 1))).toFixed(1)));
+      scMidNum.setAttribute('opacity', String(clamp((scMidP - 0.22)/0.30, 0, 1)));
+      scMidUL.setAttribute('stroke-dashoffset', String((60 * (1 - clamp((scMidP - 0.45)/0.32, 0, 1))).toFixed(1)));
+      scDiv2.setAttribute('stroke-dashoffset', String((80 * (1 - clamp((scMidP - 0.65)/0.35, 0, 1))).toFixed(1)));
+      scMidSub.setAttribute('opacity', String(clamp((scMidP - 0.68)/0.32, 0, 1)));
+    }
+
+    if (p < 0.30) {
+      penTrack = 'B'; penX = lerp(256, 300, slashP); penY = lerp(186, 136, slashP);
+    } else if (p < 0.72) {
+      penTrack = 'A'; penX = lerp(snapPersonX(9), snapPersonX(14), clamp((p - 0.42)/0.30, 0, 1)); penY = 186;
+    } else {
+      penTrack = 'B'; penX = lerp(236, 320, scMidP); penY = 176;
+    }
+  } else if (idx >= 6) {
+    for (var mAll = 9; mAll < 15; mAll++) setPersonAt(people[mAll], snapPersonX(mAll), CONFIG.trackA.floorY, 1, 1, 0, false);
+    placeZoneLabel(zoneLabels.mid, (snapPersonX(9)+snapPersonX(14))/2, 336, 1);
+    midBanner.setAttribute('opacity', idx <= 12 ? '1' : '0.45');
+    scMid.setAttribute('opacity', '1');
+    scDiv1.setAttribute('stroke-dashoffset', '0');
+    scDiv2.setAttribute('stroke-dashoffset', '0');
+    scMidNum.setAttribute('opacity', '1');
+    scMidUL.setAttribute('stroke-dashoffset', '0');
+    scMidSub.setAttribute('opacity', '1');
+    scTip.setAttribute('opacity', '1');
+    scTipText.textContent = '⚡ 睇住五段草稿：8、E、6、V、14，一個都唔會漏！';
+    if (idx === 6) setBadgeAt(demoBadgesM[2], (snapPersonX(9)+snapPersonX(14))/2, 186, 1, clamp(p / 0.25, 0, 1));
+  }
+
+  // ===== Step 6：停一停，估一估（列算式防漏主角） =====
+  if (idx === 6) {
+    var pq = Math.sin(p * Math.PI * 2) * 0.5 + 0.5;
+    setPersonAt(people[8], snapPersonX(8), CONFIG.trackA.floorY, 1, 1, pq * 0.45, true);
+    setPersonAt(people[15], snapPersonX(15), CONFIG.trackA.floorY, 1, 1, pq * 0.45, true);
+    scEddieHi.setAttribute('opacity', String((0.18 + pq * 0.35).toFixed(2)));
+    scVeraHi.setAttribute('opacity', String((0.18 + pq * 0.35).toFixed(2)));
+    penTrack = 'B'; penX = 278; penY = 160;
+  }
+
+  // ===== Step 7：前面 8 位 → 寫 8 =====
+  if (idx === 7) {
+    setRegionState('front', 'anim', clamp(p / 0.70, 0, 1));
+    setBadgeAt(badgeFrontCount, (snapPersonX(0)+snapPersonX(7))/2, 156, clamp((p - 0.58)/0.22, 0, 1), 0);
+    scFrontHi.setAttribute('opacity', String((0.16 + trilogyFillAlpha(clamp(p / 0.70, 0, 1)) * 0.45).toFixed(2)));
+    if (p > 0.70) {
+      eqCount = 1; pulseIdx = [0];
+      var bf = (p - 0.70) / 0.30;
+      for (var kf = 0; kf < 8; kf++) setPersonAt(people[kf], snapPersonX(kf), CONFIG.trackA.floorY, 1, 1, bf, true);
+      penTrack = 'B'; penX = 76; penY = 372;
+    } else {
+      penTrack = 'A'; penX = regionDefs.front.x + regionDefs.front.w * clamp(p / 0.65, 0, 1); penY = regionDefs.front.y;
+    }
+  } else if (idx >= 8) {
+    setRegionState('front', 'settled', 1);
+    eqCount = 1;
+    if (idx === 8) setBadgeAt(badgeFrontCount, (snapPersonX(0)+snapPersonX(7))/2, 156, 1, clamp(p / 0.3, 0, 1));
+  }
+
+  // ===== Step 8：艾迪 E → 寫 + 1 =====
+  if (idx === 8) {
+    setRegionState('eddie', 'anim', clamp(p / 0.68, 0, 1));
+    setBadgeAt(badgeEddieCount, snapPersonX(8), 144, clamp((p - 0.56)/0.22, 0, 1), 0);
+    scEddieOne.setAttribute('opacity', String(clamp((p - 0.52)/0.25, 0, 1)));
+    scEddieHi.setAttribute('opacity', String((0.18 + trilogyFillAlpha(clamp(p / 0.68, 0, 1)) * 0.5).toFixed(2)));
+    if (p > 0.68) {
+      eqCount = 3; pulseIdx = [1, 2];
+      setPersonAt(people[8], snapPersonX(8), CONFIG.trackA.floorY, 1, 1, (p - 0.68)/0.32, true);
+      penTrack = 'B'; penX = 144; penY = 372;
+    } else {
+      penTrack = 'A'; penX = snapPersonX(8); penY = 166;
+    }
+  } else if (idx >= 9) {
+    setRegionState('eddie', 'settled', 1);
+    scEddieOne.setAttribute('opacity', '1');
+    eqCount = 3;
+    if (idx === 9) setBadgeAt(badgeEddieCount, snapPersonX(8), 144, 1, clamp(p / 0.3, 0, 1));
+  }
+
+  // ===== Step 9：中間 6 位 → 寫 + 6 =====
+  if (idx === 9) {
+    setRegionState('mid', 'anim', clamp(p / 0.70, 0, 1));
+    setBadgeAt(badgeMidCount, (snapPersonX(9)+snapPersonX(14))/2, 156, clamp((p - 0.58)/0.22, 0, 1), 0);
+    scMidHi.setAttribute('opacity', String((0.16 + trilogyFillAlpha(clamp(p / 0.70, 0, 1)) * 0.45).toFixed(2)));
+    if (p > 0.70) {
+      eqCount = 5; pulseIdx = [3, 4];
+      var bm = (p - 0.70) / 0.30;
+      for (var km = 9; km < 15; km++) setPersonAt(people[km], snapPersonX(km), CONFIG.trackA.floorY, 1, 1, bm, true);
+      penTrack = 'B'; penX = 212; penY = 372;
+    } else {
+      penTrack = 'A'; penX = regionDefs.mid.x + regionDefs.mid.w * clamp(p / 0.65, 0, 1); penY = regionDefs.mid.y;
+    }
+  } else if (idx >= 10) {
+    setRegionState('mid', 'settled', 1);
+    eqCount = 5;
+    if (idx === 10) setBadgeAt(badgeMidCount, (snapPersonX(9)+snapPersonX(14))/2, 156, 1, clamp(p / 0.3, 0, 1));
+  }
+
+  // ===== Step 10：薇兒 V → 寫 + 1 =====
+  if (idx === 10) {
+    setRegionState('vera', 'anim', clamp(p / 0.68, 0, 1));
+    setBadgeAt(badgeVeraCount, snapPersonX(15), 144, clamp((p - 0.56)/0.22, 0, 1), 0);
+    scVeraOne.setAttribute('opacity', String(clamp((p - 0.52)/0.25, 0, 1)));
+    scVeraHi.setAttribute('opacity', String((0.18 + trilogyFillAlpha(clamp(p / 0.68, 0, 1)) * 0.5).toFixed(2)));
+    if (p > 0.68) {
+      eqCount = 7; pulseIdx = [5, 6];
+      setPersonAt(people[15], snapPersonX(15), CONFIG.trackA.floorY, 1, 1, (p - 0.68)/0.32, true);
+      penTrack = 'B'; penX = 280; penY = 372;
+    } else {
+      penTrack = 'A'; penX = snapPersonX(15); penY = 166;
+    }
+  } else if (idx >= 11) {
+    setRegionState('vera', 'settled', 1);
+    scVeraOne.setAttribute('opacity', '1');
+    eqCount = 7;
+    if (idx === 11) setBadgeAt(badgeVeraCount, snapPersonX(15), 144, 1, clamp(p / 0.3, 0, 1));
+  }
+
+  // ===== Step 11：後面 14 位 → 寫 + 14 =====
+  if (idx === 11) {
+    setRegionState('back', 'anim', clamp(p / 0.70, 0, 1));
+    setBadgeAt(badgeBackCount, (snapPersonX(16)+snapPersonX(29))/2, 156, clamp((p - 0.58)/0.22, 0, 1), 0);
+    scBackHi.setAttribute('opacity', String((0.16 + trilogyFillAlpha(clamp(p / 0.70, 0, 1)) * 0.45).toFixed(2)));
+    if (p > 0.70) {
+      eqCount = 9; pulseIdx = [7, 8];
+      var bbk = (p - 0.70) / 0.30;
+      for (var kb = 16; kb < 30; kb++) setPersonAt(people[kb], snapPersonX(kb), CONFIG.trackA.floorY, 1, 1, bbk, true);
+      penTrack = 'B'; penX = 358; penY = 372;
+    } else {
+      penTrack = 'A'; penX = regionDefs.back.x + regionDefs.back.w * clamp(p / 0.65, 0, 1); penY = regionDefs.back.y;
+    }
+  } else if (idx >= 12) {
+    setRegionState('back', 'settled', 1);
+    eqCount = 9;
+    if (idx === 12) setBadgeAt(badgeBackCount, (snapPersonX(16)+snapPersonX(29))/2, 156, 1, clamp(p / 0.3, 0, 1));
+  }
+
+  // ===== Step 12：停一停，計一計 =====
+  if (idx === 12) {
+    penTrack = 'A';
+    penX = lerp(snapPersonX(0), snapPersonX(29), easeIO(p));
+    penY = 160;
+    for (var w = 0; w < 30; w++) {
+      var wp = clamp(1 - Math.abs((w / 29) - p) * 6, 0, 1);
+      setPersonAt(people[w], snapPersonX(w), CONFIG.trackA.floorY, 1, 1, wp * 0.6, wp > 0.3);
+    }
+  }
+
+  // ===== Step 13：寫 = 30 ＋ 草稿雙底線 ＋ 原題括號填入 30 =====
+  if (idx === 13) {
+    eqCount = 11; pulseIdx = [9, 10];
+    var ulP = clamp(p / 0.36, 0, 1);
+    scAnsUL1.setAttribute('stroke-dashoffset', String((70 * (1 - clamp(ulP * 1.4, 0, 1))).toFixed(1)));
+    scAnsUL2.setAttribute('stroke-dashoffset', String((70 * (1 - clamp((ulP - 0.3) * 1.4, 0, 1))).toFixed(1)));
+
+    var writeP = clamp((p - 0.40) / 0.60, 0, 1);
+    if (p < 0.40) {
+      penTrack = 'B'; penX = lerp(436, 496, ulP); penY = 388;
+    } else {
+      penTrack = 'A';
+      penX = 445 + Math.sin(writeP * 24) * 5;
+      penY = 395 + Math.cos(writeP * 18) * 3;
+      ansValue.setAttribute('opacity', String(clamp(writeP * 1.8, 0, 1)));
+      ansGlowRing.setAttribute('opacity', String(trilogyFillAlpha(writeP).toFixed(3)));
+    }
+  } else if (idx >= 14) {
+    eqCount = 11;
+    scAnsUL1.setAttribute('stroke-dashoffset', '0');
+    scAnsUL2.setAttribute('stroke-dashoffset', '0');
+    ansValue.setAttribute('opacity', '1');
+    ansGlowRing.setAttribute('opacity', '0.58');
+    confettiItems.forEach(function(c){
+      var cp = clamp(p * 1.05, 0, 1);
+      var cx = c.x0 + c.vx * cp;
+      var cy = c.y0 + c.vy * cp + 340 * cp * cp;
+      var rot = c.rot0 + c.vr * cp;
+      var op = cp < 0.75 ? 1 : clamp(1 - (cp - 0.75) / 0.25, 0, 1);
+      c.el.setAttribute('opacity', op.toFixed(3));
+      c.el.setAttribute('transform', 'translate(' + cx.toFixed(1) + ',' + cy.toFixed(1) + ') rotate(' + rot.toFixed(1) + ')');
+    });
+    for (var wc = 0; wc < 30; wc++) {
+      setPersonAt(people[wc], snapPersonX(wc), CONFIG.trackA.floorY, 1, 1, Math.sin(p * Math.PI * 2 + wc * 0.25) * 0.32 + 0.32, false);
+    }
+    penTrack = 'A'; penX = 445 + Math.sin(p * 8) * 26; penY = 374 + Math.cos(p * 6) * 7;
+  }
+
+  setActivePen(penTrack, penX, penY);
+  setEqShown(eqCount, pulseIdx);
+
+  var curPhase = STEPS[idx].phase;
+  phaseBtns.forEach(function(btn, pi){
+    btn.classList.toggle('done', pi < curPhase || (idx === STEPS.length - 1 && p > 0.85));
+    btn.classList.toggle('active', pi === curPhase && !(idx === STEPS.length - 1 && p > 0.85));
+  });
+
+  var celBar = document.getElementById('celebrateBar');
+  if (idx === STEPS.length - 1 && p > 0.35 && !inPracticeMode) celBar.classList.add('show');
+  else if (idx < STEPS.length - 1) {
+    celBar.classList.remove('show');
+    hideProTip();
+  }
+}
+
+/* ============================================================
+   §8  純 rAF 狀態機播放引擎 ＋ 語音同步 ＋ 停一停互動 ＋ 高手湊十彩蛋
+   ============================================================ */
+var curStep = 0;
+var stepT = 0;
+var playing = false;
+var waitingQuiz = false;
+var quizAdvanceTimer = 0;
+var answeredQuizzes = {};
+var sfxFiredStep = -1;
+var btnPlay = document.getElementById('btnPlay');
+var startOverlay = document.getElementById('startOverlay');
+var quizBox = document.getElementById('quizBox');
+var quizQuestion = document.getElementById('quizQuestion');
+var quizOptions = document.getElementById('quizOptions');
+var quizFeedback = document.getElementById('quizFeedback');
+var stageWrap = document.getElementById('stageWrap');
+var proTipCard = document.getElementById('proTipCard');
+
+function hideStartOverlay(){ startOverlay.classList.add('hidden'); }
+function updatePlayButton(){
+  btnPlay.textContent = playing ? '⏸' : '▶';
+  btnPlay.title = playing ? '暫停' : '播放';
+}
+function hideProTip(){ proTipCard.classList.remove('show'); }
+
+document.getElementById('btnProTip').addEventListener('click', function(){
+  ensureAudioCtx();
+  var showing = proTipCard.classList.toggle('show');
+  if (showing) {
+    playSfx('ding');
+    try { proTipCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e){}
+    speakCantonese(CONFIG.proTipTTS);
+  } else {
+    stopSpeech();
+  }
+});
+document.getElementById('btnProSpeak').addEventListener('click', function(){
+  ensureAudioCtx();
+  playSfx('pop');
+  speakCantonese(CONFIG.proTipTTS);
+});
+document.getElementById('btnProClose').addEventListener('click', function(){
+  stopSpeech();
+  hideProTip();
+});
+
+function showQuiz(quizIdx){
+  var q = CONFIG.quizzes[quizIdx];
+  waitingQuiz = true;
+  playing = false;
+  updatePlayButton();
+  quizQuestion.textContent = q.question;
+  quizFeedback.textContent = '';
+  quizFeedback.style.color = '#1f2d3d';
+  quizOptions.innerHTML = '';
+
+  q.options.forEach(function(opt){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'quiz-btn';
+    b.textContent = opt.label;
+    b.addEventListener('click', function(){
+      ensureAudioCtx();
+      if (opt.correct) {
+        b.classList.add('correct');
+        quizFeedback.style.color = '#1b6e39';
+        quizFeedback.textContent = opt.fb;
+        playSfx('ding');
+        answeredQuizzes[quizIdx] = true;
+        if (muted || !('speechSynthesis' in window)) {
+          quizAdvanceTimer = 1.1;
+        } else {
+          speakCantonese(opt.fb, function(){
+            if (waitingQuiz) { hideQuiz(); advanceToNextStep(); }
+          });
+        }
+      } else {
+        b.classList.remove('wrong');
+        void b.offsetWidth;
+        b.classList.add('wrong');
+        quizFeedback.style.color = '#b3261e';
+        quizFeedback.textContent = opt.fb;
+        playSfx('wrong');
+        speakCantonese(opt.fb);
+      }
+    });
+    quizOptions.appendChild(b);
+  });
+
+  quizBox.classList.add('show');
+  try { quizBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e){}
+}
+
+function hideQuiz(){
+  waitingQuiz = false;
+  quizAdvanceTimer = 0;
+  quizBox.classList.remove('show');
+}
+
+document.getElementById('quizSkipBtn').addEventListener('click', function(){
+  ensureAudioCtx();
+  var qIdx = STEPS[curStep].quizIdx;
+  if (qIdx != null) answeredQuizzes[qIdx] = true;
+  stopSpeech();
+  hideQuiz();
+  advanceToNextStep();
+});
+
+function enterStep(idx, autoPlayVoice){
+  curStep = clamp(idx, 0, STEPS.length - 1);
+  stepT = 0;
+  sfxFiredStep = -1;
+  hideQuiz();
+  renderNarrBox(STEPS[curStep]);
+  applyState(curStep, 0);
+
+  if (autoPlayVoice) {
+    if (STEPS[curStep].sfx) { playSfx(STEPS[curStep].sfx); sfxFiredStep = curStep; }
+    speakCantonese(stepFullTTS(STEPS[curStep]));
+  }
+}
+
+function jumpToStep(idx, startPlaying){
+  stopSpeech();
+  hideQuiz();
+  playing = !!startPlaying;
+  updatePlayButton();
+  enterStep(idx, playing);
+}
+
+function advanceToNextStep(){
+  if (curStep < STEPS.length - 1) {
+    playing = true;
+    updatePlayButton();
+    enterStep(curStep + 1, true);
+  } else {
+    playing = false;
+    updatePlayButton();
+  }
+}
+
+var lastTime = performance.now();
+function tick(now){
+  requestAnimationFrame(tick);
+  var dt = Math.min(0.12, (now - lastTime) / 1000);
+  lastTime = now;
+
+  if (waitingQuiz && quizAdvanceTimer > 0) {
+    quizAdvanceTimer -= dt;
+    if (quizAdvanceTimer <= 0) { hideQuiz(); advanceToNextStep(); }
+    return;
+  }
+  if (!playing || waitingQuiz || inPracticeMode) return;
+
+  var st = STEPS[curStep];
+  var effDur = st.dur / speedRate;
+  stepT += dt;
+  var p = clamp(stepT / effDur, 0, 1);
+  applyState(curStep, p);
+
+  var estMaxSpeech = Math.max(effDur, (cleanForTTS(stepFullTTS(st)).length * 0.25) / speedRate + 2.6);
+  var voiceReady = speechDone || muted || (stepT >= estMaxSpeech);
+
+  if (p >= 1 && voiceReady) {
+    if (st.quizIdx != null && !answeredQuizzes[st.quizIdx]) {
+      showQuiz(st.quizIdx);
+    } else if (curStep < STEPS.length - 1) {
+      enterStep(curStep + 1, true);
+    } else {
+      playing = false;
+      updatePlayButton();
+    }
+  }
+}
+requestAnimationFrame(tick);
+
+/* ============================================================
+   §9  控制按鈕與鍵盤快捷鍵
+   ============================================================ */
+function togglePlay(){
+  ensureAudioCtx();
+  hideStartOverlay();
+  if (waitingQuiz) return;
+  if (curStep === STEPS.length - 1 && stepT >= (STEPS[curStep].dur / speedRate)) {
+    answeredQuizzes = {};
+    hideProTip();
+    jumpToStep(0, true);
+    return;
+  }
+  playing = !playing;
+  updatePlayButton();
+  if (playing) {
+    if (stepT < 0.05) {
+      if (sfxFiredStep !== curStep && STEPS[curStep].sfx) { playSfx(STEPS[curStep].sfx); sfxFiredStep = curStep; }
+      speakCantonese(stepFullTTS(STEPS[curStep]));
+    } else if ('speechSynthesis' in window && speechSynthesis.paused) {
+      try { speechSynthesis.resume(); } catch(e){}
+    }
+  } else {
+    if ('speechSynthesis' in window && speechSynthesis.speaking) {
+      try { speechSynthesis.pause(); } catch(e){}
+    }
+  }
+}
+
+document.getElementById('startBigBtn').addEventListener('click', function(){
+  ensureAudioCtx();
+  hideStartOverlay();
+  jumpToStep(0, true);
+});
+btnPlay.addEventListener('click', togglePlay);
+
+document.getElementById('btnPrev').addEventListener('click', function(){
+  ensureAudioCtx();
+  hideStartOverlay();
+  exitPracticeMode();
+  hideProTip();
+  var target = (stepT > 0.6) ? curStep : Math.max(0, curStep - 1);
+  jumpToStep(target, false);
+  speakCantonese(stepFullTTS(STEPS[curStep]));
+});
+
+document.getElementById('btnNext').addEventListener('click', function(){
+  ensureAudioCtx();
+  hideStartOverlay();
+  exitPracticeMode();
+  if (waitingQuiz) {
+    var qIdx = STEPS[curStep].quizIdx;
+    if (qIdx != null) answeredQuizzes[qIdx] = true;
+    hideQuiz();
+  }
+  if (curStep < STEPS.length - 1) {
+    jumpToStep(curStep + 1, playing);
+    if (!playing) { applyState(curStep, 1); speakCantonese(stepFullTTS(STEPS[curStep])); }
+  } else {
+    applyState(curStep, 1);
+  }
+});
+
+document.getElementById('btnReplay').addEventListener('click', function(){
+  ensureAudioCtx();
+  hideStartOverlay();
+  exitPracticeMode();
+  hideProTip();
+  answeredQuizzes = {};
+  jumpToStep(0, true);
+  stageWrap.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+var btnMute = document.getElementById('btnMute');
+btnMute.addEventListener('click', function(){
+  muted = !muted;
+  btnMute.textContent = muted ? '🔇' : '🔊';
+  if (muted) stopSpeech();
+});
+
+var btnSpeed = document.getElementById('btnSpeed');
+btnSpeed.addEventListener('click', function(){
+  speedRate = (speedRate === 1.0) ? 0.75 : 1.0;
+  btnSpeed.textContent = (speedRate === 0.75) ? '🐢 慢速' : '🚶 正常';
+});
+
+document.addEventListener('keydown', function(e){
+  if (inPracticeMode) return;
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  else if (e.code === 'ArrowRight') { e.preventDefault(); document.getElementById('btnNext').click(); }
+  else if (e.code === 'ArrowLeft') { e.preventDefault(); document.getElementById('btnPrev').click(); }
+  else if (e.code === 'KeyR' || e.code === 'Escape') { e.preventDefault(); document.getElementById('btnReplay').click(); }
+});
+
+/* ============================================================
+   §10  片尾「🎯 挑戰類似題」（預設純文字＋按掣睇五段極簡草稿）
+   ============================================================ */
+var inPracticeMode = false;
+var practiceView = document.getElementById('practiceView');
+var questionCard = document.getElementById('questionCard');
+var dualStage = document.getElementById('dualStage');
+var celebrateBar = document.getElementById('celebrateBar');
+var prQuestion = document.getElementById('prQuestion');
+var prHintWrap = document.getElementById('prHintWrap');
+var prScratchSvg = document.getElementById('prScratchSvg');
+var prVerifyWrap = document.getElementById('prVerifyWrap');
+var prVerifySvg = document.getElementById('prVerifySvg');
+var prOpts = document.getElementById('prOpts');
+var prFeedback = document.getElementById('prFeedback');
+var prHintBtn = document.getElementById('prHintBtn');
+
+function renderPracticeScratch(F, M, B){
+  prScratchSvg.innerHTML = '';
+  svgEl('rect', { x: 0, y: 0, width: 640, height: 124, fill: '#fffdf5' }, prScratchSvg);
+
+  // F_
+  svgEl('rect', { x: 64, y: 24, width: 68, height: 52, rx: 10, fill: '#0aa5c9', opacity: '0.15' }, prScratchSvg);
+  var tf = svgEl('text', { x: 98, y: 60, 'text-anchor': 'middle', 'font-size': '32', 'font-weight': '900', fill: '#077792' }, prScratchSvg);
+  tf.textContent = String(F);
+  svgEl('path', { d: 'M 74 72 Q 98 78 122 72', fill: 'none', stroke: '#36414f', 'stroke-width': '3.2', 'stroke-linecap': 'round' }, prScratchSvg);
+
+  // E
+  svgEl('circle', { cx: 186, cy: 50, r: 23, fill: '#f4711f', opacity: '0.18' }, prScratchSvg);
+  var te = svgEl('text', { x: 186, y: 60, 'text-anchor': 'middle', 'font-size': '30', 'font-weight': '900', fill: '#c84b00' }, prScratchSvg);
+  te.textContent = 'E';
+
+  // | M_ |
+  svgEl('line', { x1: 238, y1: 20, x2: 238, y2: 84, stroke: '#e8467c', 'stroke-width': '3.2', 'stroke-linecap': 'round' }, prScratchSvg);
+  svgEl('rect', { x: 266, y: 24, width: 108, height: 52, rx: 10, fill: '#e8467c', opacity: '0.15' }, prScratchSvg);
+  var tm = svgEl('text', { x: 320, y: 60, 'text-anchor': 'middle', 'font-size': '32', 'font-weight': '900', fill: '#ad1f52' }, prScratchSvg);
+  tm.textContent = String(M);
+  svgEl('path', { d: 'M 294 72 Q 320 78 346 72', fill: 'none', stroke: '#36414f', 'stroke-width': '3.2', 'stroke-linecap': 'round' }, prScratchSvg);
+  svgEl('line', { x1: 402, y1: 20, x2: 402, y2: 84, stroke: '#e8467c', 'stroke-width': '3.2', 'stroke-linecap': 'round' }, prScratchSvg);
+
+  // V
+  svgEl('circle', { cx: 454, cy: 50, r: 23, fill: '#8d5bd6', opacity: '0.18' }, prScratchSvg);
+  var tv = svgEl('text', { x: 454, y: 60, 'text-anchor': 'middle', 'font-size': '30', 'font-weight': '900', fill: '#5d2fa8' }, prScratchSvg);
+  tv.textContent = 'V';
+
+  // B_
+  svgEl('rect', { x: 506, y: 24, width: 76, height: 52, rx: 10, fill: '#2f9e57', opacity: '0.15' }, prScratchSvg);
+  var tb = svgEl('text', { x: 544, y: 60, 'text-anchor': 'middle', 'font-size': '32', 'font-weight': '900', fill: '#1e713c' }, prScratchSvg);
+  tb.textContent = String(B);
+  svgEl('path', { d: 'M 516 72 Q 544 78 572 72', fill: 'none', stroke: '#36414f', 'stroke-width': '3.2', 'stroke-linecap': 'round' }, prScratchSvg);
+
+  var note = svgEl('text', { x: 320, y: 112, 'text-anchor': 'middle', 'font-size': '14', 'font-weight': '800', fill: '#7a5b21' }, prScratchSvg);
+  note.textContent = '◀ 前　' + F + ' ＋ E(1) ＋ ' + M + ' ＋ V(1) ＋ ' + B + '　後 ▶';
+}
+
+function renderPracticeVerify(F, M, B){
+  prVerifySvg.innerHTML = '';
+  var total = F + 1 + M + 1 + B;
+  var span = 840;
+  var step = Math.min(34, span / Math.max(1, total - 1));
+  var startX = 480 - (step * (total - 1)) / 2;
+
+  svgEl('rect', { x: 24, y: 152, width: 912, height: 14, rx: 5, fill: '#e4edf6', stroke: '#c5d6e8', 'stroke-width': '1.5' }, prVerifySvg);
+  for (var i = 0; i < total; i++) {
+    var k = i < F ? 'front' : (i === F ? 'eddie' : (i <= F + M ? 'mid' : (i === F + M + 1 ? 'vera' : 'back')));
+    var pn = buildPersonNode(i, k, prVerifySvg);
+    var cx = startX + i * step;
+    pn.g.setAttribute('opacity', '1');
+    pn.g.setAttribute('transform', 'translate(' + cx.toFixed(1) + ',156) scale(0.84)');
+  }
+  svgEl('rect', { x: 180, y: 8, width: 600, height: 34, rx: 17, fill: '#e4f7eb', stroke: '#2f9e57', 'stroke-width': '2' }, prVerifySvg);
+  var ts = svgEl('text', { x: 480, y: 31, 'text-anchor': 'middle', 'font-size': '18.5', 'font-weight': '900', fill: '#1b6e39' }, prVerifySvg);
+  ts.textContent = '✓ 驗證：' + F + ' + 1 + ' + M + ' + 1 + ' + B + ' = ' + total + ' 位顧客！';
+}
+
+function generatePractice(){
+  // 挑選好計又可練湊十嘅數字
+  var presets = [
+    [6, 7, 13],
+    [5, 8, 12],
+    [9, 4, 11],
+    [7, 5, 10],
+    [4, 6, 14]
+  ];
+  var pick = presets[Math.floor(Math.random() * presets.length)];
+  var F = pick[0], M = pick[1], B = pick[2];
+  var total = F + 1 + M + 1 + B;
+
+  prHintWrap.classList.remove('show');
+  prVerifyWrap.classList.remove('show');
+  prHintBtn.textContent = '✏️ 睇草稿提示';
+
+  prQuestion.innerHTML = '艾迪和薇兒在文具店排隊買文具，<span style="color:#f4711f">艾迪</span>的前面有 <span style="color:#0aa5c9">' + F +
+    '</span> 位顧客，<span style="color:#8d5bd6">薇兒</span>的後面有 <span style="color:#2f9e57">' + B +
+    '</span> 位顧客。艾迪在薇兒的前面，艾迪和薇兒之間有 <span style="color:#e8467c">' + M +
+    '</span> 位顧客。那麼一共有多少位顧客在排隊？';
+
+  renderPracticeScratch(F, M, B);
+
+  var choices = [F + M + B, F + M + B + 1, total];
+  choices.sort(function(){ return Math.random() - 0.5; });
+  prOpts.innerHTML = '';
+  prFeedback.textContent = '💡 試吓自己用 E、V 畫草稿計！需要幫忙可撳「✏️ 睇草稿提示」。';
+  prFeedback.style.color = '#5a6b7d';
+
+  choices.forEach(function(val){
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pr-opt';
+    btn.textContent = val + ' 位';
+    btn.addEventListener('click', function(){
+      ensureAudioCtx();
+      if (val === total) {
+        btn.classList.add('correct');
+        prHintWrap.classList.add('show');
+        renderPracticeVerify(F, M, B);
+        prVerifyWrap.classList.add('show');
+        var msg = '🎉 啱晒！' + F + ' + 1 + ' + M + ' + 1 + ' + B + ' = ' + total + ' 位顧客！你已經完全掌握！';
+        prFeedback.style.color = '#1b6e39';
+        prFeedback.textContent = msg;
+        playSfx('cheer');
+        speakCantonese(msg);
+      } else {
+        btn.classList.remove('wrong');
+        void btn.offsetWidth;
+        btn.classList.add('wrong');
+        prHintWrap.classList.add('show');
+        prHintBtn.textContent = '✏️ 收起草稿提示';
+        var hint = (val === F + M + B)
+          ? '💡 漏咗艾迪 E 同薇兒 V 兩位主角！睇草稿加埋兩個 1 再計！'
+          : '💡 好近喇！前面 ' + F + '、艾迪 1、中間 ' + M + '、薇兒 1、後面 ' + B + '，再計真啲！';
+        prFeedback.style.color = '#b3261e';
+        prFeedback.textContent = hint;
+        playSfx('wrong');
+        speakCantonese(hint);
+      }
+    });
+    prOpts.appendChild(btn);
+  });
+
+  speakCantonese('題目話：艾迪和薇兒在文具店排隊買文具，艾迪的前面有 ' + F + ' 位顧客，薇兒的後面有 ' + B + ' 位顧客。艾迪在薇兒的前面，艾迪和薇兒之間有 ' + M + ' 位顧客。題目問：那麼一共有多少位顧客在排隊？');
+}
+
+prHintBtn.addEventListener('click', function(){
+  ensureAudioCtx();
+  var showing = prHintWrap.classList.toggle('show');
+  prHintBtn.textContent = showing ? '✏️ 收起草稿提示' : '✏️ 睇草稿提示';
+  if (showing) playSfx('pop');
+});
+
+function enterPracticeMode(){
+  stopSpeech();
+  playing = false;
+  updatePlayButton();
+  hideProTip();
+  inPracticeMode = true;
+  questionCard.style.display = 'none';
+  dualStage.style.display = 'none';
+  quizBox.classList.remove('show');
+  celebrateBar.classList.remove('show');
+  practiceView.classList.add('show');
+  generatePractice();
+}
+
+function exitPracticeMode(){
+  if (!inPracticeMode) return;
+  stopSpeech();
+  inPracticeMode = false;
+  practiceView.classList.remove('show');
+  questionCard.style.display = '';
+  dualStage.style.display = '';
+}
+
+document.getElementById('btnChallenge').addEventListener('click', enterPracticeMode);
+document.getElementById('prNewBtn').addEventListener('click', generatePractice);
+document.getElementById('prBackBtn').addEventListener('click', function(){
+  exitPracticeMode();
+  applyState(curStep, 1);
+});
+
+// 開場忠實初始化：第 0 步 t=0（空店舖＋空白草稿紙）
+applyState(0, 0);
+updatePlayButton();
+})();
+</script>
+</body>
+</html>

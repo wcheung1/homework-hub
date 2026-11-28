@@ -1,0 +1,2357 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>拓展練習 5｜排隊問題視覺化動畫與考場速記教練</title>
+<style>
+  :root {
+    --bg: #f4f7fb;
+    --card: #ffffff;
+    --ink: #1e293b;
+    --muted: #64748b;
+    --navy: #1e3a8a;
+    --orange: #f4711f;
+    --cyan: #0aa5c9;
+    --purple: #8d5bd6;
+    --amber: #f0a500;
+    --pink: #e8467c;
+    --green: #33b26a;
+    --paper: #fffdf4;
+    --paper-grid: #efe8d4;
+    --border: #e2e8f0;
+    --shadow: 0 6px 20px rgba(30, 58, 138, 0.08);
+    --font: "PingFang TC", "PingFang HK", "Microsoft JhengHei", "Noto Sans TC", system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    line-height: 1.5;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 10px 12px 176px;
+    gap: 10px;
+  }
+
+  /* Top Phase Bar */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--card);
+    padding: 8px 12px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+
+  .brand-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--navy);
+    background: #eff6ff;
+    padding: 5px 11px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .phase-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .phase-pill {
+    border: 2px solid var(--border);
+    background: #f8fafc;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .phase-pill:hover { border-color: #93c5fd; color: var(--navy); }
+  .phase-pill.active {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(30, 58, 138, 0.25);
+  }
+  .phase-pill.done {
+    background: #ecfdf5;
+    border-color: #86efac;
+    color: #166534;
+  }
+
+  .top-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .chip-btn {
+    border: 1.5px solid var(--border);
+    background: #fff;
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .chip-btn:hover { background: #f1f5f9; }
+  .chip-btn.active { background: #dbeafe; border-color: #3b82f6; color: var(--navy); }
+
+  .kbd-hint {
+    font-size: 12px;
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  @media (pointer: coarse), (max-width: 900px) {
+    .kbd-hint { display: none; }
+  }
+
+  /* Question Card */
+  .question-card {
+    background: var(--card);
+    border-radius: 18px;
+    border: 1.5px solid var(--border);
+    padding: 14px 18px 12px;
+    box-shadow: var(--shadow);
+  }
+
+  .q-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .q-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 3px 10px;
+    border-radius: 8px;
+  }
+
+  .q-cn {
+    font-size: clamp(20px, 2.3vw, 24px);
+    font-weight: 700;
+    line-height: 1.85;
+    color: #1e293b;
+    letter-spacing: 0.01em;
+  }
+
+  .q-seg {
+    display: inline;
+    padding: 2px 3px;
+    border-radius: 7px;
+    transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .q-seg.active {
+    background: #fef08a;
+    color: #0f172a;
+    box-shadow: inset 0 -3px 0 #f4711f;
+  }
+
+  .q-seg.done {
+    color: #334155;
+  }
+
+  .name-anchor {
+    position: relative;
+    display: inline-block;
+    border-bottom: 2px solid #94a3b8;
+    padding-bottom: 0;
+  }
+
+  .code-sup {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 6px;
+    color: #fff;
+    pointer-events: none;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+    opacity: 0;
+    white-space: nowrap;
+  }
+  .code-sup.show {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+  .code-sup.sq { background: var(--purple); }
+  .code-sup.ed { background: var(--cyan); }
+
+  .q-en {
+    margin-top: 6px;
+    font-size: 13.5px;
+    color: #64748b;
+    line-height: 1.45;
+  }
+
+  /* Official Answer Line inside Question Card */
+  .answer-line-box {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1.5px dashed #cbd5e1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: clamp(18px, 2vw, 22px);
+    font-weight: 800;
+    color: var(--navy);
+    min-height: 38px;
+  }
+
+  .ans-label {
+    color: #475569;
+    font-size: 16px;
+  }
+
+  .ans-blank {
+    display: inline-flex;
+    align-items: center;
+    min-width: 280px;
+    border-bottom: 2.5px solid #1e3a8a;
+    padding: 0 8px 2px;
+    min-height: 32px;
+    color: #0f172a;
+    position: relative;
+  }
+
+  .ans-written {
+    color: #1e3a8a;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+  }
+
+  /* Dual Track Main Stage */
+  .dual-stage {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  @media (max-width: 860px) {
+    .dual-stage {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .track-card {
+    background: var(--card);
+    border-radius: 18px;
+    border: 1.5px solid var(--border);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .track-card.draft-card {
+    background: var(--paper);
+    border-color: #e6dcc2;
+  }
+
+  .track-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 800;
+    border-bottom: 1px solid var(--border);
+    background: #f8fafc;
+    color: var(--navy);
+  }
+
+  .draft-card .track-header {
+    background: #faf3de;
+    border-bottom-color: #e6dcc2;
+    color: #7c4a03;
+  }
+
+  .track-sub {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .svg-wrap {
+    width: 100%;
+    aspect-ratio: 600 / 320;
+    position: relative;
+  }
+
+  .svg-wrap svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Interactive Pause Inline Banner (Non-blocking Stage Card) */
+  .quiz-banner {
+    display: none;
+    background: linear-gradient(135deg, #eff6ff 0%, #fef9c3 100%);
+    border: 2.5px solid #3b82f6;
+    border-radius: 18px;
+    padding: 14px 18px;
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.16);
+    animation: popIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .quiz-banner.show { display: block; }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .quiz-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .quiz-title {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--navy);
+  }
+
+  .quiz-skip {
+    border: 1.5px solid #94a3b8;
+    background: #fff;
+    color: #475569;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .quiz-opts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .quiz-opt-btn {
+    flex: 1;
+    min-width: 130px;
+    border: 2.5px solid #3b82f6;
+    background: #fff;
+    color: var(--navy);
+    font-family: var(--font);
+    font-size: 18px;
+    font-weight: 800;
+    padding: 12px 16px;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    box-shadow: 0 3px 0 #bfdbfe;
+  }
+  .quiz-opt-btn:hover { background: #eff6ff; transform: translateY(-1px); }
+  .quiz-opt-btn:active { transform: translateY(1px); }
+  .quiz-opt-btn.wrong {
+    border-color: #ef4444;
+    background: #fef2f2;
+    color: #b91c1c;
+  }
+  .quiz-opt-btn.correct {
+    border-color: #16a34a;
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  .quiz-feedback {
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    min-height: 22px;
+  }
+  .quiz-feedback.err { color: #dc2626; }
+  .quiz-feedback.ok { color: #15803d; }
+
+  /* Celebration + Mantra + Bonus Action Bar */
+  .celebrate-panel {
+    display: none;
+    background: linear-gradient(135deg, #ecfdf5 0%, #eff6ff 55%, #fef3c7 100%);
+    border: 2px solid #34d399;
+    border-radius: 18px;
+    padding: 14px 18px;
+    box-shadow: var(--shadow);
+  }
+  .celebrate-panel.show { display: block; animation: popIn 0.35s ease; }
+
+  .mantra-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .mantra-box {
+    font-size: 18px;
+    font-weight: 900;
+    color: #065f46;
+  }
+
+  .bonus-btns {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .cta-btn {
+    border: none;
+    font-family: var(--font);
+    font-size: 16px;
+    font-weight: 800;
+    padding: 10px 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .cta-btn:hover { transform: translateY(-1px); }
+  .cta-practice {
+    background: #2563eb;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  }
+  .cta-master {
+    background: linear-gradient(135deg, #f59e0b, #ea580c);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.28);
+  }
+
+  /* Fixed Bottom Dock */
+  .bottom-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(10px);
+    border-top: 2px solid var(--border);
+    box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.08);
+    z-index: 40;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .dock-inner {
+    max-width: 1240px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .subtitle-bar {
+    font-size: clamp(17px, 2vw, 20px);
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.5;
+    min-height: 30px;
+  }
+
+  .quote-tag {
+    display: inline;
+    background: #fef3c7;
+    color: #92400e;
+    padding: 1px 6px;
+    border-radius: 6px;
+    border-bottom: 2px solid #f59e0b;
+    margin-right: 4px;
+    font-weight: 800;
+  }
+
+  .quote-prefix {
+    color: #b45309;
+    font-weight: 900;
+    margin-right: 2px;
+  }
+
+  .dock-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .formula-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: clamp(20px, 2.2vw, 24px);
+    font-weight: 900;
+    background: #f8fafc;
+    border: 1.5px solid var(--border);
+    padding: 5px 14px;
+    border-radius: 12px;
+    min-height: 44px;
+  }
+
+  .f-tok { padding: 1px 4px; border-radius: 6px; }
+  .f-orange { color: var(--orange); background: #fff7ed; }
+  .f-cyan { color: var(--cyan); background: #ecfeff; }
+  .f-amber { color: #b45309; background: #fef3c7; }
+  .f-purple { color: var(--purple); background: #f5f3ff; }
+  .f-green { color: #15803d; background: #dcfce7; }
+  .f-navy { color: var(--navy); background: #dbeafe; }
+  .f-muted { color: #94a3b8; font-size: 15px; font-weight: 700; }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ctrl-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: #fff;
+    color: var(--navy);
+    font-size: 20px;
+    font-weight: 900;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  }
+  .ctrl-btn:hover { background: #eff6ff; border-color: #93c5fd; }
+  .ctrl-btn:active { transform: scale(0.94); }
+  .ctrl-btn.primary {
+    width: 56px;
+    height: 56px;
+    background: var(--navy);
+    border-color: var(--navy);
+    color: #fff;
+    font-size: 22px;
+    box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+  }
+  .ctrl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .step-counter {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--muted);
+    min-width: 56px;
+    text-align: center;
+  }
+
+  /* Modal Overlay (Practice & Master Shortcut) */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal-card {
+    background: #fff;
+    border-radius: 22px;
+    max-width: 720px;
+    width: 100%;
+    max-height: 90dvh;
+    overflow-y: auto;
+    padding: 20px 22px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+    position: relative;
+  }
+
+  .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1.5px solid var(--border);
+    padding-bottom: 10px;
+  }
+
+  .modal-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--navy);
+  }
+
+  .close-btn {
+    border: none;
+    background: #f1f5f9;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 18px;
+    font-weight: 900;
+    cursor: pointer;
+    color: #475569;
+  }
+
+  .practice-q {
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.75;
+    background: #f8fafc;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 15px;
+    margin-bottom: 12px;
+  }
+
+  .practice-tools {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .hint-box, .verify-box {
+    display: none;
+    border-radius: 14px;
+    padding: 10px;
+    margin-bottom: 12px;
+  }
+  .hint-box {
+    background: var(--paper);
+    border: 1.5px dashed #d6c598;
+  }
+  .verify-box {
+    background: #f0fdf4;
+    border: 1.5px solid #86efac;
+  }
+  .hint-box.show, .verify-box.show { display: block; animation: popIn 0.25s ease; }
+
+  .master-hero {
+    background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%);
+    border: 2px solid #fb923c;
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+
+  .master-eq {
+    font-size: 28px;
+    font-weight: 900;
+    text-align: center;
+    margin: 8px 0;
+    color: #9a3412;
+  }
+
+  /* Confetti Canvas */
+  #confettiCanvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 90;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="confettiCanvas"></canvas>
+
+<div class="app-shell">
+  <!-- Top Phase Navigation Bar -->
+  <header class="top-bar">
+    <div class="brand-tag">📐 拓展練習 5｜排隊問題</div>
+    <nav class="phase-pills" id="phasePills" aria-label="解題階段"></nav>
+    <div class="top-tools">
+      <button class="chip-btn" id="speedBtn" title="切換語速">🚶 正常 1.0x</button>
+      <button class="chip-btn" id="muteBtn" title="靜音開關">🔊 語音開</button>
+      <span class="kbd-hint">空白鍵 播放 ｜ ← → 切換</span>
+    </div>
+  </header>
+
+  <!-- Question Card -->
+  <section class="question-card">
+    <div class="q-header">
+      <span class="q-badge">📝 原題文字（跟住順讀）</span>
+      <span class="q-badge" id="stepTag">第 0 步：準備審題</span>
+    </div>
+    <div class="q-cn" id="questionCn"></div>
+    <div class="q-en">
+      The children are lined up in a queue, and Squary and Eddie are in the queue. There are 16 children in front of Squary, and 20 children behind Eddie. Squary is behind Eddie, and there are 4 children between Eddie and Squary. How many children are there in total in the queue?
+    </div>
+    <div class="answer-line-box">
+      <span class="ans-label">✏️ 作答區：</span>
+      <span class="ans-blank"><span class="ans-written" id="answerWritten"></span></span>
+    </div>
+  </section>
+
+  <!-- Interactive Pause Banner -->
+  <section class="quiz-banner" id="quizBanner" aria-live="polite">
+    <div class="quiz-top">
+      <div class="quiz-title" id="quizQuestion"></div>
+      <button class="quiz-skip" id="quizSkipBtn">跳過 ⏭</button>
+    </div>
+    <div class="quiz-opts" id="quizOptions"></div>
+    <div class="quiz-feedback" id="quizFeedback"></div>
+  </section>
+
+  <!-- Celebration & Bonus Panel -->
+  <section class="celebrate-panel" id="celebratePanel">
+    <div class="mantra-row">
+      <div class="mantra-box">🏆 考場實戰口訣：「先畫碎片後拼隊，睇清前後唔漏自己！」</div>
+      <div class="bonus-btns">
+        <button class="cta-btn cta-practice" id="openPracticeBtn">🎯 挑戰類似題</button>
+        <button class="cta-btn cta-master" id="openMasterBtn">✨ 高手秒殺思維</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dual-Track Stage -->
+  <main class="dual-stage">
+    <!-- Track A: Concrete Queue Stage -->
+    <section class="track-card">
+      <div class="track-header">
+        <span>🎬 具象理解舞台（一眼睇明排隊）</span>
+        <span class="track-sub">左面隊頭 ←　→ 右面隊尾</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="stageSvg" viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </section>
+
+    <!-- Track B: Pencil Draft Paper -->
+    <section class="track-card draft-card">
+      <div class="track-header">
+        <span>✏️ 實戰鉛筆算草紙（最短筆劃速記）</span>
+        <span class="track-sub">唔寫中文字・1–2 筆搞掂</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="draftSvg" viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Fixed Bottom Dock -->
+<footer class="bottom-dock">
+  <div class="dock-inner">
+    <div class="subtitle-bar" id="subtitleBar"></div>
+    <div class="dock-bottom-row">
+      <div class="formula-strip" id="formulaStrip"></div>
+      <div class="controls">
+        <span class="step-counter" id="stepCounter">0 / 9</span>
+        <button class="ctrl-btn" id="prevBtn" title="上一步">⏮</button>
+        <button class="ctrl-btn primary" id="playBtn" title="播放／暫停">▶</button>
+        <button class="ctrl-btn" id="nextBtn" title="下一步">⏭</button>
+        <button class="ctrl-btn" id="replayBtn" title="重播今步">🔄</button>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Practice Modal -->
+<div class="modal-backdrop" id="practiceModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title" id="practiceTitle">🎯 挑戰類似題（第 1 題）</div>
+      <button class="close-btn" id="closePracticeBtn">✕</button>
+    </div>
+    <div class="practice-q" id="practiceText"></div>
+    <div class="practice-tools">
+      <button class="chip-btn" id="toggleHintBtn">✏️ 睇草稿提示</button>
+      <button class="chip-btn" id="nextPracticeBtn">🔀 換一條新數字</button>
+    </div>
+    <div class="hint-box" id="practiceHintBox">
+      <div style="font-size:13px;font-weight:800;color:#7c4a03;margin-bottom:4px;">✏️ 極簡鉛筆算草提示：</div>
+      <svg id="practiceHintSvg" viewBox="0 0 560 155" style="width:100%;height:auto;display:block;"></svg>
+    </div>
+    <div class="quiz-opts" id="practiceOpts"></div>
+    <div class="quiz-feedback" id="practiceFeedback"></div>
+    <div class="verify-box" id="practiceVerifyBox">
+      <div style="font-size:14px;font-weight:800;color:#166534;margin-bottom:6px;">🎉 實物排隊圖解驗證：</div>
+      <svg id="practiceVerifySvg" viewBox="0 0 560 175" style="width:100%;height:auto;display:block;"></svg>
+    </div>
+  </div>
+</div>
+
+<!-- Master Shortcut Modal -->
+<div class="modal-backdrop" id="masterModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title">✨ 高手秒殺思維：重疊抵銷法（容斥直覺）</div>
+      <button class="close-btn" id="closeMasterBtn">✕</button>
+    </div>
+    <div class="master-hero">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <strong style="font-size:16px;color:#9a3412;">💡 唔使逐段拆，一條式 2 秒秒殺！</strong>
+        <button class="chip-btn active" id="speakMasterBtn">🔊 聽廣東話講解</button>
+      </div>
+      <div class="master-eq">
+        <span style="color:#f4711f;">16</span> + <span style="color:#0aa5c9;">20</span> − <span style="color:#d97706;">4</span> = <span style="color:#1e3a8a;">32</span>
+      </div>
+      <div style="font-size:15px;font-weight:700;color:#7c2d12;line-height:1.65;">
+        睇真啲兩條大括弧合埋一齊：<br>
+        • <strong>多多（○）</strong>已經包咗喺「方方前面 16 個」入面（計咗 1 次）；<br>
+        • <strong>方方（□）</strong>已經包咗喺「多多後面 20 個」入面（計咗 1 次）；<br>
+        • 全隊淨係得<strong>中間 4 個小朋友</strong>俾兩邊重疊計多咗 1 次！<br>
+        所以直接 <strong>16 + 20 − 4 = 32</strong>，唔使再減多 2！
+      </div>
+    </div>
+    <svg id="masterSvg" viewBox="0 0 600 225" style="width:100%;height:auto;display:block;background:#f8fafc;border-radius:14px;border:1.5px solid #e2e8f0;"></svg>
+  </div>
+</div>
+
+<script>
+// =========================================================
+// 1. CENTRALIZED CONFIG (Question, Segments, Palette, TTS)
+// =========================================================
+const CONFIG = {
+  colors: {
+    frontSq: '#f4711f',  // Orange: 16 in front of Squary
+    eddie: '#0aa5c9',    // Cyan: Eddie (○) & 20 behind Eddie
+    between: '#f0a500',  // Amber: 4 children between
+    squary: '#8d5bd6',   // Purple: Squary (□)
+    behindSq: '#33b26a', // Green: 15 behind Squary
+    accent: '#e8467c',
+    navy: '#1e3a8a'
+  },
+
+  // Question broken into exact verbatim Chinese segments
+  segments: [
+    { id: 0, text: '小朋友們排成一隊，方方和多多在隊伍中。', html: '小朋友們排成一隊，<span class="name-anchor">方方<span class="code-sup sq">□</span></span>和<span class="name-anchor">多多<span class="code-sup ed">○</span></span>在隊伍中。' },
+    { id: 1, text: '方方的前面有 16 個小朋友，', html: '<span class="name-anchor">方方<span class="code-sup sq">□</span></span>的前面有 16 個小朋友，' },
+    { id: 2, text: '多多的後面有 20 個小朋友。', html: '<span class="name-anchor">多多<span class="code-sup ed">○</span></span>的後面有 20 個小朋友。' },
+    { id: 3, text: '方方在多多的後面，', html: '<span class="name-anchor">方方<span class="code-sup sq">□</span></span>在<span class="name-anchor">多多<span class="code-sup ed">○</span></span>的後面，' },
+    { id: 4, text: '多多和方方之間有 4 個小朋友。', html: '<span class="name-anchor">多多<span class="code-sup ed">○</span></span>和<span class="name-anchor">方方<span class="code-sup sq">□</span></span>之間有 4 個小朋友。' },
+    { id: 5, text: '請問一共有多少個小朋友在排隊？', html: '請問一共有多少個小朋友在排隊？' }
+  ],
+
+  // Cantonese heteronym (多音／異讀字) calibration map for zh-HK TTS
+  HETERO_MAP: [
+    ['先畫碎片', '先劃碎片'],
+    ['畫碎片', '劃碎片'],
+    ['畫方方', '劃方方'],
+    ['畫多多', '劃多多'],
+    ['畫條', '劃條'],
+    ['畫一', '劃一'],
+    ['畫個', '劃個'],
+    ['畫線', '劃線'],
+    ['畫圈', '劃圈'],
+    ['畫出', '劃出'],
+    ['畫晒', '劃晒'],
+    ['畫走', '劃走'],
+    ['畫低', '劃低'],
+    ['畫起', '劃起'],
+    ['重疊', '從疊'],
+    ['數一數', '掃一掃'],
+    ['數吓', '掃吓']
+  ],
+
+  phases: [
+    { id: 0, label: '① 順讀起草', startStep: 0 },
+    { id: 1, label: '② 拼合排位', startStep: 4 },
+    { id: 2, label: '③ 拆解計數', startStep: 6 },
+    { id: 3, label: '④ 作答慶祝', startStep: 9 }
+  ],
+
+  steps: [
+    {
+      phase: 0,
+      tag: '第 0 步：準備審題',
+      highlight: [],
+      quotePrefix: '',
+      quote: '',
+      thought: '睇清楚呢條排隊題，我哋順住由頭讀到尾，一邊讀一邊用鉛筆速記！',
+      duration: 2200,
+      formula: [{ t: '準備落筆審題…', c: 'f-muted' }]
+    },
+    {
+      phase: 0,
+      tag: '第 1 步：定下極簡代號',
+      highlight: [0],
+      quotePrefix: '題目寫住：',
+      quote: '小朋友們排成一隊，方方和多多在隊伍中。',
+      thought: '左邊係隊頭，右邊係隊尾。草稿唔寫中文字：方方用小方格，多多用細圓圈！',
+      duration: 2800,
+      formula: [{ t: '□ = 方方', c: 'f-purple' }, { t: '○ = 多多', c: 'f-cyan' }]
+    },
+    {
+      phase: 0,
+      tag: '第 2 步：草擬第一段碎片',
+      highlight: [1],
+      quotePrefix: '題目話：',
+      quote: '方方的前面有 16 個小朋友，',
+      thought: '即刻先畫第一段：前面寫 16，後面畫方方。記住，呢 16 個唔包方方自己！',
+      duration: 2800,
+      formula: [{ t: '方方前面 16', c: 'f-orange' }, { t: '（唔包方方）', c: 'f-muted' }]
+    },
+    {
+      phase: 0,
+      tag: '第 3 步：草擬第二段碎片',
+      highlight: [2],
+      quotePrefix: '題目話：',
+      quote: '多多的後面有 20 個小朋友。',
+      thought: '仲未知邊個企前面，中間留個問號，另一邊畫多多，後面寫 20，同樣唔包多多。',
+      duration: 2800,
+      formula: [{ t: '方方前面 16', c: 'f-orange' }, { t: '？', c: 'f-navy' }, { t: '多多後面 20', c: 'f-cyan' }]
+    },
+    {
+      phase: 1,
+      tag: '第 4 步：確定前後・拼成一隊',
+      highlight: [3],
+      quotePrefix: '題目指明：',
+      quote: '方方在多多的後面，',
+      thought: '即係多多企前面，方方企後面！一筆劃走問號，將兩段拉埋拼成一隊！',
+      duration: 3000,
+      formula: [{ t: '多多 ○（前）', c: 'f-cyan' }, { t: '→', c: 'f-muted' }, { t: '方方 □（後）', c: 'f-purple' }],
+      quiz: {
+        prompt: '停一停，估一估！「方方在多多的後面」，即係邊個企前面（左邊隊頭嗰邊）？',
+        ttsPrompt: '題目指明：方方在多多的後面。停一停，估一估！咁即係邊個企前面？',
+        pendingFormula: [{ t: '🤔 邊個企前面（隊頭）？', c: 'f-navy' }],
+        options: [
+          { label: '多多（○）企前面', ok: true, fb: '答啱啦！方方喺多多後面，所以多多企前面！' },
+          { label: '方方（□）企前面', ok: false, fb: '再睇真啲呀！「方方在多多的後面」，即係方方喺後面，邊個先係前面？' }
+        ]
+      }
+    },
+    {
+      phase: 1,
+      tag: '第 5 步：填入中間 4 人・對齊總數',
+      highlight: [4],
+      quotePrefix: '題目話：',
+      quote: '多多和方方之間有 4 個小朋友。',
+      thought: '中間填返 4 個！依家成條隊清清楚楚：方方前面 16 個，多多後面 20 個！',
+      duration: 3000,
+      formula: [{ t: '方方前 16', c: 'f-orange' }, { t: '中間 4', c: 'f-amber' }, { t: '多多後 20', c: 'f-cyan' }]
+    },
+    {
+      phase: 2,
+      tag: '第 6 步：鎖定目標・搵方方後面',
+      highlight: [5],
+      quotePrefix: '題目問：',
+      quote: '請問一共有多少個小朋友在排隊？',
+      thought: '方方前面已經知有 16 個，加埋方方 1 個，淨係計埋方方後面幾多個就掂！',
+      duration: 2800,
+      formula: [{ t: '全隊 =', c: 'f-navy' }, { t: '16', c: 'f-orange' }, { t: '+', c: 'f-navy' }, { t: '1', c: 'f-purple' }, { t: '+', c: 'f-navy' }, { t: '？', c: 'f-green' }]
+    },
+    {
+      phase: 2,
+      tag: '第 7 步：計算方方後面人數',
+      highlight: [2, 4],
+      quotePrefix: '',
+      quote: '',
+      thought: '計得好準！多多後面 20 個，減走中間 4 個，再減方方自己 1 個，仲有 15 個！',
+      duration: 3200,
+      formula: [{ t: '20', c: 'f-cyan' }, { t: '−', c: 'f-navy' }, { t: '4', c: 'f-amber' }, { t: '−', c: 'f-navy' }, { t: '1', c: 'f-purple' }, { t: '=', c: 'f-navy' }, { t: '15', c: 'f-green' }],
+      quiz: {
+        prompt: '停一停，估一估！多多後面有 20 個，扣走中間 4 個同埋方方自己 1 個，方方後面仲有幾多個？',
+        ttsPrompt: '停一停，估一估！多多後面有 20 個，扣走中間 4 個同埋方方自己 1 個，方方後面仲有幾多個？',
+        pendingFormula: [{ t: '20', c: 'f-cyan' }, { t: '−', c: 'f-navy' }, { t: '4', c: 'f-amber' }, { t: '−', c: 'f-navy' }, { t: '1', c: 'f-purple' }, { t: '=', c: 'f-navy' }, { t: '？', c: 'f-green' }],
+        options: [
+          { label: '16 個', ok: false, fb: '小心呀！20 減 4 等於 16，但仲未扣走方方自己 1 個喎，再試多次！' },
+          { label: '15 個', ok: true, fb: '醒目！20 減 4 再減 1 等於 15 個！' },
+          { label: '14 個', ok: false, fb: '差少少！20 減 4 係 16，再減多 1 個係幾多呀？' }
+        ]
+      }
+    },
+    {
+      phase: 2,
+      tag: '第 8 步：三段相加計總數',
+      highlight: [1, 5],
+      quotePrefix: '',
+      quote: '',
+      thought: '三段一齊加：方方前面 16 個，加方方自己 1 個係 17，再加後面 15 個，一共 32 個！',
+      duration: 3400,
+      formula: [{ t: '16', c: 'f-orange' }, { t: '+', c: 'f-navy' }, { t: '1', c: 'f-purple' }, { t: '+', c: 'f-navy' }, { t: '15', c: 'f-green' }, { t: '=', c: 'f-navy' }, { t: '32', c: 'f-navy' }]
+    },
+    {
+      phase: 3,
+      tag: '第 9 步：寫上答句・完美驗算',
+      highlight: [5],
+      quotePrefix: '',
+      quote: '',
+      thought: '寫低答句：一共有 32 個小朋友在排隊！記住口訣：先畫碎片後拼隊，睇清前後唔漏自己！',
+      duration: 3200,
+      formula: [{ t: '20 − 4 − 1 = 15', c: 'f-green' }, { t: '｜', c: 'f-muted' }, { t: '16 + 1 + 15 = 32', c: 'f-navy' }]
+    }
+  ],
+
+  masterTTS: '高手秒殺思維！睇住兩條大括弧：方方前面 16 個，已經包咗多多喺入面；多多後面 20 個，又已經包咗方方喺入面！全隊淨係得中間 4 個小朋友俾兩邊重疊計多咗一次。所以直接 16 加 20 減 4，一秒就計到等於 32！',
+
+  practiceBank: [
+    {
+      aName: '小明', bName: '小美', frontA: 12, behindB: 15, between: 3,
+      ans: 24, behindA: 11, frontB: 8,
+      choices: [22, 24, 27],
+      wrongFb: {
+        22: '小心陷阱！12 加 15 減 3 已經唔使再減多 2，試下用 15 − 3 − 1 搵小明後面先！',
+        27: '12 加 15 重疊計多咗中間 3 個喎！記得先計小明後面：15 − 3 − 1 = 11！'
+      }
+    },
+    {
+      aName: '樂樂', bName: '悠悠', frontA: 18, behindB: 14, between: 5,
+      ans: 27, behindA: 8, frontB: 12,
+      choices: [25, 27, 32],
+      wrongFb: {
+        25: '差少少！唔好扣多咗兩個自己呀，先計樂樂後面：14 − 5 − 1 = 8，再加 18 + 1！',
+        32: '18 加 14 重疊計多咗中間 5 個小朋友！先計樂樂後面有幾多個再加啦！'
+      }
+    },
+    {
+      aName: '子軒', bName: '心怡', frontA: 11, behindB: 19, between: 2,
+      ans: 28, behindA: 16, frontB: 8,
+      choices: [26, 28, 30],
+      wrongFb: {
+        26: '唔使多減 2 呀！先計子軒後面：19 − 2 − 1 = 16，然後 11 + 1 + 16！',
+        30: '11 加 19 重疊咗中間 2 個小朋友呀！再計多次！'
+      }
+    }
+  ]
+};
+
+// =========================================================
+// 2. AUDIO & CANTONESE TTS ENGINE
+// =========================================================
+const audioState = {
+  muted: false,
+  rate: 1.0,
+  ctx: null,
+  voice: null,
+  fallbackTimer: null,
+  speakToken: 0
+};
+
+function ensureAudioCtx() {
+  if (!audioState.ctx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioState.ctx = new AC();
+  }
+  if (audioState.ctx && audioState.ctx.state === 'suspended') {
+    audioState.ctx.resume().catch(() => {});
+  }
+}
+
+function playSfx(type) {
+  if (audioState.muted) return;
+  try {
+    ensureAudioCtx();
+    const ctx = audioState.ctx;
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    if (type === 'pop') {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(520, now);
+      o.frequency.exponentialRampToValueAtTime(760, now + 0.08);
+      g.gain.setValueAtTime(0.08, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      o.connect(g).connect(ctx.destination);
+      o.start(now); o.stop(now + 0.095);
+    } else if (type === 'whoosh') {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(240, now);
+      o.frequency.exponentialRampToValueAtTime(480, now + 0.18);
+      g.gain.setValueAtTime(0.06, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      o.connect(g).connect(ctx.destination);
+      o.start(now); o.stop(now + 0.21);
+    } else if (type === 'ding') {
+      [587.3, 880].forEach((freq, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(freq, now + i * 0.09);
+        g.gain.setValueAtTime(0.11, now + i * 0.09);
+        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.25);
+        o.connect(g).connect(ctx.destination);
+        o.start(now + i * 0.09); o.stop(now + i * 0.09 + 0.26);
+      });
+    } else if (type === 'chord') {
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(freq, now + i * 0.07);
+        g.gain.setValueAtTime(0.09, now + i * 0.07);
+        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.5);
+        o.connect(g).connect(ctx.destination);
+        o.start(now + i * 0.07); o.stop(now + i * 0.07 + 0.52);
+      });
+    }
+  } catch (e) {}
+}
+
+function loadCantoneseVoice() {
+  if (!('speechSynthesis' in window)) return;
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return;
+  audioState.voice =
+    voices.find(v => /zh[-_]HK/i.test(v.lang) && /Sinji|HiuGaai|HiuMaan|WanLung|Google/i.test(v.name)) ||
+    voices.find(v => /zh[-_]HK/i.test(v.lang)) ||
+    voices.find(v => /yue/i.test(v.lang)) ||
+    voices.find(v => /zh[-_]TW/i.test(v.lang)) ||
+    voices.find(v => /zh/i.test(v.lang)) ||
+    null;
+}
+
+if ('speechSynthesis' in window) {
+  loadCantoneseVoice();
+  window.speechSynthesis.onvoiceschanged = loadCantoneseVoice;
+}
+
+function cleanForTTS(text) {
+  let s = String(text || '');
+  // Strip emojis, box/shape symbols, vertical bars
+  s = s.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}□○△×｜|「」『』]/gu, ' ');
+  // Convert math operators to natural Cantonese
+  s = s.replace(/−|-/g, ' 減 ')
+       .replace(/\+/g, ' 加 ')
+       .replace(/×/g, ' 乘 ')
+       .replace(/÷/g, ' 除 ')
+       .replace(/=/g, ' 等於 ');
+  // Apply heteronym calibration map
+  for (const [src, dst] of CONFIG.HETERO_MAP) {
+    s = s.split(src).join(dst);
+  }
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+function stopSpeech() {
+  audioState.speakToken++;
+  if (audioState.fallbackTimer) {
+    clearTimeout(audioState.fallbackTimer);
+    audioState.fallbackTimer = null;
+  }
+  if ('speechSynthesis' in window) {
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
+}
+
+function speakText(rawText, onDone) {
+  stopSpeech();
+  const token = audioState.speakToken;
+  const cleaned = cleanForTTS(rawText);
+  const finish = () => {
+    if (token !== audioState.speakToken) return;
+    if (audioState.fallbackTimer) {
+      clearTimeout(audioState.fallbackTimer);
+      audioState.fallbackTimer = null;
+    }
+    if (onDone) onDone();
+  };
+
+  if (audioState.muted || !('speechSynthesis' in window) || !cleaned) {
+    const ms = Math.max(1800, Math.min(6500, cleaned.length * (160 / audioState.rate)));
+    audioState.fallbackTimer = setTimeout(finish, ms);
+    return;
+  }
+
+  try {
+    loadCantoneseVoice();
+    const utt = new SpeechSynthesisUtterance(cleaned);
+    utt.lang = 'zh-HK';
+    if (audioState.voice) utt.voice = audioState.voice;
+    utt.rate = audioState.rate;
+    utt.pitch = 1.04;
+    utt.onend = finish;
+    utt.onerror = finish;
+    // Safety timeout prevents stalls on quirky browsers
+    const safetyMs = Math.max(4500, Math.round((cleaned.length * 290) / audioState.rate) + 2500);
+    audioState.fallbackTimer = setTimeout(finish, safetyMs);
+    window.speechSynthesis.speak(utt);
+  } catch (e) {
+    audioState.fallbackTimer = setTimeout(finish, 2400);
+  }
+}
+
+// =========================================================
+// 3. PURE-FUNCTION MATH & SVG RENDERERS
+// =========================================================
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const segP = (p, a, b) => clamp((p - a) / (b - a), 0, 1);
+const easeOut = t => 1 - Math.pow(1 - clamp(t), 3);
+const easeInOut = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// 3-flash choreography pure function (returns { fillAlpha, strokeWidth, badgeScale })
+function flash3(p, start, end) {
+  const t = segP(p, start, end);
+  if (t <= 0) return { show: false, fillAlpha: 0, strokeW: 0, badge: 0 };
+  if (t < 0.72) {
+    const wave = Math.abs(Math.sin((t / 0.72) * Math.PI * 3));
+    return { show: true, fillAlpha: 0.14 + 0.32 * wave, strokeW: 2.2 + 2.2 * wave, badge: 0 };
+  }
+  const bt = easeOut((t - 0.72) / 0.28);
+  return { show: true, fillAlpha: 0.16, strokeW: 2.5, badge: bt };
+}
+
+// Reusable SVG mini-kid helper
+function kidSvg(x, y, color, opts = {}) {
+  const scale = opts.scale ?? 1;
+  const label = opts.label || '';
+  const symbol = opts.symbol || '';
+  const glow = opts.glow || 0;
+  const opacity = opts.opacity ?? 1;
+  const cap = opts.cap || '';
+  const dy = glow > 0 ? -Math.sin(glow * Math.PI) * 5 : 0;
+  return `
+    <g transform="translate(${x.toFixed(1)}, ${(y + dy).toFixed(1)}) scale(${scale})" opacity="${opacity.toFixed(3)}">
+      ${glow > 0.05 ? `<circle cx="0" cy="-22" r="27" fill="${color}" opacity="${(0.22 * glow).toFixed(2)}" />` : ''}
+      <ellipse cx="0" cy="4" rx="13" ry="4" fill="#cbd5e1" opacity="0.7" />
+      <!-- Legs -->
+      <line x1="-4" y1="-6" x2="-5" y2="3" stroke="#334155" stroke-width="3.2" stroke-linecap="round" />
+      <line x1="4" y1="-6" x2="5" y2="3" stroke="#334155" stroke-width="3.2" stroke-linecap="round" />
+      <!-- Body -->
+      <rect x="-12" y="-26" width="24" height="22" rx="8" fill="${color}" stroke="#1e293b" stroke-width="1.6" />
+      ${symbol === 'sq' ? `<rect x="-5.5" y="-20.5" width="11" height="11" rx="1.5" fill="none" stroke="#fff" stroke-width="2.4" />` : ''}
+      ${symbol === 'ci' ? `<circle cx="0" cy="-15" r="5.8" fill="none" stroke="#fff" stroke-width="2.4" />` : ''}
+      <!-- Head -->
+      <circle cx="0" cy="-38" r="12.5" fill="#fde6c4" stroke="#1e293b" stroke-width="1.6" />
+      <!-- Cap / Hair -->
+      ${cap === 'sq'
+        ? `<rect x="-12" y="-53" width="24" height="8" rx="2" fill="${color}" stroke="#1e293b" stroke-width="1.4" />`
+        : cap === 'ci'
+        ? `<path d="M-12,-42 A12,11 0 0,1 12,-42 Z" fill="${color}" stroke="#1e293b" stroke-width="1.4" />`
+        : `<path d="M-11,-41 Q0,-53 11,-41 Z" fill="#475569" />`}
+      <!-- Eyes facing slightly left (front of queue) -->
+      <circle cx="-5.5" cy="-38.5" r="1.5" fill="#1e293b" />
+      <circle cx="1.5" cy="-38.5" r="1.5" fill="#1e293b" />
+      <path d="M-5,-33.5 Q-2,-31 1,-33.5" fill="none" stroke="#1e293b" stroke-width="1.4" stroke-linecap="round" />
+      ${label ? `<text x="0" y="21" text-anchor="middle" font-size="15" font-weight="900" fill="${color}">${label}</text>` : ''}
+    </g>
+  `;
+}
+
+// Grouped queue crowd block (clean, zero clutter)
+function crowdGroupSvg(x, y, w, countText, color, opacity = 1, dashed = false) {
+  if (opacity <= 0.01) return '';
+  const cx = x + w / 2;
+  return `
+    <g opacity="${opacity.toFixed(3)}">
+      <rect x="${x}" y="${y - 54}" width="${w}" height="62" rx="14"
+            fill="${color}" fill-opacity="0.10"
+            stroke="${color}" stroke-width="2" ${dashed ? 'stroke-dasharray="6,4"' : ''} />
+      ${kidSvg(x + 24, y, '#94a3b8', { scale: 0.78 })}
+      ${w > 115 ? kidSvg(x + 52, y, '#94a3b8', { scale: 0.78 }) : ''}
+      <text x="${cx}" y="${y - 22}" text-anchor="middle" font-size="18" font-weight="900" fill="#64748b">⋯</text>
+      ${kidSvg(x + w - 24, y, '#94a3b8', { scale: 0.78 })}
+      <rect x="${cx - 32}" y="${y + 12}" width="64" height="22" rx="11" fill="${color}" />
+      <text x="${cx}" y="${y + 27.5}" text-anchor="middle" font-size="13.5" font-weight="900" fill="#fff">${countText}</text>
+    </g>
+  `;
+}
+
+// Single-layer circular Arabic numeral badge (NEVER ①②③)
+function numBadgeSvg(x, y, num, color, scale = 1) {
+  if (scale <= 0.01) return '';
+  return `
+    <g transform="translate(${x.toFixed(1)}, ${y.toFixed(1)}) scale(${scale.toFixed(3)})">
+      <circle cx="0" cy="0" r="16" fill="${color}" stroke="#ffffff" stroke-width="2.5" />
+      <text x="0" y="6" text-anchor="middle" font-size="16" font-weight="900" fill="#ffffff">${num}</text>
+    </g>
+  `;
+}
+
+// Animated bracket helper (top or bottom)
+function bracketSvg(x1, x2, y, dir, color, label, prog = 1, glow = 0) {
+  if (prog <= 0.01) return '';
+  const tip = dir === 'top' ? 12 : -12;
+  const mid = (x1 + x2) / 2;
+  const d = `M ${x1} ${y + tip} L ${x1} ${y} L ${x2} ${y} L ${x2} ${y + tip}`;
+  const dashOff = 100 * (1 - clamp(prog));
+  const ly = dir === 'top' ? y - 10 : y + 22;
+  const labelAlpha = segP(prog, 0.55, 1);
+  return `
+    <g>
+      <path d="${d}" fill="none" stroke="${color}" stroke-width="${(3 + glow * 1.8).toFixed(1)}"
+            stroke-linecap="round" stroke-linejoin="round"
+            pathLength="100" stroke-dasharray="100" stroke-dashoffset="${dashOff.toFixed(1)}" />
+      <g opacity="${labelAlpha.toFixed(3)}">
+        <rect x="${mid - 42}" y="${ly - 17}" width="84" height="24" rx="12" fill="${color}" />
+        <text x="${mid}" y="${ly}" text-anchor="middle" font-size="14.5" font-weight="900" fill="#fff">${label}</text>
+      </g>
+    </g>
+  `;
+}
+
+// Unique Deep-Navy Pen-Tip Guide Cursor (mutually exclusive across tracks)
+function penCursorSvg(x, y, active = true) {
+  if (!active || x == null || y == null) return '';
+  return `
+    <g transform="translate(${x.toFixed(1)}, ${y.toFixed(1)})" pointer-events="none">
+      <circle cx="0" cy="0" r="13" fill="#1e3a8a" opacity="0.18" />
+      <circle cx="0" cy="0" r="6.5" fill="#1e3a8a" stroke="#ffffff" stroke-width="2.5" />
+    </g>
+  `;
+}
+
+// =========================================================
+// 4. TRACK A RENDERER (Concrete Queue Stage)
+// =========================================================
+function renderStageA(step, p) {
+  const C = CONFIG.colors;
+  let out = `
+    <defs>
+      <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f8fafc" />
+        <stop offset="100%" stop-color="#eef2ff" />
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="600" height="320" fill="#ffffff" />
+    <rect x="0" y="196" width="600" height="124" fill="url(#floorGrad)" />
+    <line x1="16" y1="196" x2="584" y2="196" stroke="#cbd5e1" stroke-width="2.5" stroke-dasharray="8,6" />
+    <!-- Direction Flags -->
+    <g transform="translate(14, 14)">
+      <rect x="0" y="0" width="128" height="28" rx="14" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5" />
+      <text x="64" y="19" text-anchor="middle" font-size="13" font-weight="900" fill="#1e3a8a">🚩 隊頭（前面）</text>
+    </g>
+    <g transform="translate(470, 14)">
+      <rect x="0" y="0" width="116" height="28" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+      <text x="58" y="19" text-anchor="middle" font-size="13" font-weight="800" fill="#475569">隊尾（後面）→</text>
+    </g>
+  `;
+
+  let cursor = null;
+
+  // Step 0: Faithful blank stage (ready queue lane)
+  if (step === 0) {
+    out += `<text x="300" y="155" text-anchor="middle" font-size="17" font-weight="800" fill="#94a3b8">按 ▶ 開始，一齊跟住題目逐句排隊！</text>`;
+    return { svg: out, cursor: null };
+  }
+
+  // Step 1: Introduce Squary & Eddie floating in
+  if (step === 1) {
+    const t = easeOut(segP(p, 0.1, 0.7));
+    const sy = lerp(110, 190, t);
+    const glow = Math.sin(segP(p, 0.55, 0.95) * Math.PI);
+    out += kidSvg(225, sy, C.squary, { label: '方方', symbol: 'sq', cap: 'sq', opacity: t, glow });
+    out += kidSvg(375, sy, C.eddie, { label: '多多', symbol: 'ci', cap: 'ci', opacity: t, glow });
+    return { svg: out, cursor: null };
+  }
+
+  // Step 2: Fragment 1 — [16 kids] + 方方 (left side)
+  if (step === 2) {
+    const tCrowd = easeOut(segP(p, 0.08, 0.55));
+    const tBr = segP(p, 0.5, 0.9);
+    const glowSq = Math.sin(segP(p, 0.4, 0.85) * Math.PI);
+    out += crowdGroupSvg(32, 190, 166, '16 個', C.frontSq, tCrowd);
+    out += kidSvg(232, 190, C.squary, { label: '方方', symbol: 'sq', cap: 'sq', glow: glowSq });
+    out += bracketSvg(32, 198, 92, 'top', C.frontSq, '前面 16 個', tBr);
+    // Faint waiting Eddie on right? No! Strictly don't spoil Fragment 2 yet!
+    return { svg: out, cursor: null };
+  }
+
+  // Step 3: Fragment 1 (left) + ? divider + Fragment 2 (right)
+  if (step === 3) {
+    const tQ = easeOut(segP(p, 0.05, 0.35));
+    const tEd = easeOut(segP(p, 0.25, 0.7));
+    const tBr2 = segP(p, 0.6, 0.95);
+    out += crowdGroupSvg(30, 190, 160, '16 個', C.frontSq, 1);
+    out += kidSvg(225, 190, C.squary, { label: '方方', symbol: 'sq', cap: 'sq' });
+    out += bracketSvg(30, 190, 92, 'top', C.frontSq, '前面 16 個', 1);
+
+    // Question mark divider
+    out += `
+      <g opacity="${tQ.toFixed(3)}">
+        <line x1="298" y1="78" x2="298" y2="232" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="6,6" />
+        <circle cx="298" cy="155" r="20" fill="#fef3c7" stroke="#f59e0b" stroke-width="2.5" />
+        <text x="298" y="163" text-anchor="middle" font-size="22" font-weight="900" fill="#b45309">?</text>
+      </g>
+    `;
+
+    // Fragment 2
+    out += kidSvg(362, 190, C.eddie, { label: '多多', symbol: 'ci', cap: 'ci', opacity: tEd, glow: Math.sin(segP(p, 0.3, 0.65) * Math.PI) });
+    out += crowdGroupSvg(400, 190, 170, '20 個', C.eddie, tEd);
+    out += bracketSvg(400, 570, 260, 'bottom', C.eddie, '後面 20 個', tBr2);
+    return { svg: out, cursor: null };
+  }
+
+  // Step 4: Slash ? and smoothly slide Eddie left (front) & Squary right (back)
+  if (step === 4) {
+    const tSlash = segP(p, 0.0, 0.25);
+    const tMove = easeInOut(segP(p, 0.22, 0.85));
+    const qFade = 1 - segP(p, 0.25, 0.48);
+    const crowdFade = 1 - segP(p, 0.2, 0.45);
+    const unifiedIn = segP(p, 0.65, 1.0);
+
+    // Old crowds fade cleanly during reorder
+    if (crowdFade > 0.01) {
+      out += crowdGroupSvg(30, 190, 160, '16 個', C.frontSq, crowdFade);
+      out += crowdGroupSvg(400, 190, 170, '20 個', C.eddie, crowdFade);
+    }
+
+    // ? slashed then disappears
+    if (qFade > 0.01) {
+      out += `
+        <g opacity="${qFade.toFixed(3)}">
+          <line x1="298" y1="78" x2="298" y2="232" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="6,6" />
+          <circle cx="298" cy="155" r="20" fill="#fef3c7" stroke="#f59e0b" stroke-width="2.5" />
+          <text x="298" y="163" text-anchor="middle" font-size="22" font-weight="900" fill="#b45309">?</text>
+          <line x1="274" y1="178" x2="322" y2="132" stroke="#ef4444" stroke-width="4.5" stroke-linecap="round"
+                pathLength="100" stroke-dasharray="100" stroke-dashoffset="${(100 * (1 - tSlash)).toFixed(1)}" />
+        </g>
+      `;
+    }
+
+    // Arc paths so Eddie and Squary visibly pass each other cleanly
+    const edX = lerp(362, 178, tMove);
+    const edY = 190 - Math.sin(tMove * Math.PI) * 38;
+    const sqX = lerp(225, 382, tMove);
+    const sqY = 190 + Math.sin(tMove * Math.PI) * 16;
+
+    // Unified front/back placeholder crowds fading in
+    if (unifiedIn > 0.01) {
+      out += crowdGroupSvg(24, 190, 124, '前排', '#94a3b8', unifiedIn * 0.85, true);
+      out += crowdGroupSvg(418, 190, 158, '後排', '#94a3b8', unifiedIn * 0.85, true);
+      out += `<rect x="210" y="142" width="142" height="48" rx="12" fill="#fef3c7" fill-opacity="${(unifiedIn * 0.5).toFixed(2)}" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,4" opacity="${unifiedIn.toFixed(2)}" />`;
+      out += `<text x="281" y="172" text-anchor="middle" font-size="14" font-weight="800" fill="#b45309" opacity="${unifiedIn.toFixed(2)}">中間有幾多個？</text>`;
+    }
+
+    out += kidSvg(edX, edY, C.eddie, { label: '多多', symbol: 'ci', cap: 'ci', glow: tMove > 0.8 ? 0.6 : 0 });
+    out += kidSvg(sqX, sqY, C.squary, { label: '方方', symbol: 'sq', cap: 'sq', glow: tMove > 0.8 ? 0.6 : 0 });
+
+    if (tMove > 0.05 && tMove < 0.95) {
+      cursor = { x: edX, y: edY - 45 };
+    }
+    return { svg: out, cursor };
+  }
+
+  // Unified layout for Steps 5–9!
+  // Positions:
+  // Front crowd: x=24..148 (w=124)
+  // Eddie (○): x=178
+  // Between 4 kids: x=228, 262, 296, 330 (zone box x=208..352)
+  // Squary (□): x=382
+  // Behind crowd: x=418..576 (w=158)
+
+  const showBehindNum = (step > 7) || (step === 7 && p > 0.72);
+  const showFrontSplit = (step === 9 && p > 0.5);
+
+  // Base crowds
+  out += crowdGroupSvg(24, 190, 124, showFrontSplit ? '11 個' : '前排', showFrontSplit ? C.frontSq : '#94a3b8', 0.95, !showFrontSplit);
+  out += crowdGroupSvg(418, 190, 158, showBehindNum ? '15 個' : '？個', showBehindNum ? C.behindSq : '#94a3b8', 0.95, !showBehindNum);
+
+  // Step 5: 4 kids pop in between Eddie & Squary + draw both overlapping brackets
+  let betweenScale = 1;
+  let br1Prog = 1, br2Prog = 1;
+  if (step === 5) {
+    betweenScale = easeOut(segP(p, 0.05, 0.42));
+    br1Prog = segP(p, 0.42, 0.72);
+    br2Prog = segP(p, 0.68, 0.96);
+  }
+
+  // Zone highlight boxes (Steps 5, 6, 7, 8)
+  if (step === 5 && p > 0.05) {
+    const fl = flash3(p, 0.1, 0.5);
+    if (fl.show) {
+      out += `<rect x="208" y="132" width="144" height="68" rx="14" fill="${C.between}" fill-opacity="${fl.fillAlpha.toFixed(2)}" stroke="${C.between}" stroke-width="${fl.strokeW.toFixed(1)}" />`;
+    }
+  }
+
+  // Step 6: Highlight known 16 zone, Squary (1), and target unknown tail (?)
+  if (step === 6) {
+    const flFront = flash3(p, 0.08, 0.45);
+    const flTail = flash3(p, 0.52, 0.92);
+    if (flFront.show) {
+      out += `<rect x="20" y="124" width="336" height="80" rx="16" fill="${C.frontSq}" fill-opacity="${flFront.fillAlpha.toFixed(2)}" stroke="${C.frontSq}" stroke-width="${flFront.strokeW.toFixed(1)}" stroke-dasharray="7,5" />`;
+    }
+    if (flTail.show) {
+      out += `<rect x="414" y="128" width="166" height="74" rx="14" fill="${C.behindSq}" fill-opacity="${flTail.fillAlpha.toFixed(2)}" stroke="${C.behindSq}" stroke-width="${flTail.strokeW.toFixed(1)}" stroke-dasharray="6,4" />`;
+    }
+  }
+
+  // Step 7: Peel off 4 (amber) and Squary (purple) from 20 (cyan) -> 3-flash Green 15!
+  let badge4 = 0, badgeSq = 0, badge15 = 0;
+  if (step === 7) {
+    const fl4 = flash3(p, 0.05, 0.34);
+    const flSq = flash3(p, 0.30, 0.56);
+    const fl15 = flash3(p, 0.55, 0.92);
+    if (fl4.show) {
+      out += `<rect x="208" y="132" width="144" height="68" rx="14" fill="${C.between}" fill-opacity="${fl4.fillAlpha.toFixed(2)}" stroke="${C.between}" stroke-width="${fl4.strokeW.toFixed(1)}" />`;
+      badge4 = fl4.badge;
+    }
+    if (flSq.show) {
+      out += `<rect x="358" y="128" width="48" height="74" rx="12" fill="${C.squary}" fill-opacity="${flSq.fillAlpha.toFixed(2)}" stroke="${C.squary}" stroke-width="${flSq.strokeW.toFixed(1)}" />`;
+      badgeSq = flSq.badge;
+    }
+    if (fl15.show) {
+      out += `<rect x="414" y="128" width="166" height="74" rx="14" fill="${C.behindSq}" fill-opacity="${fl15.fillAlpha.toFixed(2)}" stroke="${C.behindSq}" stroke-width="${fl15.strokeW.toFixed(1)}" />`;
+      badge15 = fl15.badge;
+    }
+  }
+
+  // Step 8: 3 non-overlapping zones flash in sequence (16 orange + 1 purple + 15 green = 32!)
+  let b16 = 0, b1 = 0, b15s8 = 0;
+  if (step === 8) {
+    const fl1 = flash3(p, 0.04, 0.34);
+    const fl2 = flash3(p, 0.34, 0.62);
+    const fl3 = flash3(p, 0.62, 0.92);
+    if (fl1.show) {
+      out += `<rect x="20" y="124" width="336" height="80" rx="16" fill="${C.frontSq}" fill-opacity="${fl1.fillAlpha.toFixed(2)}" stroke="${C.frontSq}" stroke-width="${fl1.strokeW.toFixed(1)}" />`;
+      b16 = fl1.badge;
+    }
+    if (fl2.show) {
+      out += `<rect x="358" y="124" width="48" height="80" rx="14" fill="${C.squary}" fill-opacity="${fl2.fillAlpha.toFixed(2)}" stroke="${C.squary}" stroke-width="${fl2.strokeW.toFixed(1)}" />`;
+      b1 = fl2.badge;
+    }
+    if (fl3.show) {
+      out += `<rect x="414" y="124" width="166" height="80" rx="16" fill="${C.behindSq}" fill-opacity="${fl3.fillAlpha.toFixed(2)}" stroke="${C.behindSq}" stroke-width="${fl3.strokeW.toFixed(1)}" />`;
+      b15s8 = fl3.badge;
+    }
+  }
+
+  // Step 9: Calm colored 3-zone highlight + verification ribbon
+  if (step === 9) {
+    out += `<rect x="20" y="124" width="336" height="80" rx="16" fill="${C.frontSq}" fill-opacity="0.12" stroke="${C.frontSq}" stroke-width="2" />`;
+    out += `<rect x="358" y="124" width="48" height="80" rx="14" fill="${C.squary}" fill-opacity="0.14" stroke="${C.squary}" stroke-width="2" />`;
+    out += `<rect x="414" y="124" width="166" height="80" rx="16" fill="${C.behindSq}" fill-opacity="0.14" stroke="${C.behindSq}" stroke-width="2" />`;
+  }
+
+  // Draw the 4 individual kids between Eddie & Squary
+  if (betweenScale > 0.01) {
+    const xs = [228, 262, 296, 330];
+    xs.forEach((kx, idx) => {
+      const kSc = step === 5 ? easeOut(segP(p, 0.05 + idx * 0.06, 0.25 + idx * 0.06)) : 1;
+      if (kSc > 0.01) {
+        out += kidSvg(kx, 190, C.between, { scale: 0.8 * kSc, opacity: kSc });
+      }
+    });
+    const lblAlpha = step === 5 ? segP(p, 0.3, 0.5) : 1;
+    out += `
+      <g opacity="${lblAlpha.toFixed(2)}">
+        <rect x="252" y="202" width="56" height="22" rx="11" fill="${C.between}" />
+        <text x="280" y="217.5" text-anchor="middle" font-size="13.5" font-weight="900" fill="#fff">4 個</text>
+      </g>
+    `;
+  }
+
+  // Draw Eddie & Squary on top
+  const sqGlow = (step === 6 && p > 0.3 && p < 0.55) || (step === 7 && p > 0.32 && p < 0.55) || (step === 8 && p > 0.35 && p < 0.62) ? 0.8 : 0;
+  out += kidSvg(178, 190, C.eddie, { label: '多多', symbol: 'ci', cap: 'ci' });
+  out += kidSvg(382, 190, C.squary, { label: '方方', symbol: 'sq', cap: 'sq', glow: sqGlow });
+
+  // Brackets (Top = 16 in front of Squary; Bottom = 20 behind Eddie)
+  out += bracketSvg(24, 354, 78, 'top', C.frontSq, '方方前 16', br1Prog, step === 8 ? 0.7 : 0);
+  out += bracketSvg(204, 576, 268, 'bottom', C.eddie, '多多後 20', br2Prog, step === 7 ? 0.7 : 0);
+
+  // Single-layer Arabic Numeral Badges
+  if (step === 7) {
+    out += numBadgeSvg(280, 122, '4', C.between, badge4);
+    out += numBadgeSvg(382, 118, '1', C.squary, badgeSq);
+    out += numBadgeSvg(497, 118, '15', C.behindSq, badge15);
+  }
+  if (step === 8) {
+    out += numBadgeSvg(188, 118, '16', C.frontSq, b16);
+    out += numBadgeSvg(382, 118, '1', C.squary, b1);
+    out += numBadgeSvg(497, 118, '15', C.behindSq, b15s8);
+  }
+  if (step === 9) {
+    out += numBadgeSvg(188, 118, '16', C.frontSq, 1);
+    out += numBadgeSvg(382, 118, '1', C.squary, 1);
+    out += numBadgeSvg(497, 118, '15', C.behindSq, 1);
+    if (p > 0.45) {
+      const vt = easeOut(segP(p, 0.45, 0.8));
+      out += `
+        <g opacity="${vt.toFixed(2)}">
+          <rect x="172" y="14" width="256" height="28" rx="14" fill="#dcfce7" stroke="#22c55e" stroke-width="1.5" />
+          <text x="300" y="33" text-anchor="middle" font-size="13.5" font-weight="900" fill="#166534">✓ 驗算：11+1+4=16　4+1+15=20</text>
+        </g>
+      `;
+    }
+  }
+
+  return { svg: out, cursor };
+}
+
+// =========================================================
+// 5. TRACK B RENDERER (✏️ Minimal-Stroke Pencil Draft Paper)
+// =========================================================
+function strokePath(d, color, width, prog, extra = '') {
+  if (prog <= 0.005) return '';
+  const off = 100 * (1 - clamp(prog));
+  return `<path d="${d}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${off.toFixed(1)}" ${extra} />`;
+}
+
+function renderDraftB(step, p, stageHasCursor) {
+  const C = CONFIG.colors;
+  // Subtle graph paper background (zero multi-stroke Chinese text!)
+  let out = `
+    <defs>
+      <pattern id="gridPat" width="24" height="24" patternUnits="userSpaceOnUse">
+        <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#efe8d4" stroke-width="1" />
+      </pattern>
+    </defs>
+    <rect x="0" y="0" width="600" height="320" fill="#fffdf4" />
+    <rect x="0" y="0" width="600" height="320" fill="url(#gridPat)" />
+    <line x1="0" y1="42" x2="600" y2="42" stroke="#f3d4d4" stroke-width="1.5" />
+  `;
+
+  let cursor = null;
+
+  if (step === 0) {
+    out += `<text x="300" y="168" text-anchor="middle" font-size="16" font-weight="700" fill="#b8a88a">（空白算草紙：模擬考場一支鉛筆速記）</text>`;
+    return { svg: out, cursor: null };
+  }
+
+  // Top-left Visual Legend (Tiny avatar icons = □ / ○, ZERO Chinese words!)
+  const legProg = step === 1 ? segP(p, 0.15, 0.85) : 1;
+  if (legProg > 0.01) {
+    const sqP = step === 1 ? segP(p, 0.15, 0.5) : 1;
+    const ciP = step === 1 ? segP(p, 0.5, 0.85) : 1;
+    out += `
+      <g opacity="${easeOut(legProg).toFixed(2)}">
+        <!-- Mini purple avatar = □ -->
+        <circle cx="28" cy="21" r="10" fill="#fde6c4" stroke="${C.squary}" stroke-width="2" />
+        <rect x="20" y="8" width="16" height="5" rx="1.5" fill="${C.squary}" />
+        <text x="48" y="27" font-size="17" font-weight="900" fill="#475569">=</text>
+        ${strokePath('M 66 12 L 84 12 L 84 30 L 66 30 Z', C.squary, 3, sqP)}
+
+        <!-- Mini cyan avatar = ○ -->
+        <g opacity="${(step === 1 ? segP(p, 0.45, 0.7) : 1).toFixed(2)}">
+          <circle cx="122" cy="21" r="10" fill="#fde6c4" stroke="${C.eddie}" stroke-width="2" />
+          <path d="M113,16 A9,8 0 0,1 131,16 Z" fill="${C.eddie}" />
+          <text x="142" y="27" font-size="17" font-weight="900" fill="#475569">=</text>
+          ${strokePath('M 170 12 A 9 9 0 1 1 169.9 12 Z', C.eddie, 3, ciP)}
+        </g>
+
+        <!-- Direction arrow ← (Front on left) -->
+        <g opacity="0.7">
+          <path d="M 550 21 L 502 21 M 512 14 L 502 21 L 512 28" fill="none" stroke="#64748b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        </g>
+      </g>
+    `;
+    if (step === 1) {
+      cursor = p < 0.5 ? { x: lerp(66, 84, sqP), y: 21 } : { x: lerp(161, 179, ciP), y: 21 };
+    }
+  }
+
+  // Row 1 (y=90): Initial Fragments Draft (Step 2 & Step 3, dimmed gently after Step 4)
+  const row1Opacity = step >= 5 ? 0.32 : (step === 4 ? lerp(1, 0.38, segP(p, 0.35, 0.8)) : 1);
+  if (step >= 2) {
+    const f1Line = step === 2 ? segP(p, 0.1, 0.55) : 1;
+    const f1Sq = step === 2 ? segP(p, 0.52, 0.9) : 1;
+    const f1Txt = step === 2 ? segP(p, 0.25, 0.6) : 1;
+    out += `<g opacity="${row1Opacity.toFixed(2)}">`;
+    // Fragment 1: 16___ □
+    out += strokePath('M 48 92 L 182 92', C.frontSq, 3.5, f1Line);
+    out += `<text x="115" y="83" text-anchor="middle" font-size="24" font-weight="900" fill="${C.frontSq}" opacity="${f1Txt.toFixed(2)}">16</text>`;
+    out += strokePath('M 196 72 L 222 72 L 222 98 L 196 98 Z', C.squary, 3.5, f1Sq);
+
+    if (step === 2) {
+      cursor = p < 0.55 ? { x: lerp(48, 182, f1Line), y: 92 } : { x: lerp(196, 222, f1Sq), y: 85 };
+    }
+
+    // Fragment 2: ?  ○ ___20
+    if (step >= 3) {
+      const qP = step === 3 ? segP(p, 0.05, 0.32) : 1;
+      const f2Ci = step === 3 ? segP(p, 0.32, 0.62) : 1;
+      const f2Line = step === 3 ? segP(p, 0.6, 0.95) : 1;
+      const f2Txt = step === 3 ? segP(p, 0.7, 0.98) : 1;
+
+      out += `<text x="292" y="95" text-anchor="middle" font-size="28" font-weight="900" fill="#d97706" opacity="${qP.toFixed(2)}">?</text>`;
+      out += strokePath('M 366 72 A 13 13 0 1 1 365.9 72 Z', C.eddie, 3.5, f2Ci);
+      out += strokePath('M 392 92 L 542 92', C.eddie, 3.5, f2Line);
+      out += `<text x="468" y="83" text-anchor="middle" font-size="24" font-weight="900" fill="${C.eddie}" opacity="${f2Txt.toFixed(2)}">20</text>`;
+
+      if (step === 3) {
+        if (p < 0.32) cursor = { x: 292, y: 86 };
+        else if (p < 0.62) cursor = { x: 366, y: 85 };
+        else cursor = { x: lerp(392, 542, f2Line), y: 92 };
+      }
+    }
+
+    // Step 4+: Slash out the '?'
+    if (step >= 4) {
+      const slashP = step === 4 ? segP(p, 0.04, 0.28) : 1;
+      out += strokePath('M 274 102 L 310 66', '#ef4444', 4, slashP);
+    }
+    out += `</g>`;
+  }
+
+  // Row 2 (y=185): Clean Assembled Unified Pencil Line (Steps 4–9)
+  if (step >= 4) {
+    const downArr = step === 4 ? segP(p, 0.24, 0.44) : 1;
+    const baseLine = step === 4 ? segP(p, 0.38, 0.72) : 1;
+    const edDraw = step === 4 ? segP(p, 0.58, 0.82) : 1;
+    const sqDraw = step === 4 ? segP(p, 0.75, 0.98) : 1;
+
+    // Quick downward connector arrow
+    out += strokePath('M 292 108 L 292 126 M 285 119 L 292 126 L 299 119', '#94a3b8', 2.5, downArr);
+
+    // Main queue pencil baseline (segments)
+    out += strokePath('M 42 184 L 164 184', '#475569', 3, baseLine);
+    out += strokePath('M 200 184 L 364 184', '#475569', 3, baseLine);
+    out += strokePath('M 400 184 L 558 184', '#475569', 3, baseLine);
+
+    // ○ (Eddie) at x=182, □ (Squary) at x=382
+    out += strokePath('M 182 170 A 14 14 0 1 1 181.9 170 Z', C.eddie, 3.8, edDraw);
+    out += strokePath('M 368 170 L 396 170 L 396 198 L 368 198 Z', C.squary, 3.8, sqDraw);
+
+    if (step === 4 && !stageHasCursor) {
+      if (p < 0.3) cursor = { x: lerp(274, 310, segP(p, 0.04, 0.28)), y: lerp(102, 66, segP(p, 0.04, 0.28)) };
+      else if (p >= 0.58) cursor = { x: lerp(182, 382, segP(p, 0.58, 0.98)), y: 184 };
+    }
+  }
+
+  // Step 5+: Write '4' in middle + Top fast arc '16' + Bottom fast arc '20'
+  if (step >= 5) {
+    const fourAlpha = step === 5 ? easeOut(segP(p, 0.08, 0.35)) : 1;
+    const arc16 = step === 5 ? segP(p, 0.38, 0.68) : 1;
+    const arc20 = step === 5 ? segP(p, 0.68, 0.96) : 1;
+
+    // 4 between ○ and □
+    out += `<rect x="266" y="156" width="32" height="24" rx="8" fill="#fef3c7" opacity="${fourAlpha.toFixed(2)}" />`;
+    out += `<text x="282" y="176" text-anchor="middle" font-size="24" font-weight="900" fill="#d97706" opacity="${fourAlpha.toFixed(2)}">4</text>`;
+
+    // Top fast pencil arc for 16 (x=42..362)
+    out += strokePath('M 42 166 Q 202 122 362 166', C.frontSq, 3.5, arc16);
+    out += `<text x="202" y="140" text-anchor="middle" font-size="24" font-weight="900" fill="${C.frontSq}" opacity="${segP(arc16, 0.5, 1).toFixed(2)}">16</text>`;
+
+    // Bottom fast pencil arc for 20 (x=202..558)
+    out += strokePath('M 202 204 Q 380 246 558 204', C.eddie, 3.5, arc20);
+    out += `<text x="380" y="242" text-anchor="middle" font-size="24" font-weight="900" fill="${C.eddie}" opacity="${segP(arc20, 0.5, 1).toFixed(2)}">20</text>`;
+
+    if (step === 5) {
+      if (p < 0.38) cursor = { x: 282, y: 170 };
+      else if (p < 0.68) cursor = { x: lerp(42, 362, arc16), y: 146 };
+      else cursor = { x: lerp(202, 558, arc20), y: 222 };
+    }
+  }
+
+  // Step 6: Mark '?' on the tail segment after □
+  if (step === 6) {
+    const qTail = easeOut(segP(p, 0.45, 0.85));
+    out += `<rect x="454" y="154" width="48" height="26" rx="8" fill="#dcfce7" opacity="${qTail.toFixed(2)}" />`;
+    out += `<text x="478" y="175" text-anchor="middle" font-size="22" font-weight="900" fill="${C.behindSq}" opacity="${qTail.toFixed(2)}">?</text>`;
+    cursor = { x: 478, y: 168 };
+  }
+
+  // Step 7+: Write '15' on the tail + live calculation "20 − 4 − 1 = 15"
+  if (step >= 7) {
+    const tCalc = step === 7 ? segP(p, 0.12, 0.72) : 1;
+    const t15 = step === 7 ? easeOut(segP(p, 0.68, 0.96)) : 1;
+
+    // 15 on the tail line
+    out += `<rect x="454" y="152" width="52" height="28" rx="9" fill="#dcfce7" stroke="${C.behindSq}" stroke-width="2" opacity="${t15.toFixed(2)}" />`;
+    out += `<text x="480" y="174" text-anchor="middle" font-size="24" font-weight="900" fill="#15803d" opacity="${t15.toFixed(2)}">15</text>`;
+
+    // Calculation line 1 at bottom-left
+    const c1 = step === 7 ? segP(p, 0.1, 0.28) : 1;
+    const c2 = step === 7 ? segP(p, 0.28, 0.46) : 1;
+    const c3 = step === 7 ? segP(p, 0.46, 0.64) : 1;
+    const c4 = step === 7 ? segP(p, 0.64, 0.88) : 1;
+    out += `
+      <g font-size="25" font-weight="900">
+        <text x="34" y="294" fill="${C.eddie}" opacity="${c1.toFixed(2)}">20</text>
+        <text x="72" y="294" fill="#334155" opacity="${c2.toFixed(2)}">−</text>
+        <text x="96" y="294" fill="#d97706" opacity="${c2.toFixed(2)}">4</text>
+        <text x="120" y="294" fill="#334155" opacity="${c3.toFixed(2)}">−</text>
+        <text x="144" y="294" fill="${C.squary}" opacity="${c3.toFixed(2)}">1</text>
+        <text x="168" y="294" fill="#334155" opacity="${c4.toFixed(2)}">=</text>
+        <text x="194" y="294" fill="#15803d" opacity="${c4.toFixed(2)}">15</text>
+      </g>
+    `;
+    if (step === 7) {
+      cursor = p < 0.78 ? { x: lerp(42, 212, tCalc), y: 288 } : { x: 480, y: 168 };
+    }
+  }
+
+  // Step 8+: Live calculation "16 + 1 + 15 = 32" with double underline
+  if (step >= 8) {
+    const s1 = step === 8 ? segP(p, 0.12, 0.34) : 1;
+    const s2 = step === 8 ? segP(p, 0.38, 0.60) : 1;
+    const s3 = step === 8 ? segP(p, 0.64, 0.84) : 1;
+    const s4 = step === 8 ? segP(p, 0.82, 0.98) : 1;
+
+    out += `<line x1="258" y1="270" x2="258" y2="302" stroke="#cbd5e1" stroke-width="2" />`;
+    out += `
+      <g font-size="26" font-weight="900">
+        <text x="278" y="294" fill="${C.frontSq}" opacity="${s1.toFixed(2)}">16</text>
+        <text x="318" y="294" fill="#334155" opacity="${s2.toFixed(2)}">+</text>
+        <text x="342" y="294" fill="${C.squary}" opacity="${s2.toFixed(2)}">1</text>
+        <text x="366" y="294" fill="#334155" opacity="${s3.toFixed(2)}">+</text>
+        <text x="390" y="294" fill="#15803d" opacity="${s3.toFixed(2)}">15</text>
+        <text x="430" y="294" fill="#334155" opacity="${s4.toFixed(2)}">=</text>
+        <text x="458" y="294" fill="${C.navy}" font-size="30" opacity="${s4.toFixed(2)}">32</text>
+      </g>
+    `;
+    // Double underline under 32
+    out += strokePath('M 454 301 L 498 301', C.navy, 3, s4);
+    out += strokePath('M 454 307 L 498 307', C.navy, 2.5, s4);
+
+    if (step === 8) {
+      cursor = { x: lerp(286, 492, segP(p, 0.12, 0.96)), y: 288 };
+    }
+  }
+
+  return { svg: out, cursor };
+}
+
+// =========================================================
+// 6. STATE MACHINE & RENDER LOOP (100% Pure & Reversible)
+// =========================================================
+const state = {
+  step: 0,
+  p: 1,
+  playing: false,
+  rafId: null,
+  lastTs: 0,
+  quizResolved: {},
+  waitingQuiz: false,
+  confettiFired: false,
+  speechDoneForStep: false,
+  animDoneForStep: false,
+  quizAdvanceTimer: null
+};
+
+const dom = {
+  phasePills: document.getElementById('phasePills'),
+  questionCn: document.getElementById('questionCn'),
+  stepTag: document.getElementById('stepTag'),
+  answerWritten: document.getElementById('answerWritten'),
+  stageSvg: document.getElementById('stageSvg'),
+  draftSvg: document.getElementById('draftSvg'),
+  subtitleBar: document.getElementById('subtitleBar'),
+  formulaStrip: document.getElementById('formulaStrip'),
+  stepCounter: document.getElementById('stepCounter'),
+  prevBtn: document.getElementById('prevBtn'),
+  playBtn: document.getElementById('playBtn'),
+  nextBtn: document.getElementById('nextBtn'),
+  replayBtn: document.getElementById('replayBtn'),
+  speedBtn: document.getElementById('speedBtn'),
+  muteBtn: document.getElementById('muteBtn'),
+  quizBanner: document.getElementById('quizBanner'),
+  quizQuestion: document.getElementById('quizQuestion'),
+  quizOptions: document.getElementById('quizOptions'),
+  quizFeedback: document.getElementById('quizFeedback'),
+  quizSkipBtn: document.getElementById('quizSkipBtn'),
+  celebratePanel: document.getElementById('celebratePanel')
+};
+
+function initStaticDOM() {
+  // Phase pills
+  dom.phasePills.innerHTML = CONFIG.phases.map(ph =>
+    `<button class="phase-pill" data-phase="${ph.id}" data-step="${ph.startStep}">${ph.label}</button>`
+  ).join('');
+  dom.phasePills.querySelectorAll('.phase-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetStep = Number(btn.dataset.step);
+      jumpToStep(targetStep, true);
+    });
+  });
+
+  // Question segments
+  dom.questionCn.innerHTML = CONFIG.segments.map(seg =>
+    `<span class="q-seg" data-seg="${seg.id}">${seg.html}</span>`
+  ).join('');
+}
+
+function render(stepIdx, p) {
+  const stepCfg = CONFIG.steps[stepIdx];
+
+  // 1. Update Phase Pills
+  dom.phasePills.querySelectorAll('.phase-pill').forEach(btn => {
+    const pid = Number(btn.dataset.phase);
+    btn.classList.toggle('active', pid === stepCfg.phase);
+    btn.classList.toggle('done', pid < stepCfg.phase);
+  });
+
+  // 2. Highlight Question Segments & Superscript Code Tags
+  const showCodes = stepIdx >= 1;
+  dom.questionCn.querySelectorAll('.q-seg').forEach(el => {
+    const sid = Number(el.dataset.seg);
+    el.classList.toggle('active', stepCfg.highlight.includes(sid));
+  });
+  dom.questionCn.querySelectorAll('.code-sup').forEach(el => {
+    el.classList.toggle('show', showCodes);
+  });
+
+  dom.stepTag.textContent = stepCfg.tag;
+  dom.stepCounter.textContent = `${stepIdx} / ${CONFIG.steps.length - 1}`;
+
+  // 3. Official Answer Line (Step 9 progressive pen writing)
+  const fullAnswer = '一共有 32 個小朋友在排隊。';
+  if (stepIdx < 9) {
+    dom.answerWritten.textContent = '';
+  } else {
+    const chars = Math.round(fullAnswer.length * segP(p, 0.05, 0.65));
+    dom.answerWritten.textContent = fullAnswer.slice(0, chars);
+  }
+
+  // 4. Dual-Track SVG Render with Exclusive Single Pen-Tip Cursor
+  const resA = renderStageA(stepIdx, p);
+  const resB = renderDraftB(stepIdx, p, !!resA.cursor);
+  dom.stageSvg.innerHTML = resA.svg + (resA.cursor ? penCursorSvg(resA.cursor.x, resA.cursor.y, true) : '');
+  dom.draftSvg.innerHTML = resB.svg + (!resA.cursor && resB.cursor ? penCursorSvg(resB.cursor.x, resB.cursor.y, true) : '');
+
+  // 5. Subtitle (Visual separation between verbatim question quote & reasoning)
+  if (state.waitingQuiz && stepCfg.quiz) {
+    const qPrefix = stepCfg.quote ? `<span class="quote-prefix">${stepCfg.quotePrefix}</span><span class="quote-tag">「${stepCfg.quote}」</span>` : '';
+    dom.subtitleBar.innerHTML = `${qPrefix}<span>🤔 ${stepCfg.quiz.prompt}</span>`;
+  } else {
+    const qHtml = stepCfg.quote
+      ? `<span class="quote-prefix">${stepCfg.quotePrefix}</span><span class="quote-tag">「${stepCfg.quote}」</span>`
+      : '';
+    dom.subtitleBar.innerHTML = `${qHtml}<span>${stepCfg.thought}</span>`;
+  }
+
+  // 6. Color-Coded Formula Strip
+  const activeFormula = (state.waitingQuiz && stepCfg.quiz && stepCfg.quiz.pendingFormula) ? stepCfg.quiz.pendingFormula : stepCfg.formula;
+  dom.formulaStrip.innerHTML = activeFormula
+    .map(tok => `<span class="f-tok ${tok.c}">${tok.t}</span>`)
+    .join('');
+
+  // 7. Celebration Panel
+  const showCelebrate = (stepIdx === CONFIG.steps.length - 1 && p >= 0.72);
+  dom.celebratePanel.classList.toggle('show', showCelebrate);
+  if (showCelebrate && !state.confettiFired) {
+    state.confettiFired = true;
+    playSfx('chord');
+    launchConfetti();
+  }
+
+  // 8. Controls State
+  dom.prevBtn.disabled = stepIdx === 0;
+  dom.nextBtn.disabled = stepIdx === CONFIG.steps.length - 1;
+  dom.playBtn.textContent = state.playing ? '⏸' : '▶';
+}
+
+function showQuizForStep(stepIdx) {
+  const q = CONFIG.steps[stepIdx].quiz;
+  state.waitingQuiz = true;
+  dom.quizQuestion.textContent = q.prompt;
+  dom.quizFeedback.textContent = '';
+  dom.quizFeedback.className = 'quiz-feedback';
+  dom.quizOptions.innerHTML = q.options.map((opt, idx) =>
+    `<button class="quiz-opt-btn" data-idx="${idx}">${opt.label}</button>`
+  ).join('');
+
+  dom.quizOptions.querySelectorAll('.quiz-opt-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const opt = q.options[Number(btn.dataset.idx)];
+      if (opt.ok) {
+        btn.classList.add('correct');
+        dom.quizFeedback.textContent = '🎉 ' + opt.fb;
+        dom.quizFeedback.className = 'quiz-feedback ok';
+        playSfx('ding');
+        state.quizResolved[stepIdx] = true;
+        clearTimeout(state.quizAdvanceTimer);
+        state.quizAdvanceTimer = setTimeout(() => {
+          dom.quizBanner.classList.remove('show');
+          state.waitingQuiz = false;
+          startStepAnimationAndSpeech(stepIdx);
+        }, 700);
+      } else {
+        btn.classList.add('wrong');
+        dom.quizFeedback.textContent = '💡 ' + opt.fb;
+        dom.quizFeedback.className = 'quiz-feedback err';
+        speakText(opt.fb);
+      }
+    });
+  });
+
+  dom.quizBanner.classList.add('show');
+  render(stepIdx, 0);
+  speakText(q.ttsPrompt);
+}
+
+function startStepAnimationAndSpeech(stepIdx) {
+  const stepCfg = CONFIG.steps[stepIdx];
+  state.p = 0;
+  state.animDoneForStep = false;
+  state.speechDoneForStep = false;
+  state.lastTs = performance.now();
+
+  if (stepIdx === 4) playSfx('whoosh');
+  else if (stepIdx > 0 && stepIdx < 9) playSfx('pop');
+
+  const fullNarration = (stepCfg.quotePrefix || '') + (stepCfg.quote || '') + ' ' + stepCfg.thought;
+  speakText(fullNarration, () => {
+    state.speechDoneForStep = true;
+    tryAutoAdvance();
+  });
+
+  cancelAnimationFrame(state.rafId);
+  const tick = (now) => {
+    const dt = now - state.lastTs;
+    state.lastTs = now;
+    const dur = stepCfg.duration / audioState.rate;
+    state.p = clamp(state.p + dt / dur, 0, 1);
+    render(state.step, state.p);
+
+    if (state.p < 1) {
+      state.rafId = requestAnimationFrame(tick);
+    } else {
+      state.animDoneForStep = true;
+      tryAutoAdvance();
+    }
+  };
+  state.rafId = requestAnimationFrame(tick);
+}
+
+function tryAutoAdvance() {
+  if (!state.playing || state.waitingQuiz) return;
+  if (state.animDoneForStep && state.speechDoneForStep) {
+    if (state.step < CONFIG.steps.length - 1) {
+      goToStep(state.step + 1, true);
+    } else {
+      state.playing = false;
+      render(state.step, 1);
+    }
+  }
+}
+
+function goToStep(stepIdx, autoPlay) {
+  cancelAnimationFrame(state.rafId);
+  clearTimeout(state.quizAdvanceTimer);
+  stopSpeech();
+  dom.quizBanner.classList.remove('show');
+  state.waitingQuiz = false;
+  state.step = clamp(stepIdx, 0, CONFIG.steps.length - 1);
+  state.playing = !!autoPlay;
+  state.confettiFired = false;
+
+  const stepCfg = CONFIG.steps[state.step];
+  if (autoPlay && stepCfg.quiz && !state.quizResolved[state.step]) {
+    showQuizForStep(state.step);
+    return;
+  }
+
+  startStepAnimationAndSpeech(state.step);
+}
+
+function jumpToStep(stepIdx, speakNow) {
+  goToStep(stepIdx, false);
+  if (!speakNow) stopSpeech();
+}
+
+// =========================================================
+// 7. CONFETTI CELEBRATION
+// =========================================================
+function launchConfetti() {
+  const canvas = document.getElementById('confettiCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const colors = ['#f4711f', '#0aa5c9', '#8d5bd6', '#f0a500', '#33b26a', '#e8467c'];
+  const pieces = Array.from({ length: 85 }, () => ({
+    x: Math.random() * canvas.width,
+    y: -20 - Math.random() * 120,
+    w: 7 + Math.random() * 6,
+    h: 5 + Math.random() * 5,
+    vx: (Math.random() - 0.5) * 4,
+    vy: 2.5 + Math.random() * 4,
+    rot: Math.random() * 360,
+    vr: (Math.random() - 0.5) * 9,
+    c: colors[Math.floor(Math.random() * colors.length)]
+  }));
+  let frames = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(pt => {
+      pt.x += pt.vx;
+      pt.y += pt.vy;
+      pt.rot += pt.vr;
+      ctx.save();
+      ctx.translate(pt.x, pt.y);
+      ctx.rotate((pt.rot * Math.PI) / 180);
+      ctx.fillStyle = pt.c;
+      ctx.fillRect(-pt.w / 2, -pt.h / 2, pt.w, pt.h);
+      ctx.restore();
+    });
+    frames++;
+    if (frames < 130) requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  requestAnimationFrame(draw);
+}
+
+// =========================================================
+// 8. PRACTICE SIMILAR PROBLEM MODAL
+// =========================================================
+let practiceIdx = 0;
+
+function renderPractice(idx) {
+  const pr = CONFIG.practiceBank[idx % CONFIG.practiceBank.length];
+  document.getElementById('practiceTitle').textContent = `🎯 挑戰類似題（第 ${(idx % CONFIG.practiceBank.length) + 1} 題）`;
+  document.getElementById('practiceText').innerHTML =
+    `小朋友們排成一隊，<strong>${pr.aName}</strong>和<strong>${pr.bName}</strong>在隊伍中。` +
+    `<strong>${pr.aName}</strong>的前面有 <span style="color:#f4711f;">${pr.frontA}</span> 個小朋友，` +
+    `<strong>${pr.bName}</strong>的後面有 <span style="color:#0aa5c9;">${pr.behindB}</span> 個小朋友。` +
+    `<strong>${pr.aName}</strong>在<strong>${pr.bName}</strong>的後面，` +
+    `<strong>${pr.bName}</strong>和<strong>${pr.aName}</strong>之間有 <span style="color:#d97706;">${pr.between}</span> 個小朋友。請問一共有多少個小朋友在排隊？`;
+
+  const hintBox = document.getElementById('practiceHintBox');
+  const verifyBox = document.getElementById('practiceVerifyBox');
+  const fb = document.getElementById('practiceFeedback');
+  hintBox.classList.remove('show');
+  verifyBox.classList.remove('show');
+  fb.textContent = '';
+  fb.className = 'quiz-feedback';
+
+  // Build minimal pencil sketch hint (no colorful kids!)
+  document.getElementById('practiceHintSvg').innerHTML = `
+    <rect x="0" y="0" width="560" height="155" fill="#fffdf4" />
+    <text x="16" y="24" font-size="14" font-weight="900" fill="#0aa5c9">○ = ${pr.bName}</text>
+    <text x="112" y="24" font-size="14" font-weight="900" fill="#8d5bd6">□ = ${pr.aName}</text>
+    <line x1="34" y1="84" x2="152" y2="84" stroke="#475569" stroke-width="2.5" />
+    <circle cx="170" cy="84" r="13" fill="none" stroke="#0aa5c9" stroke-width="3" />
+    <line x1="188" y1="84" x2="342" y2="84" stroke="#475569" stroke-width="2.5" />
+    <rect x="348" y="71" width="26" height="26" fill="none" stroke="#8d5bd6" stroke-width="3" />
+    <line x1="380" y1="84" x2="526" y2="84" stroke="#475569" stroke-width="2.5" />
+    <text x="265" y="75" text-anchor="middle" font-size="22" font-weight="900" fill="#d97706">${pr.between}</text>
+    <path d="M 34 66 Q 188 26 342 66" fill="none" stroke="#f4711f" stroke-width="3" />
+    <text x="188" y="42" text-anchor="middle" font-size="20" font-weight="900" fill="#f4711f">${pr.frontA}</text>
+    <path d="M 188 104 Q 357 142 526 104" fill="none" stroke="#0aa5c9" stroke-width="3" />
+    <text x="357" y="138" text-anchor="middle" font-size="20" font-weight="900" fill="#0aa5c9">${pr.behindB}</text>
+    <text x="454" y="74" text-anchor="middle" font-size="18" font-weight="900" fill="#15803d">?</text>
+  `;
+
+  // Build colorful verification SVG (shown only after answering right!)
+  document.getElementById('practiceVerifySvg').innerHTML = `
+    <rect x="0" y="0" width="560" height="175" rx="10" fill="#ffffff" />
+    <rect x="18" y="54" width="318" height="62" rx="12" fill="#f4711f" fill-opacity="0.14" stroke="#f4711f" stroke-width="2" />
+    <rect x="342" y="54" width="44" height="62" rx="10" fill="#8d5bd6" fill-opacity="0.16" stroke="#8d5bd6" stroke-width="2" />
+    <rect x="392" y="54" width="150" height="62" rx="12" fill="#33b26a" fill-opacity="0.16" stroke="#33b26a" stroke-width="2" />
+    ${kidSvg(156, 106, '#0aa5c9', { scale: 0.72, label: pr.bName, symbol: 'ci', cap: 'ci' })}
+    ${kidSvg(364, 106, '#8d5bd6', { scale: 0.72, label: pr.aName, symbol: 'sq', cap: 'sq' })}
+    <text x="82" y="90" text-anchor="middle" font-size="16" font-weight="900" fill="#c2410c">${pr.frontB} 個</text>
+    <text x="255" y="90" text-anchor="middle" font-size="16" font-weight="900" fill="#b45309">中間 ${pr.between} 個</text>
+    <text x="467" y="90" text-anchor="middle" font-size="17" font-weight="900" fill="#15803d">${pr.behindA} 個</text>
+    <text x="177" y="42" text-anchor="middle" font-size="15" font-weight="900" fill="#f4711f">${pr.aName}前面共 ${pr.frontA} 個</text>
+    <text x="467" y="42" text-anchor="middle" font-size="15" font-weight="900" fill="#15803d">${pr.behindB}−${pr.between}−1=${pr.behindA}</text>
+    <text x="280" y="158" text-anchor="middle" font-size="18" font-weight="900" fill="#1e3a8a">
+      總數：${pr.frontA} + 1 + ${pr.behindA} = ${pr.ans}（高手法：${pr.frontA} + ${pr.behindB} − ${pr.between} = ${pr.ans}）
+    </text>
+  `;
+
+  // Choices
+  const optsEl = document.getElementById('practiceOpts');
+  optsEl.innerHTML = pr.choices.map(val =>
+    `<button class="quiz-opt-btn" data-val="${val}">${val} 個</button>`
+  ).join('');
+  optsEl.querySelectorAll('.quiz-opt-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = Number(btn.dataset.val);
+      if (val === pr.ans) {
+        btn.classList.add('correct');
+        fb.textContent = `🎉 答啱啦！一共有 ${pr.ans} 個小朋友，睇下面實物圖解驗證！`;
+        fb.className = 'quiz-feedback ok';
+        verifyBox.classList.add('show');
+        playSfx('chord');
+        launchConfetti();
+        speakText(`答啱啦！一共有 ${pr.ans} 個小朋友！`);
+      } else {
+        btn.classList.add('wrong');
+        const hint = pr.wrongFb[val] || '再諗諗，試下撳「睇草稿提示」幫手！';
+        fb.textContent = '💡 ' + hint;
+        fb.className = 'quiz-feedback err';
+        speakText(hint);
+      }
+    });
+  });
+}
+
+// =========================================================
+// 9. MASTER SHORTCUT DIAGRAM (16 + 20 - 4 = 32)
+// =========================================================
+function renderMasterSvg() {
+  document.getElementById('masterSvg').innerHTML = `
+    <text x="300" y="26" text-anchor="middle" font-size="15" font-weight="900" fill="#1e3a8a">睇清楚兩條大括弧點樣「重疊」：</text>
+
+    <!-- Orange bar: 16 (Front of Squary, covers Front + Eddie + 4) -->
+    <rect x="28" y="44" width="330" height="34" rx="10" fill="#f4711f" fill-opacity="0.22" stroke="#f4711f" stroke-width="2.5" />
+    <text x="193" y="66" text-anchor="middle" font-size="16" font-weight="900" fill="#c2410c">方方前面 16 個（已包多多 ○）</text>
+
+    <!-- Overlap Highlight Box (Middle 4) -->
+    <rect x="214" y="42" width="144" height="142" rx="12" fill="#f0a500" fill-opacity="0.22" stroke="#d97706" stroke-width="2.5" stroke-dasharray="6,4" />
+    <text x="286" y="106" text-anchor="middle" font-size="15" font-weight="900" fill="#b45309">重疊區！</text>
+    <text x="286" y="126" text-anchor="middle" font-size="17" font-weight="900" fill="#b45309">中間 4 個計咗 2 次</text>
+
+    <!-- Cyan bar: 20 (Behind Eddie, covers 4 + Squary + Back) -->
+    <rect x="214" y="142" width="358" height="34" rx="10" fill="#0aa5c9" fill-opacity="0.22" stroke="#0aa5c9" stroke-width="2.5" />
+    <text x="393" y="164" text-anchor="middle" font-size="16" font-weight="900" fill="#0e7490">多多後面 20 個（已包方方 □）</text>
+
+    <!-- Position markers -->
+    <circle cx="182" cy="112" r="14" fill="#0aa5c9" />
+    <text x="182" y="117" text-anchor="middle" font-size="13" font-weight="900" fill="#fff">○</text>
+    <text x="182" y="138" text-anchor="middle" font-size="12" font-weight="800" fill="#0e7490">多多</text>
+
+    <rect x="372" y="98" width="28" height="28" rx="6" fill="#8d5bd6" />
+    <text x="386" y="117" text-anchor="middle" font-size="13" font-weight="900" fill="#fff">□</text>
+    <text x="386" y="138" text-anchor="middle" font-size="12" font-weight="800" fill="#6d28d9">方方</text>
+
+    <text x="300" y="208" text-anchor="middle" font-size="16" font-weight="900" fill="#1e293b">
+      整隊人數 = 16 + 20 − 重疊的 4 = <tspan fill="#1e3a8a" font-size="20">32 個</tspan>
+    </text>
+  `;
+}
+
+// =========================================================
+// 10. EVENT BINDINGS
+// =========================================================
+dom.playBtn.addEventListener('click', () => {
+  ensureAudioCtx();
+  if (state.playing) {
+    state.playing = false;
+    cancelAnimationFrame(state.rafId);
+    stopSpeech();
+    render(state.step, state.p);
+  } else {
+    const nextStart = state.step === CONFIG.steps.length - 1 && state.p >= 0.99 ? 0 : (state.p >= 0.99 && state.step < CONFIG.steps.length - 1 ? state.step + 1 : state.step);
+    goToStep(nextStart, true);
+  }
+});
+
+dom.prevBtn.addEventListener('click', () => {
+  if (state.step > 0) goToStep(state.step - 1, false);
+});
+
+dom.nextBtn.addEventListener('click', () => {
+  if (state.step < CONFIG.steps.length - 1) goToStep(state.step + 1, false);
+});
+
+dom.replayBtn.addEventListener('click', () => {
+  goToStep(state.step, state.playing);
+});
+
+dom.quizSkipBtn.addEventListener('click', () => {
+  state.quizResolved[state.step] = true;
+  dom.quizBanner.classList.remove('show');
+  state.waitingQuiz = false;
+  startStepAnimationAndSpeech(state.step);
+});
+
+dom.speedBtn.addEventListener('click', () => {
+  audioState.rate = audioState.rate === 1.0 ? 0.75 : 1.0;
+  dom.speedBtn.textContent = audioState.rate === 1.0 ? '🚶 正常 1.0x' : '🐢 慢速 0.75x';
+  dom.speedBtn.classList.toggle('active', audioState.rate === 0.75);
+});
+
+dom.muteBtn.addEventListener('click', () => {
+  audioState.muted = !audioState.muted;
+  if (audioState.muted) stopSpeech();
+  dom.muteBtn.textContent = audioState.muted ? '🔇 已靜音' : '🔊 語音開';
+  dom.muteBtn.classList.toggle('active', audioState.muted);
+});
+
+// Modals
+const practiceModal = document.getElementById('practiceModal');
+const masterModal = document.getElementById('masterModal');
+
+document.getElementById('openPracticeBtn').addEventListener('click', () => {
+  stopSpeech();
+  renderPractice(practiceIdx);
+  practiceModal.classList.add('open');
+});
+document.getElementById('closePracticeBtn').addEventListener('click', () => {
+  stopSpeech();
+  practiceModal.classList.remove('open');
+});
+document.getElementById('toggleHintBtn').addEventListener('click', () => {
+  document.getElementById('practiceHintBox').classList.toggle('show');
+  playSfx('pop');
+});
+document.getElementById('nextPracticeBtn').addEventListener('click', () => {
+  practiceIdx = (practiceIdx + 1) % CONFIG.practiceBank.length;
+  renderPractice(practiceIdx);
+  playSfx('pop');
+});
+
+document.getElementById('openMasterBtn').addEventListener('click', () => {
+  stopSpeech();
+  renderMasterSvg();
+  masterModal.classList.add('open');
+});
+document.getElementById('closeMasterBtn').addEventListener('click', () => {
+  stopSpeech();
+  masterModal.classList.remove('open');
+});
+document.getElementById('speakMasterBtn').addEventListener('click', () => {
+  speakText(CONFIG.masterTTS);
+});
+
+[practiceModal, masterModal].forEach(m => {
+  m.addEventListener('click', (e) => {
+    if (e.target === m) { stopSpeech(); m.classList.remove('open'); }
+  });
+});
+
+// Keyboard shortcuts (desktop)
+window.addEventListener('keydown', (e) => {
+  if (practiceModal.classList.contains('open') || masterModal.classList.contains('open')) return;
+  if (e.code === 'Space') { e.preventDefault(); dom.playBtn.click(); }
+  else if (e.code === 'ArrowRight') { e.preventDefault(); dom.nextBtn.click(); }
+  else if (e.code === 'ArrowLeft') { e.preventDefault(); dom.prevBtn.click(); }
+});
+
+// Initial boot (Faithful Step 0)
+initStaticDOM();
+render(0, 1);
+</script>
+</body>
+</html>

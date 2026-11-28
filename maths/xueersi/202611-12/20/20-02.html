@@ -1,0 +1,2139 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>拓展練習 2：販賣機裡一共有多少個瓶子？— 雙軌極簡草稿動畫</title>
+<style>
+  :root{
+    --bg:#eef3f9;
+    --card:#ffffff;
+    --paper:#fffdf5;
+    --ink:#1f2d3d;
+    --muted:#5a6b7d;
+    --border:#d5e0ec;
+    --primary:#0066cc;
+    --primary-dark:#004f9e;
+    --c-left:#0aa5c9;
+    --c-milk:#f4711f;
+    --c-yogurt:#8d5bd6;
+    --c-right:#2f9e57;
+    --c-juice:#d68910;
+    --c-ans:#e8541f;
+    --pencil:#36414f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;
+    background:var(--bg);color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Heiti TC",sans-serif;
+    -webkit-user-select:none;user-select:none;
+  }
+  #app{
+    display:flex;flex-direction:column;height:100%;height:100dvh;width:100%;
+    overflow:hidden;
+  }
+
+  /* ===== 頂部：可點擊階段進度列 ===== */
+  #header{
+    flex:0 0 auto;background:rgba(255,255,255,.97);
+    border-bottom:1px solid var(--border);
+    padding:7px 12px 6px;z-index:20;
+    box-shadow:0 2px 8px rgba(25,55,90,.05);
+  }
+  .head-top{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    max-width:1240px;margin:0 auto 5px;
+  }
+  .q-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    font-weight:800;font-size:14.5px;color:#fff;background:#556677;
+    padding:3px 11px;border-radius:999px;white-space:nowrap;
+  }
+  .q-badge .tri{
+    display:inline-block;width:0;height:0;
+    border-left:6px solid transparent;border-right:6px solid transparent;
+    border-bottom:10px solid #fff;
+  }
+  .kbd-hint{font-size:12.5px;color:var(--muted);white-space:nowrap;}
+  .kbd-hint b{color:var(--primary);}
+  @media (hover:none),(pointer:coarse),(max-width:820px){
+    .kbd-hint{display:none !important;}
+  }
+  #phases{
+    display:flex;flex-wrap:wrap;justify-content:center;gap:5px 6px;
+    max-width:1240px;margin:0 auto;
+  }
+  .ph-pill{
+    border:1.5px solid #d4dfec;background:#f4f7fb;color:#55677a;
+    border-radius:999px;padding:3.5px 11px;font-size:13.5px;font-weight:700;
+    cursor:pointer;transition:transform .16s ease,background .2s,color .2s,border-color .2s;
+  }
+  .ph-pill:hover{border-color:var(--primary);color:var(--primary);}
+  .ph-pill.done{background:#e1f4e8;border-color:#9bd6b0;color:#237541;}
+  .ph-pill.active{
+    background:var(--primary);border-color:var(--primary);color:#fff;
+    box-shadow:0 3px 10px rgba(0,102,204,.28);transform:scale(1.04);
+  }
+
+  /* ===== 中間主捲動區 ===== */
+  #stageWrap{
+    flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;
+    padding:9px 12px 14px;display:flex;flex-direction:column;align-items:center;
+    scroll-behavior:smooth;position:relative;
+  }
+
+  /* 順讀題目卡片（原句動態高亮＋零迷失代號上標 M / Y） */
+  .question-card{
+    width:100%;max-width:1240px;background:var(--card);
+    border:1.5px solid var(--border);border-radius:14px;
+    padding:12px 15px 9px;margin-bottom:9px;
+    box-shadow:0 3px 12px rgba(25,55,90,.06);
+  }
+  .q-zh{
+    font-size:clamp(18px,2.05vw,22.5px);font-weight:800;line-height:1.85;color:#243445;
+  }
+  .q-en{
+    font-size:clamp(12.5px,1.28vw,14.8px);color:#5d6f82;line-height:1.38;margin-top:3px;
+  }
+  .q-seg{
+    display:inline;padding:1px 3px;border-radius:6px;
+    transition:background .25s ease,color .25s ease,border-color .25s ease;
+    border-bottom:3px solid transparent;
+  }
+  .q-seg.read-done{color:#3c4d5e;border-bottom-color:#d8e3ef;}
+  .q-seg.active-0{background:#e7f1ff;color:#004f9e;border-bottom-color:#0066cc;}
+  .q-seg.active-1{background:#e0f7fc;color:#076a82;border-bottom-color:#0aa5c9;}
+  .q-seg.active-2{background:#e4f8ec;color:#1b6e39;border-bottom-color:#2f9e57;}
+  .q-seg.active-3{background:#fff8df;color:#996100;border-bottom-color:#e69b00;}
+  .q-seg.active-4{background:#fff0e1;color:#b84500;border-bottom-color:#f4711f;}
+  .q-seg.active-5{background:#f3eaff;color:#5a2ca3;border-bottom-color:#8d5bd6;}
+
+  .kw-wrap{position:relative;display:inline-block;}
+  .code-sup{
+    position:absolute;top:-15px;left:50%;transform:translateX(-50%) scale(0.4);
+    font-size:12px;font-weight:900;line-height:1;padding:2px 6px;border-radius:999px;
+    color:#fff;opacity:0;pointer-events:none;white-space:nowrap;
+    transition:opacity .25s ease,transform .25s cubic-bezier(.2,1.4,.4,1);
+    box-shadow:0 2px 5px rgba(0,0,0,.18);
+  }
+  .code-sup.show{opacity:1;transform:translateX(-50%) scale(1);}
+  .code-sup.m-tag{background:var(--c-milk);}
+  .code-sup.y-tag{background:var(--c-yogurt);}
+
+  /* ===== 雙軌主舞台：具象動畫區 ＋ ✏️ 實戰鉛筆算草紙 ===== */
+  #dualStage{
+    width:100%;max-width:1240px;
+    display:grid;grid-template-columns:1.32fr 0.92fr;gap:10px;
+    position:relative;flex:0 0 auto;
+  }
+  @media (max-width:860px){
+    #dualStage{grid-template-columns:1fr;gap:8px;}
+  }
+
+  .track-card{
+    background:var(--card);border:1.5px solid var(--border);border-radius:16px;
+    box-shadow:0 5px 18px rgba(25,55,90,.07);overflow:hidden;
+    display:flex;flex-direction:column;position:relative;
+  }
+  .track-card.paper-card{background:var(--paper);border-color:#dfd3b8;}
+  .track-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:6px 12px;font-size:13.5px;font-weight:800;
+    border-bottom:1px solid #e7eef6;background:#f7fafd;color:#385068;
+  }
+  .paper-card .track-head{
+    background:#fbf4e2;border-bottom:1px solid #e6d8b9;color:#6c5222;
+  }
+  .track-sub{font-size:12px;font-weight:700;opacity:.85;}
+  .track-svg{display:block;width:100%;height:auto;}
+
+  /* 開場大播放遮罩 */
+  #startOverlay{
+    position:absolute;inset:0;background:rgba(238,243,249,.58);
+    backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;
+    z-index:12;border-radius:16px;transition:opacity .25s ease;
+  }
+  #startOverlay.hidden{opacity:0;pointer-events:none;}
+  #startBigBtn{
+    border:none;border-radius:999px;background:linear-gradient(135deg,#0077ee,#0052b0);
+    color:#fff;font-size:clamp(18px,2.1vw,22px);font-weight:800;
+    padding:14px 28px;cursor:pointer;
+    box-shadow:0 8px 24px rgba(0,102,204,.38);
+    display:flex;align-items:center;gap:10px;
+    animation:pulseBtn 1.5s ease-in-out infinite;
+  }
+  @keyframes pulseBtn{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+
+  /* 互動小提問（「停一停，估一估」） */
+  #quizBox{
+    display:none;width:100%;max-width:1240px;margin-top:9px;
+    background:#fffdf4;border:2.5px solid #f0a500;border-radius:16px;
+    padding:11px 16px;box-shadow:0 6px 20px rgba(240,165,0,.18);
+  }
+  #quizBox.show{display:block;animation:popIn .3s cubic-bezier(.2,1.3,.4,1);}
+  @keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+  .quiz-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;}
+  .quiz-tag{font-size:14px;font-weight:800;color:#995d00;background:#ffefc2;padding:3px 10px;border-radius:999px;}
+  .quiz-skip{border:1px solid #d5c59b;background:#fff;color:#6c5b32;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:700;cursor:pointer;}
+  .quiz-q{font-size:clamp(17px,1.95vw,20px);font-weight:800;color:#23303e;margin-bottom:9px;}
+  .quiz-opts{display:flex;flex-wrap:wrap;gap:9px;}
+  .quiz-btn{
+    flex:1 1 180px;border:2px solid #cfdceb;background:#fff;color:#1f2d3d;
+    border-radius:12px;padding:10px 14px;font-size:16.5px;font-weight:800;
+    cursor:pointer;transition:all .15s;text-align:center;
+  }
+  .quiz-btn:hover{border-color:var(--primary);background:#f2f8ff;}
+  .quiz-btn.correct{background:#dcf5e6;border-color:#2f9e57;color:#1b6e39;}
+  .quiz-btn.wrong{background:#fdeaea;border-color:#d64545;color:#a82424;animation:shake .35s;}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  .quiz-fb{margin-top:8px;font-size:15.5px;font-weight:700;min-height:22px;line-height:1.45;}
+
+  /* 慶祝口訣 ＋ 挑戰類似題列（常規解法 4+5=9 已一步到位，依「寧缺勿濫」原則不顯示進階區） */
+  #celebrateBar{
+    display:none;width:100%;max-width:1240px;margin-top:9px;
+    background:linear-gradient(135deg,#fff7ed,#eef9f2);
+    border:2px solid #f4a261;border-radius:14px;padding:11px 16px;
+    align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    box-shadow:0 4px 14px rgba(232,84,31,.14);
+  }
+  #celebrateBar.show{display:flex;animation:popIn .35s cubic-bezier(.2,1.3,.4,1);}
+  .motto-wrap{flex:1 1 280px;}
+  .motto-title{font-size:14.5px;font-weight:800;color:#d9531e;margin-bottom:2px;}
+  .motto-text{font-size:clamp(16.5px,1.9vw,19.5px);font-weight:800;color:#1f2d3d;}
+  #btnChallenge{
+    border:none;border-radius:999px;background:linear-gradient(135deg,#ff7b29,#e8541f);
+    color:#fff;font-size:16.5px;font-weight:800;padding:10px 22px;cursor:pointer;
+    box-shadow:0 4px 14px rgba(232,84,31,.35);white-space:nowrap;
+  }
+  #btnChallenge:active{transform:scale(.97);}
+
+  /* ===== 挑戰類似題面板 ===== */
+  #practiceView{
+    display:none;width:100%;max-width:1040px;background:#fff;
+    border:2px solid #8d5bd6;border-radius:16px;padding:16px;
+    box-shadow:0 8px 26px rgba(141,91,214,.16);
+  }
+  #practiceView.show{display:block;animation:popIn .3s ease;}
+  .pr-top{
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+    margin-bottom:10px;border-bottom:1px solid #e6ebf2;padding-bottom:8px;
+  }
+  .pr-title{font-size:20px;font-weight:800;color:#6a3cb5;}
+  .pr-actions{display:flex;flex-wrap:wrap;gap:8px;}
+  .pr-mini-btn{
+    border:1.5px solid #c9d6e4;background:#f5f8fc;color:#2b3d4f;
+    border-radius:999px;padding:6px 14px;font-size:14px;font-weight:800;cursor:pointer;
+  }
+  .pr-mini-btn.hint-btn{border-color:#d9a441;background:#fff8e6;color:#8a5a00;}
+  .pr-q{font-size:clamp(18px,2.1vw,22px);font-weight:800;line-height:1.52;margin-bottom:12px;}
+  #prHintWrap{
+    display:none;background:var(--paper);border:2px dashed #d7c396;
+    border-radius:14px;padding:8px 12px;margin-bottom:12px;
+  }
+  #prHintWrap.show{display:block;animation:popIn .25s ease;}
+  .pr-hint-lbl{font-size:13.5px;font-weight:800;color:#7a5b21;margin-bottom:4px;}
+  #prScratchSvg,#prVerifySvg{display:block;width:100%;height:auto;}
+  #prVerifyWrap{
+    display:none;background:#f5fbf7;border:1.5px solid #9bd6b0;
+    border-radius:14px;padding:8px 10px;margin-bottom:12px;
+  }
+  #prVerifyWrap.show{display:block;animation:popIn .3s ease;}
+  .pr-opts{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
+  .pr-opt{
+    flex:1 1 120px;border:2px solid #cddae8;background:#fff;color:#1f2d3d;
+    border-radius:14px;padding:12px 16px;font-size:21px;font-weight:800;cursor:pointer;
+  }
+  .pr-opt:hover{border-color:#8d5bd6;background:#f8f4ff;}
+  .pr-opt.correct{background:#dcf5e6;border-color:#2f9e57;color:#1b6e39;}
+  .pr-opt.wrong{background:#fdeaea;border-color:#d64545;color:#a82424;animation:shake .35s;}
+  #prFeedback{font-size:17px;font-weight:700;line-height:1.55;min-height:28px;}
+
+  /* ===== 底部固定停靠區：讀題／解題視覺分界字幕 ＋ 同色算式條 ＋ 大觸控掣 ===== */
+  #dock{
+    flex:0 0 auto;background:rgba(255,255,255,.98);
+    border-top:1px solid var(--border);
+    padding:7px 12px max(9px,env(safe-area-inset-bottom));
+    box-shadow:0 -4px 16px rgba(25,55,90,.07);z-index:25;
+  }
+  .dock-inner{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:6px;}
+  #narrBox{
+    background:#f2f7fd;border:1px solid #d9e6f4;border-radius:12px;
+    padding:7px 12px;font-size:clamp(16px,1.82vw,18.2px);line-height:1.55;
+    color:#1f2d3d;min-height:48px;display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;
+  }
+  .narr-lead{
+    display:inline-block;font-size:.86em;font-weight:900;
+    color:#0052a3;background:#dcecff;padding:1px 8px;border-radius:999px;
+  }
+  .narr-quote{
+    display:inline;font-weight:800;color:#16304b;
+    background:#fff7df;border-bottom:2px solid #eab308;
+    padding:1px 6px;border-radius:6px;
+  }
+  .narr-sep{color:#8fa3b8;font-weight:900;}
+  .narr-think{font-weight:700;color:#1f2d3d;}
+
+  .dock-bottom{
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px 12px;
+  }
+  #calcBar{
+    display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;
+    background:#f9fbfd;border:1.5px solid #dde6f0;border-radius:12px;
+    padding:4px 14px;min-height:42px;flex:1 1 240px;justify-content:center;
+  }
+  .ctok{
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:clamp(22px,2.6vw,28px);font-weight:900;
+    padding:1px 7px;border-radius:8px;opacity:0;transform:scale(.4);
+    transition:opacity .22s ease,transform .25s cubic-bezier(.2,1.4,.4,1),background .25s;
+  }
+  .ctok.show{opacity:1;transform:scale(1);}
+  .ctok.pulse{transform:scale(1.18);background:rgba(0,102,204,.1);}
+  .ctok.op{color:#5a6b7d;padding:1px 2px;}
+  .ctok.t-left{color:var(--c-left);}
+  .ctok.t-right{color:var(--c-right);}
+  .ctok.t-ans{color:var(--c-ans);font-size:clamp(25px,3vw,32px);background:#fff1eb;border:1.5px solid #f7bda5;}
+
+  .ctrl-row{display:flex;align-items:center;gap:7px;justify-content:center;flex:0 0 auto;}
+  .tool-btn{
+    height:42px;border-radius:999px;border:1.5px solid #cad7e6;
+    background:#f4f7fb;color:#243445;font-size:14.5px;font-weight:800;
+    padding:0 11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+  }
+  .tool-btn:active{background:#e3ecf6;}
+  .nav-btn{
+    width:44px;height:44px;border-radius:50%;border:none;
+    background:#e8f1fb;color:var(--primary);font-size:19px;font-weight:800;
+    cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+  }
+  .nav-btn:active{background:#d1e4f8;}
+  #btnPlay{
+    width:52px;height:52px;border-radius:50%;border:none;
+    background:var(--primary);color:#fff;font-size:23px;
+    cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 12px rgba(0,102,204,.34);
+  }
+  #btnPlay:active{background:var(--primary-dark);transform:scale(.96);}
+
+  @media (max-width:640px){
+    #header{padding:6px 8px;}
+    .ph-pill{font-size:12px;padding:3px 8px;}
+    #stageWrap{padding:7px 8px 10px;}
+    .question-card{padding:11px 11px 8px;}
+    #dock{padding:6px 8px max(8px,env(safe-area-inset-bottom));}
+    .dock-bottom{justify-content:center;}
+    #calcBar{flex:1 1 100%;min-height:38px;}
+    .tool-btn{height:38px;font-size:13.5px;padding:0 9px;}
+    .nav-btn{width:40px;height:40px;font-size:17px;}
+    #btnPlay{width:48px;height:48px;font-size:21px;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 頂部：可點擊階段進度列 -->
+  <header id="header">
+    <div class="head-top">
+      <span class="q-badge"><span class="tri"></span> 拓展練習 2・排隊計數（第幾個・極簡草稿）</span>
+      <span class="kbd-hint"><b>Space</b> 播放/暫停 · <b>←/→</b> 上下步 · <b>R</b> 重播</span>
+    </div>
+    <nav id="phases" aria-label="解題步驟進度"></nav>
+  </header>
+
+  <!-- 中間主區 -->
+  <main id="stageWrap">
+    <!-- 順讀題目卡：完整原句逐句高亮＋零迷失代號上標 M / Y -->
+    <section class="question-card" id="questionCard">
+      <div class="q-zh">
+        <span class="q-seg" id="qseg-0">販賣機裡有一排飲料，</span><span class="q-seg" id="qseg-1">從左數，<span class="kw-wrap">牛奶瓶<span class="code-sup m-tag" id="supM1">M</span></span>排第 4，</span><span class="q-seg" id="qseg-2">從右數，<span class="kw-wrap">酸奶瓶<span class="code-sup y-tag" id="supY1">Y</span></span>排第 5，</span><span class="q-seg" id="qseg-3">其餘全是果汁瓶，</span><span class="q-seg" id="qseg-4"><span class="kw-wrap">牛奶瓶<span class="code-sup m-tag" id="supM2">M</span></span>在<span class="kw-wrap">酸奶瓶<span class="code-sup y-tag" id="supY2">Y</span></span>的左邊一個。</span><span class="q-seg" id="qseg-5">請問販賣機裡一共有多少個瓶子？</span>
+      </div>
+      <div class="q-en">
+        In the vending machine, there is a row of beverages. Counting from the left, the <b>m</b>ilk bottle is at position 4. Counting from the right, the <b>y</b>ogurt bottle is at position 5. All the other bottles are juice bottles. The milk bottle is one position to the left of the yogurt bottle. How many bottles are in the vending machine in total?
+      </div>
+    </section>
+
+    <!-- 雙軌視覺舞台：左＝具象販賣機舞台，右＝✏️ 實戰鉛筆算草紙 -->
+    <div id="dualStage">
+      <div id="startOverlay">
+        <button id="startBigBtn" type="button">▶ 撳一下開始（廣東話實戰解題）</button>
+      </div>
+
+      <!-- 軌道 A：具象理解舞台（飲料販賣機） -->
+      <div class="track-card">
+        <div class="track-head">
+          <span>🎬 具象理解舞台（飲料販賣機）</span>
+          <span class="track-sub">順讀先分兩段 → 讀到連接句拼合</span>
+        </div>
+        <svg id="sceneA" class="track-svg" viewBox="0 0 960 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="販賣機飲料排隊動畫">
+          <defs>
+            <linearGradient id="vmBody" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#3b5b82"/>
+              <stop offset="100%" stop-color="#2a4361"/>
+            </linearGradient>
+            <linearGradient id="vmGlass" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#f7fbff"/>
+              <stop offset="100%" stop-color="#e9f3fc"/>
+            </linearGradient>
+            <linearGradient id="shelfMetal" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#d7e1ec"/>
+              <stop offset="100%" stop-color="#9fb1c4"/>
+            </linearGradient>
+            <radialGradient id="penGradA" cx="35%" cy="30%" r="65%">
+              <stop offset="0%" stop-color="#7ec4ff"/>
+              <stop offset="45%" stop-color="#0066cc"/>
+              <stop offset="100%" stop-color="#003d80"/>
+            </radialGradient>
+            <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="4" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <rect x="0" y="0" width="960" height="440" fill="#fbfdff"/>
+
+          <!-- 頂部方向標示 -->
+          <g id="dirBar" opacity="1">
+            <rect x="36" y="8" width="176" height="32" rx="16" fill="#e6f7fb" stroke="#0aa5c9" stroke-width="1.6"/>
+            <text x="124" y="29" text-anchor="middle" font-size="15.5" font-weight="800" fill="#077792">從左數 (Left) ▶</text>
+            <line x1="226" y1="24" x2="622" y2="24" stroke="#d5e2ee" stroke-width="2" stroke-dasharray="6 6"/>
+            <rect x="636" y="8" width="176" height="32" rx="16" fill="#e8f7ee" stroke="#2f9e57" stroke-width="1.6"/>
+            <text x="724" y="29" text-anchor="middle" font-size="15.5" font-weight="800" fill="#1e713c">◀ 從右數 (Right)</text>
+          </g>
+
+          <!-- 片尾慶祝橫幅 -->
+          <g id="celBanner" opacity="0">
+            <rect x="174" y="6" width="500" height="38" rx="19" fill="#fff1e6" stroke="#e8541f" stroke-width="2.4"/>
+            <text x="424" y="31" text-anchor="middle" font-size="20" font-weight="900" fill="#e8541f">🎉 啱晒！販賣機裡一共有 9 個瓶子！ 🎉</text>
+          </g>
+
+          <!-- 販賣機外框 -->
+          <g id="vendingMachine">
+            <rect x="20" y="50" width="920" height="302" rx="20" fill="url(#vmBody)" stroke="#1e324a" stroke-width="2.4"/>
+            <rect x="36" y="60" width="776" height="24" rx="7" fill="#1e3550"/>
+            <text x="424" y="77" text-anchor="middle" font-size="13.5" font-weight="800" fill="#cfe6ff" letter-spacing="2">🥤 飲料販賣機 VENDING MACHINE</text>
+            <!-- 玻璃櫥窗 -->
+            <rect x="36" y="88" width="776" height="250" rx="12" fill="url(#vmGlass)" stroke="#6d8eb3" stroke-width="2"/>
+            <polygon points="74,90 120,90 62,336 38,336" fill="#ffffff" opacity="0.42"/>
+            <polygon points="134,90 150,90 92,336 78,336" fill="#ffffff" opacity="0.28"/>
+            <!-- 層板 -->
+            <rect x="44" y="274" width="760" height="14" rx="4" fill="url(#shelfMetal)" stroke="#7c91a8" stroke-width="1.3"/>
+            <rect x="44" y="288" width="760" height="5" fill="#6f849c"/>
+
+            <!-- 右側控制面板 -->
+            <rect x="824" y="60" width="102" height="278" rx="12" fill="#213854" stroke="#4f729c" stroke-width="1.5"/>
+            <rect x="836" y="74" width="78" height="30" rx="6" fill="#102030" stroke="#5378a1" stroke-width="1.2"/>
+            <text id="vmLed" x="875" y="95" text-anchor="middle" font-size="16" font-weight="900" fill="#4ef09c" font-family="monospace">? 瓶</text>
+            <rect x="850" y="116" width="50" height="22" rx="5" fill="#16283d" stroke="#5c7fa6" stroke-width="1.2"/>
+            <rect x="871" y="121" width="8" height="12" rx="2" fill="#89a8c9"/>
+            <rect x="840" y="152" width="31" height="15" rx="4" fill="#f5b041"/>
+            <rect x="879" y="152" width="31" height="15" rx="4" fill="#f4711f"/>
+            <rect x="840" y="174" width="31" height="15" rx="4" fill="#8d5bd6"/>
+            <rect x="879" y="174" width="31" height="15" rx="4" fill="#2f9e57"/>
+            <rect x="840" y="196" width="70" height="17" rx="5" fill="#0aa5c9" opacity="0.85"/>
+            <text x="875" y="208" text-anchor="middle" font-size="10.5" font-weight="800" fill="#ffffff">PUSH</text>
+            <rect x="836" y="246" width="78" height="76" rx="8" fill="#132336" stroke="#4f729c" stroke-width="1.5"/>
+            <rect x="844" y="256" width="62" height="14" rx="4" fill="#274363"/>
+          </g>
+
+          <!-- 未知空隙標示（未讀到連接句前） -->
+          <g id="gapBoxA" opacity="0">
+            <rect x="314" y="154" width="132" height="114" rx="14" fill="#fff7e6" stroke="#d9941e" stroke-width="2.4" stroke-dasharray="7 5"/>
+            <text x="380" y="204" text-anchor="middle" font-size="32" font-weight="900" fill="#c97b00">?</text>
+            <text x="380" y="232" text-anchor="middle" font-size="14" font-weight="800" fill="#9c6200">未知距離</text>
+            <line id="gapSlashA" x1="328" y1="254" x2="432" y2="164" stroke="#d64545" stroke-width="5" stroke-linecap="round" stroke-dasharray="145" stroke-dashoffset="145"/>
+          </g>
+
+          <!-- 區域高亮層（三部曲） -->
+          <g id="regionsLayer"></g>
+
+          <!-- 緊貼無重疊分界（拼合後出現） -->
+          <g id="adjacentLink" opacity="0">
+            <line x1="387" y1="126" x2="387" y2="282" stroke="#d9531e" stroke-width="2.8" stroke-dasharray="6 4"/>
+            <rect x="297" y="94" width="180" height="26" rx="13" fill="#fff2e6" stroke="#f4711f" stroke-width="1.8"/>
+            <text x="387" y="112" text-anchor="middle" font-size="13.5" font-weight="800" fill="#c84b00">緊貼！兩組完全冇重疊</text>
+          </g>
+
+          <!-- 9 個具象飲料瓶層 -->
+          <g id="bottlesLayer"></g>
+
+          <!-- 層板下方說明標籤 -->
+          <g id="zoneLabelsLayer"></g>
+
+          <!-- 單層圓圈數字徽章層 -->
+          <g id="badgesLayer"></g>
+
+          <!-- 忠實作答區（括號填數） -->
+          <g id="answerArea">
+            <rect x="174" y="366" width="560" height="58" rx="16" fill="#f5f9ff" stroke="#cfdceb" stroke-width="1.8"/>
+            <text x="454" y="405" text-anchor="middle" font-size="29" font-weight="800" fill="#1f2d3d" font-family="'Songti TC','PingFang TC',serif">
+              販賣機裡一共有（　　　）個瓶子。
+            </text>
+            <circle id="ansGlowRing" cx="508" cy="395" r="28" fill="none" stroke="#2f9e57" stroke-width="4" opacity="0"/>
+            <text id="ansValue" x="508" y="407" text-anchor="middle" font-size="36" font-weight="900" fill="#e8541f" opacity="0">9</text>
+          </g>
+
+          <!-- 彩紙慶祝層 -->
+          <g id="confettiLayer"></g>
+
+          <!-- 視線嚮導筆尖（軌道 A） -->
+          <g id="penA" opacity="0">
+            <ellipse cx="2" cy="14" rx="10" ry="4.5" fill="rgba(0,40,100,.18)"/>
+            <circle cx="0" cy="0" r="10.5" fill="url(#penGradA)" stroke="#ffffff" stroke-width="2"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- 軌道 B：✏️ 實戰鉛筆算草紙（極簡：← 4 M | Y 5 →，底弧線一筆包埋主角！） -->
+      <div class="track-card paper-card">
+        <div class="track-head">
+          <span>✏️ 實戰鉛筆算草紙</span>
+          <span class="track-sub">極簡代號・筆尖最短路徑</span>
+        </div>
+        <svg id="sceneB" class="track-svg" viewBox="0 0 560 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="鉛筆算草紙最短筆劃速記">
+          <defs>
+            <pattern id="gridPat" width="28" height="28" patternUnits="userSpaceOnUse">
+              <path d="M 28 0 L 0 0 0 28" fill="none" stroke="#efe6cf" stroke-width="1"/>
+            </pattern>
+            <radialGradient id="penGradB" cx="35%" cy="30%" r="65%">
+              <stop offset="0%" stop-color="#7ec4ff"/>
+              <stop offset="45%" stop-color="#0066cc"/>
+              <stop offset="100%" stop-color="#003d80"/>
+            </radialGradient>
+          </defs>
+
+          <rect x="0" y="0" width="560" height="440" fill="#fffdf5"/>
+          <rect x="0" y="0" width="560" height="440" fill="url(#gridPat)"/>
+          <line x1="34" y1="0" x2="34" y2="440" stroke="#f2c4c4" stroke-width="1.6"/>
+
+          <!-- 角落極簡對照表（零迷失） -->
+          <g id="scLegend">
+            <g id="legM" opacity="0">
+              <rect x="336" y="14" width="96" height="26" rx="13" fill="#fff0e1" stroke="#f4711f" stroke-width="1.4"/>
+              <text x="384" y="32" text-anchor="middle" font-size="14" font-weight="900" fill="#c84b00">M = 牛奶</text>
+            </g>
+            <g id="legY" opacity="0">
+              <rect x="442" y="14" width="98" height="26" rx="13" fill="#f3eaff" stroke="#8d5bd6" stroke-width="1.4"/>
+              <text x="491" y="32" text-anchor="middle" font-size="14" font-weight="900" fill="#5d2fa8">Y = 酸奶</text>
+            </g>
+          </g>
+
+          <!-- 第 0 步：極簡方向線（左 ◀ ——— ▶ 右） -->
+          <g id="scDir" opacity="0">
+            <text x="72" y="70" text-anchor="middle" font-size="15" font-weight="800" fill="#087c98">左</text>
+            <path id="scDirLine" d="M 96 64 L 464 64" fill="none" stroke="#36414f" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="380" stroke-dashoffset="380"/>
+            <path d="M 106 57 L 94 64 L 106 71" fill="none" stroke="#36414f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 454 57 L 466 64 L 454 71" fill="none" stroke="#36414f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="488" y="70" text-anchor="middle" font-size="15" font-weight="800" fill="#217840">右</text>
+          </g>
+
+          <!-- 草稿碎片一：← 4  M ＋ 一筆大底弧（視覺化「排第 4 已包埋 M」） -->
+          <g id="scFragLeft" opacity="0">
+            <rect id="scLeftHi" x="62" y="128" width="156" height="64" rx="12" fill="#0aa5c9" opacity="0.15"/>
+            <text id="scLeftArr" x="82" y="168" text-anchor="middle" font-size="24" font-weight="900" fill="#077792" opacity="0">←</text>
+            <text id="scLeftNum" x="122" y="172" text-anchor="middle" font-size="38" font-weight="900" fill="#077792" opacity="0">4</text>
+            <circle cx="184" cy="160" r="24" fill="#f4711f" opacity="0.16"/>
+            <text id="scMilkChar" x="184" y="172" text-anchor="middle" font-size="34" font-weight="900" fill="#c84b00" opacity="0">M</text>
+            <!-- 一筆包埋底弧：從最左包到 M 尾，代表共 4 個已含 M -->
+            <path id="scLeftArc" d="M 68 186 Q 140 212 212 186" fill="none" stroke="#077792" stroke-width="3.6" stroke-linecap="round" stroke-dasharray="160" stroke-dashoffset="160"/>
+            <text id="scLeftSub" x="140" y="220" text-anchor="middle" font-size="14" font-weight="900" fill="#077792" opacity="0">已包 M（共 4 個）</text>
+          </g>
+
+          <!-- 中間未知空隙「?」與一筆快斜線「/」 -->
+          <g id="scGap" opacity="0">
+            <text x="280" y="172" text-anchor="middle" font-size="36" font-weight="900" fill="#c97b00">?</text>
+            <line id="scGapSlash" x1="258" y1="186" x2="302" y2="136" stroke="#d64545" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="80" stroke-dashoffset="80"/>
+          </g>
+
+          <!-- 拼合後一筆短豎線「|」 -->
+          <g id="scDivider" opacity="0">
+            <line id="scDivLine" x1="280" y1="122" x2="280" y2="202" stroke="#d9531e" stroke-width="3.8" stroke-linecap="round" stroke-dasharray="90" stroke-dashoffset="90"/>
+            <rect x="234" y="92" width="92" height="24" rx="12" fill="#fff0e1" stroke="#f4711f" stroke-width="1.6"/>
+            <text x="280" y="109" text-anchor="middle" font-size="13" font-weight="900" fill="#c84b00">緊貼冇重疊</text>
+          </g>
+
+          <!-- 草稿碎片二：Y  5 → ＋ 一筆大底弧（視覺化「排第 5 已包埋 Y」） -->
+          <g id="scFragRight" opacity="0">
+            <rect id="scRightHi" x="342" y="128" width="156" height="64" rx="12" fill="#2f9e57" opacity="0.15"/>
+            <circle cx="376" cy="160" r="24" fill="#8d5bd6" opacity="0.16"/>
+            <text id="scYogChar" x="376" y="172" text-anchor="middle" font-size="34" font-weight="900" fill="#5d2fa8" opacity="0">Y</text>
+            <text id="scRightNum" x="438" y="172" text-anchor="middle" font-size="38" font-weight="900" fill="#1e713c" opacity="0">5</text>
+            <text id="scRightArr" x="478" y="168" text-anchor="middle" font-size="24" font-weight="900" fill="#1e713c" opacity="0">→</text>
+            <path id="scRightArc" d="M 348 186 Q 420 212 492 186" fill="none" stroke="#1e713c" stroke-width="3.6" stroke-linecap="round" stroke-dasharray="160" stroke-dashoffset="160"/>
+            <text id="scRightSub" x="420" y="220" text-anchor="middle" font-size="14" font-weight="900" fill="#1e713c" opacity="0">已包 Y（共 5 個）</text>
+          </g>
+
+          <!-- 極簡速度提示條 -->
+          <g id="scTip" opacity="0">
+            <rect x="54" y="242" width="452" height="30" rx="10" fill="#f7efda" stroke="#dfc996" stroke-width="1.3"/>
+            <text id="scTipText" x="280" y="262" text-anchor="middle" font-size="14" font-weight="800" fill="#6b4e16">
+              ⚡ 底弧一筆包埋主角，一眼分清「第幾個」！
+            </text>
+          </g>
+
+          <!-- 草稿紙底部手寫算式區（邊數邊寫：4 + 5 = 9） -->
+          <g id="scEqArea">
+            <line x1="56" y1="292" x2="504" y2="292" stroke="#e2d5b5" stroke-width="1.5" stroke-dasharray="5 5"/>
+            <text x="58" y="322" font-size="15" font-weight="800" fill="#7a6845">算式：</text>
+            <g font-size="38" font-weight="900" font-family="'PingFang TC','Microsoft JhengHei',sans-serif">
+              <text id="se0" x="148" y="374" text-anchor="middle" fill="#0aa5c9" opacity="0">4</text>
+              <text id="se1" x="212" y="374" text-anchor="middle" fill="#5a6b7d" opacity="0">+</text>
+              <text id="se2" x="276" y="374" text-anchor="middle" fill="#2f9e57" opacity="0">5</text>
+              <text id="se3" x="340" y="374" text-anchor="middle" fill="#5a6b7d" opacity="0">=</text>
+              <text id="se4" x="410" y="376" text-anchor="middle" fill="#e8541f" font-size="42" opacity="0">9</text>
+            </g>
+            <line id="scAnsUL1" x1="384" y1="388" x2="436" y2="388" stroke="#e8541f" stroke-width="3" stroke-dasharray="70" stroke-dashoffset="70"/>
+            <line id="scAnsUL2" x1="384" y1="395" x2="436" y2="395" stroke="#e8541f" stroke-width="3" stroke-dasharray="70" stroke-dashoffset="70"/>
+          </g>
+
+          <!-- 視線嚮導筆尖（軌道 B） -->
+          <g id="penB" opacity="0">
+            <ellipse cx="2" cy="14" rx="9" ry="4" fill="rgba(0,40,100,.18)"/>
+            <circle cx="0" cy="0" r="9.5" fill="url(#penGradB)" stroke="#ffffff" stroke-width="2"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 互動小提問（「停一停，估一估」） -->
+    <section id="quizBox" aria-live="polite">
+      <div class="quiz-head">
+        <span class="quiz-tag">🤔 停一停，估一估</span>
+        <button class="quiz-skip" id="quizSkipBtn" type="button">跳過繼續 ▶</button>
+      </div>
+      <div class="quiz-q" id="quizQuestion"></div>
+      <div class="quiz-opts" id="quizOptions"></div>
+      <div class="quiz-fb" id="quizFeedback"></div>
+    </section>
+
+    <!-- 結尾慶祝口訣 ＋ 🎯 挑戰類似題 -->
+    <section id="celebrateBar">
+      <div class="motto-wrap">
+        <div class="motto-title">💡 考場實戰口訣</div>
+        <div class="motto-text">「講『第幾個』就包埋主角！兩位主角貼埋冇重疊，直接加埋！」</div>
+      </div>
+      <button id="btnChallenge" type="button">🎯 挑戰類似題</button>
+    </section>
+
+    <!-- 挑戰類似題面板（預設純文字＋按掣睇極簡草稿） -->
+    <section id="practiceView">
+      <div class="pr-top">
+        <span class="pr-title">🎯 挑戰類似題（考場實戰）</span>
+        <div class="pr-actions">
+          <button class="pr-mini-btn hint-btn" id="prHintBtn" type="button">✏️ 睇草稿提示</button>
+          <button class="pr-mini-btn" id="prNewBtn" type="button">🎲 再抽一題</button>
+          <button class="pr-mini-btn" id="prBackBtn" type="button">⬅ 返回原題動畫</button>
+        </div>
+      </div>
+      <div class="pr-q" id="prQuestion"></div>
+      <div id="prHintWrap">
+        <div class="pr-hint-lbl">✏️ 最短筆劃草稿提示（M = 牛奶，Y = 酸奶，底弧已包埋主角）：</div>
+        <svg id="prScratchSvg" viewBox="0 0 640 124" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div id="prVerifyWrap">
+        <svg id="prVerifySvg" viewBox="0 0 960 190" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="pr-opts" id="prOpts"></div>
+      <div id="prFeedback"></div>
+    </section>
+  </main>
+
+  <!-- 底部固定停靠區：讀題／解題視覺分界字幕 ＋ 同色算式條 ＋ 大觸控掣 -->
+  <footer id="dock">
+    <div class="dock-inner">
+      <div id="narrBox">
+        <span class="narr-think">撳中間藍色掣開始，順住讀原題，學用 M、Y 極簡草稿分清「排第幾」！</span>
+      </div>
+      <div class="dock-bottom">
+        <div id="calcBar" aria-label="解題算草區"></div>
+        <div class="ctrl-row">
+          <button class="tool-btn" id="btnMute" type="button" title="靜音／開聲">🔊</button>
+          <button class="tool-btn" id="btnSpeed" type="button" title="切換語速與動畫速度">🚶 正常</button>
+          <button class="nav-btn" id="btnPrev" type="button" title="上一步">⏮</button>
+          <button id="btnPlay" type="button" title="播放／暫停">▶</button>
+          <button class="nav-btn" id="btnNext" type="button" title="下一步">⏭</button>
+          <button class="nav-btn" id="btnReplay" type="button" title="重新播放">🔄</button>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   §1  集中 CONFIG（題目參數、代號 M/Y、廣東話異讀映射表、步驟）
+   ============================================================ */
+var CONFIG = {
+  leftPos: 4,
+  rightPos: 5,
+  total: 9,
+  codes: { milk: 'M', yogurt: 'Y' },
+  // 廣東話異讀字情境映射表：
+  // 1) 動詞「數」讀 sou2（同「嫂」），防瀏覽器誤讀成名詞「數」sou3
+  // 2) 動詞「畫」讀 waak6（同「劃」），防誤讀成名詞「畫」waa2/waa6
+  HETERO_MAP: [
+    ['從左數', '從左嫂'],
+    ['從右數', '從右嫂'],
+    ['由左數', '由左嫂'],
+    ['由右數', '由右嫂'],
+    ['左數', '左嫂'],
+    ['右數', '右嫂'],
+    ['數一次', '嫂一次'],
+    ['數到', '嫂到'],
+    ['畫條', '劃條'],
+    ['畫一', '劃一'],
+    ['畫個', '劃個'],
+    ['畫線', '劃線'],
+    ['畫底線', '劃底線'],
+    ['畫底弧', '劃底弧'],
+    ['畫弧', '劃弧'],
+    ['畫樽', '劃樽'],
+    ['畫汁', '劃汁'],
+    ['畫果汁', '劃果汁'],
+    ['唔畫', '唔劃']
+  ],
+  colors: {
+    left: '#0aa5c9',
+    leftDark: '#077792',
+    milk: '#f4711f',
+    milkDark: '#b84c0a',
+    yogurt: '#8d5bd6',
+    yogurtDark: '#6135a6',
+    right: '#2f9e57',
+    rightDark: '#1e713c',
+    ans: '#e8541f'
+  },
+  trackA: {
+    shelfY: 274,
+    sepLeftX0: 84, sepDx: 66,
+    sepRightX0: 480,
+    snapX0: 128, snapDx: 74
+  },
+  trackB: {
+    leftSnapDx: 46,
+    rightSnapDx: -46
+  },
+  flash: { cycles: 3, hi: 0.78, lo: 0.06, settle: 0.24 },
+  phases: [
+    { id: 0, label: '1. 定方向', firstStep: 0 },
+    { id: 1, label: '2. 左數第 4', firstStep: 1 },
+    { id: 2, label: '3. 右數第 5', firstStep: 3 },
+    { id: 3, label: '4. 果汁與拼合', firstStep: 5 },
+    { id: 4, label: '5. 避坑列式', firstStep: 7 },
+    { id: 5, label: '6. 寫答案', firstStep: 10 }
+  ],
+  calcTokens: [
+    { txt: '4', cls: 't-left' },
+    { txt: '+', cls: 'op' },
+    { txt: '5', cls: 't-right' },
+    { txt: '=', cls: 'op' },
+    { txt: '9', cls: 't-ans' }
+  ],
+  quizzes: [
+    {
+      question: '小心陷阱！左組 4 個（已包 M）、右組 5 個（已包 Y），仲使唔使再 + 2 或 − 1？',
+      options: [
+        { label: '✅ 唔使加亦唔使減！直接 4 + 5', correct: true, fb: '🎉 醒目晒！第 4 已包 M，第 5 已包 Y，兩組冇重疊，直接 4 + 5！' },
+        { label: '❌ 要再加 2（4 + 1 + 1 + 5）', correct: false, fb: '💡 望底弧！M 已計喺 4 入面，Y 已計喺 5 入面，再加 2 會計重覆！再揀過。' },
+        { label: '❌ 要減 1（4 + 5 − 1）', correct: false, fb: '💡 M 同 Y 係兩支唔同嘅樽，兩組貼住冇重疊，唔使減 1！再試吓。' }
+      ]
+    },
+    {
+      question: '左組 4 個、右組 5 個，4 + 5 一共有幾多個瓶子？',
+      options: [
+        { label: '8 個', correct: false, fb: '💡 8 係多手減咗 1，兩組冇重疊喎！直接計 4 + 5。' },
+        { label: '9 個', correct: true, fb: '🎉 完全正確！4 + 5 = 9 個瓶子！' },
+        { label: '11 個', correct: false, fb: '💡 11 係計重覆咗 M 同 Y 一次，睇草稿 4 + 5 再揀！' }
+      ]
+    }
+  ]
+};
+
+var NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs, parent){
+  var el = document.createElementNS(NS, tag);
+  if (attrs) Object.keys(attrs).forEach(function(k){ el.setAttribute(k, attrs[k]); });
+  if (parent) parent.appendChild(el);
+  return el;
+}
+function clamp(v, a, b){ return v < a ? a : (v > b ? b : v); }
+function easeOutCubic(p){ return 1 - Math.pow(1 - clamp(p,0,1), 3); }
+function easeIO(p){ p = clamp(p,0,1); return p < 0.5 ? 4*p*p*p : 1 - Math.pow(-2*p+2, 3)/2; }
+function backOut(p){ p = clamp(p,0,1); var s = 1.65; p -= 1; return p*p*((s+1)*p + s) + 1; }
+function lerp(a, b, q){ return a + (b - a) * q; }
+
+function trilogyFillAlpha(p){
+  if (p <= 0) return 0;
+  if (p >= 0.72) return CONFIG.flash.settle;
+  var local = (p / 0.72) * CONFIG.flash.cycles;
+  var frac = local - Math.floor(local);
+  return frac < 0.54 ? CONFIG.flash.hi : CONFIG.flash.lo;
+}
+
+/* ============================================================
+   §2  Web Audio 輕音效 ＋ 廣東話 TTS 引擎（含異讀字分軌校準）
+   ============================================================ */
+var audioCtx = null;
+var muted = false;
+var speedRate = 1.0;
+var hkVoice = null;
+var speechDone = true;
+var speechSerial = 0;
+
+function ensureAudioCtx(){
+  if (!audioCtx) {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) { try { audioCtx = new AC(); } catch(e){} }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    try { audioCtx.resume(); } catch(e){}
+  }
+  return audioCtx;
+}
+
+function playSfx(type){
+  if (muted) return;
+  var ctx = ensureAudioCtx();
+  if (!ctx) return;
+  var now = ctx.currentTime;
+  try {
+    if (type === 'pop') {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(390, now);
+      o.frequency.exponentialRampToValueAtTime(670, now + 0.08);
+      g.gain.setValueAtTime(0.001, now);
+      g.gain.linearRampToValueAtTime(0.11, now + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(now); o.stop(now + 0.1);
+    } else if (type === 'whoosh') {
+      var o2 = ctx.createOscillator(), g2 = ctx.createGain();
+      o2.type = 'triangle';
+      o2.frequency.setValueAtTime(520, now);
+      o2.frequency.exponentialRampToValueAtTime(220, now + 0.12);
+      g2.gain.setValueAtTime(0.06, now);
+      g2.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+      o2.connect(g2); g2.connect(ctx.destination);
+      o2.start(now); o2.stop(now + 0.14);
+    } else if (type === 'ding') {
+      [523.25, 659.25, 783.99].forEach(function(freq, i){
+        var o3 = ctx.createOscillator(), g3 = ctx.createGain();
+        o3.type = 'sine';
+        o3.frequency.setValueAtTime(freq, now + i * 0.055);
+        g3.gain.setValueAtTime(0.001, now + i * 0.055);
+        g3.gain.linearRampToValueAtTime(0.11, now + i * 0.055 + 0.015);
+        g3.gain.exponentialRampToValueAtTime(0.001, now + i * 0.055 + 0.24);
+        o3.connect(g3); g3.connect(ctx.destination);
+        o3.start(now + i * 0.055); o3.stop(now + i * 0.055 + 0.26);
+      });
+    } else if (type === 'wrong') {
+      var o4 = ctx.createOscillator(), g4 = ctx.createGain();
+      o4.type = 'sine';
+      o4.frequency.setValueAtTime(240, now);
+      o4.frequency.linearRampToValueAtTime(185, now + 0.16);
+      g4.gain.setValueAtTime(0.1, now);
+      g4.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      o4.connect(g4); g4.connect(ctx.destination);
+      o4.start(now); o4.stop(now + 0.19);
+    } else if (type === 'cheer') {
+      [523.25, 659.25, 783.99, 1046.5].forEach(function(freq, i){
+        var o5 = ctx.createOscillator(), g5 = ctx.createGain();
+        o5.type = 'triangle';
+        o5.frequency.setValueAtTime(freq, now + i * 0.09);
+        g5.gain.setValueAtTime(0.001, now + i * 0.09);
+        g5.gain.linearRampToValueAtTime(0.13, now + i * 0.09 + 0.02);
+        g5.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.38);
+        o5.connect(g5); g5.connect(ctx.destination);
+        o5.start(now + i * 0.09); o5.stop(now + i * 0.09 + 0.4);
+      });
+    }
+  } catch(e){}
+}
+
+function pickHKVoice(){
+  if (!('speechSynthesis' in window)) return null;
+  var vs = speechSynthesis.getVoices() || [];
+  return vs.find(function(x){ return /^zh[-_]HK/i.test(x.lang); })
+      || vs.find(function(x){ return /yue|cantonese|hong\s*kong/i.test(x.lang + ' ' + x.name); })
+      || vs.find(function(x){ return /^zh/i.test(x.lang); })
+      || null;
+}
+if ('speechSynthesis' in window) {
+  hkVoice = pickHKVoice();
+  speechSynthesis.onvoiceschanged = function(){ hkVoice = pickHKVoice(); };
+}
+
+function cleanForTTS(text){
+  var s = String(text || '');
+  for (var i = 0; i < CONFIG.HETERO_MAP.length; i++) {
+    s = s.split(CONFIG.HETERO_MAP[i][0]).join(CONFIG.HETERO_MAP[i][1]);
+  }
+  return s
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F]/gu, '')
+    .replace(/[\[\]|←→]/g, ' ')
+    .replace(/[「」『』（）()]/g, '，')
+    .replace(/＋|\+/g, '加')
+    .replace(/−|-/g, '減')
+    .replace(/×/g, '乘')
+    .replace(/÷/g, '除')
+    .replace(/=/g, '等於')
+    .replace(/——|—/g, '，')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function stopSpeech(){
+  speechSerial++;
+  speechDone = true;
+  if ('speechSynthesis' in window) {
+    try { speechSynthesis.cancel(); } catch(e){}
+  }
+}
+
+function speakCantonese(text, onFinished){
+  stopSpeech();
+  var mySerial = ++speechSerial;
+  if (muted || !('speechSynthesis' in window)) {
+    speechDone = true;
+    if (onFinished) onFinished();
+    return;
+  }
+  var clean = cleanForTTS(text);
+  if (!clean) {
+    speechDone = true;
+    if (onFinished) onFinished();
+    return;
+  }
+  speechDone = false;
+  try {
+    var u = new SpeechSynthesisUtterance(clean);
+    u.lang = 'zh-HK';
+    u.rate = speedRate;
+    u.pitch = 1.04;
+    if (!hkVoice) hkVoice = pickHKVoice();
+    if (hkVoice) u.voice = hkVoice;
+    u.onend = function(){
+      if (mySerial === speechSerial) { speechDone = true; if (onFinished) onFinished(); }
+    };
+    u.onerror = function(){
+      if (mySerial === speechSerial) { speechDone = true; if (onFinished) onFinished(); }
+    };
+    speechSynthesis.speak(u);
+  } catch(e){
+    speechDone = true;
+    if (onFinished) onFinished();
+  }
+}
+
+/* ============================================================
+   §3  軌道 A（販賣機具象瓶子）元件
+   零上帝視角：其餘瓶子未讀到「其餘全是果汁瓶」前顯示為未揭曉普通瓶，讀到先變身果汁瓶！
+   ============================================================ */
+var regionsLayer = document.getElementById('regionsLayer');
+var bottlesLayer = document.getElementById('bottlesLayer');
+var zoneLabelsLayer = document.getElementById('zoneLabelsLayer');
+var badgesLayer = document.getElementById('badgesLayer');
+var confettiLayer = document.getElementById('confettiLayer');
+var penA = document.getElementById('penA');
+var penB = document.getElementById('penB');
+var adjacentLink = document.getElementById('adjacentLink');
+var gapBoxA = document.getElementById('gapBoxA');
+var gapSlashA = document.getElementById('gapSlashA');
+var dirBar = document.getElementById('dirBar');
+var celBanner = document.getElementById('celBanner');
+var ansGlowRing = document.getElementById('ansGlowRing');
+var ansValue = document.getElementById('ansValue');
+var vmLed = document.getElementById('vmLed');
+
+function sepBottleX(idx){
+  return idx <= 3 ? (CONFIG.trackA.sepLeftX0 + idx * CONFIG.trackA.sepDx)
+                  : (CONFIG.trackA.sepRightX0 + (idx - 4) * CONFIG.trackA.sepDx);
+}
+function snapBottleX(idx){
+  return CONFIG.trackA.snapX0 + idx * CONFIG.trackA.snapDx;
+}
+
+function buildBottleNode(idx, kind, parent){
+  var g = svgEl('g', { opacity: '0' }, parent);
+  var inner = svgEl('g', {}, g);
+  svgEl('ellipse', { cx: 0, cy: 2, rx: 19, ry: 4.8, fill: 'rgba(20,40,70,.16)' }, inner);
+
+  var unknownG = null, juiceG = null;
+
+  if (kind === 'milk') {
+    svgEl('path', {
+      d: 'M -18 -6 L -18 -64 C -18 -78, -9.5 -84, -9.5 -98 L -9.5 -108 L 9.5 -108 L 9.5 -98 C 9.5 -84, 18 -78, 18 -64 L 18 -6 C 18 0, 12 2, 0 2 C -12 2, -18 0, -18 -6 Z',
+      fill: '#ffffff', stroke: '#f4711f', 'stroke-width': '2.6'
+    }, inner);
+    svgEl('path', {
+      d: 'M -15 -8 L -15 -60 C -15 -69, -8.5 -74, -8.5 -82 L 8.5 -82 C 8.5 -74, 15 -69, 15 -60 L 15 -8 C 15 -3, 10 -1, 0 -1 C -10 -1, -15 -3, -15 -8 Z',
+      fill: '#fff7ee'
+    }, inner);
+    svgEl('rect', { x: -11.5, y: -116, width: 23, height: 10, rx: 3.5, fill: '#f4711f' }, inner);
+    svgEl('rect', { x: -15, y: -56, width: 30, height: 30, rx: 5, fill: '#ffe5cf', stroke: '#f4711f', 'stroke-width': '1.3' }, inner);
+    var tM = svgEl('text', { x: 0, y: -35, 'text-anchor': 'middle', 'font-size': '17', 'font-weight': '900', fill: '#c84b00' }, inner);
+    tM.textContent = 'M';
+    svgEl('line', { x1: -11, y1: -62, x2: -11, y2: -16, stroke: '#ffffff', 'stroke-width': '2.4', 'stroke-linecap': 'round', opacity: '0.85' }, inner);
+  } else if (kind === 'yogurt') {
+    svgEl('path', {
+      d: 'M -17 -6 C -21 -28, -18 -54, -13 -64 C -16 -72, -15 -86, -11.5 -96 L 11.5 -96 C 15 -86, 16 -72, 13 -64 C 18 -54, 21 -28, 17 -6 C 16 0, 11 2, 0 2 C -11 2, -16 0, -17 -6 Z',
+      fill: '#fbf5ff', stroke: '#8d5bd6', 'stroke-width': '2.6'
+    }, inner);
+    svgEl('rect', { x: -13.5, y: -104, width: 27, height: 10, rx: 3.5, fill: '#8d5bd6' }, inner);
+    svgEl('rect', { x: -15, y: -50, width: 30, height: 30, rx: 6, fill: '#ebdcfc', stroke: '#8d5bd6', 'stroke-width': '1.3' }, inner);
+    var tY = svgEl('text', { x: 0, y: -29, 'text-anchor': 'middle', 'font-size': '17', 'font-weight': '900', fill: '#5d2fa8' }, inner);
+    tY.textContent = 'Y';
+    svgEl('line', { x1: -10.5, y1: -55, x2: -11.5, y2: -14, stroke: '#ffffff', 'stroke-width': '2.3', 'stroke-linecap': 'round', opacity: '0.85' }, inner);
+  } else {
+    // 子層 1：未揭曉飲料瓶（順讀未到「其餘全是果汁瓶」前顯示）
+    unknownG = svgEl('g', { opacity: '1' }, inner);
+    svgEl('path', {
+      d: 'M -16 -6 L -16 -58 C -16 -72, -8 -78, -8 -90 L -8 -102 L 8 -102 L 8 -90 C 8 -78, 16 -72, 16 -58 L 16 -6 C 16 0, 11 2, 0 2 C -11 2, -16 0, -16 -6 Z',
+      fill: '#e6eef7', stroke: '#8ea3b8', 'stroke-width': '2.2', 'stroke-dasharray': '5 3'
+    }, unknownG);
+    svgEl('rect', { x: -10, y: -110, width: 20, height: 9, rx: 3.5, fill: '#8ea3b8' }, unknownG);
+    var tU = svgEl('text', { x: 0, y: -32, 'text-anchor': 'middle', 'font-size': '18', 'font-weight': '900', fill: '#6c8299' }, unknownG);
+    tU.textContent = '?';
+
+    // 子層 2：具象金黃果汁瓶（讀到「其餘全是果汁瓶」先顯現）
+    juiceG = svgEl('g', { opacity: '0' }, inner);
+    svgEl('path', {
+      d: 'M -16.5 -6 L -16.5 -58 C -16.5 -72, -8 -78, -8 -90 L -8 -102 L 8 -102 L 8 -90 C 8 -78, 16.5 -72, 16.5 -58 L 16.5 -6 C 16.5 0, 11 2, 0 2 C -11 2, -16.5 0, -16.5 -6 Z',
+      fill: '#ffdf85', stroke: '#d68910', 'stroke-width': '2.4'
+    }, juiceG);
+    svgEl('path', {
+      d: 'M -14 -8 L -14 -55 C -14 -63, -7 -68, -7 -76 L 7 -76 C 7 -68, 14 -63, 14 -55 L 14 -8 C 14 -3, 9.5 -1, 0 -1 C -9.5 -1, -14 -3, -14 -8 Z',
+      fill: '#f7b733'
+    }, juiceG);
+    svgEl('rect', { x: -10, y: -110, width: 20, height: 9, rx: 3.5, fill: '#d68910' }, juiceG);
+    svgEl('rect', { x: -14, y: -50, width: 28, height: 28, rx: 5, fill: '#fff8e1', stroke: '#d68910', 'stroke-width': '1.2' }, juiceG);
+    svgEl('circle', { cx: 9, cy: -45, r: 3.5, fill: '#3aa856' }, juiceG);
+    var tJ = svgEl('text', { x: -1, y: -30, 'text-anchor': 'middle', 'font-size': '15', 'font-weight': '900', fill: '#b96d00' }, juiceG);
+    tJ.textContent = '汁';
+    svgEl('line', { x1: -10.5, y1: -56, x2: -10.5, y2: -14, stroke: '#ffffff', 'stroke-width': '2.2', 'stroke-linecap': 'round', opacity: '0.78' }, juiceG);
+  }
+  return { g: g, inner: inner, unknownG: unknownG, juiceG: juiceG, sepX: sepBottleX(idx), snapX: snapBottleX(idx), baseY: CONFIG.trackA.shelfY, kind: kind };
+}
+
+var bottles = [];
+for (var bi = 0; bi < 9; bi++) {
+  var bk = (bi === 3) ? 'milk' : (bi === 4 ? 'yogurt' : 'juice');
+  bottles.push(buildBottleNode(bi, bk, bottlesLayer));
+}
+
+/* 兩大專屬色區域高亮三部曲（拼合座標） */
+var regionDefs = {
+  leftGrp:  { x: snapBottleX(0) - 30, y: 146, w: snapBottleX(3) - snapBottleX(0) + 60, h: 134, color: CONFIG.colors.left, stroke: CONFIG.colors.leftDark },
+  rightGrp: { x: snapBottleX(4) - 30, y: 146, w: snapBottleX(8) - snapBottleX(4) + 60, h: 134, color: CONFIG.colors.right, stroke: CONFIG.colors.rightDark }
+};
+var regionNodes = {};
+Object.keys(regionDefs).forEach(function(k){
+  var d = regionDefs[k];
+  var g = svgEl('g', {}, regionsLayer);
+  var fill = svgEl('rect', { x: d.x, y: d.y, width: d.w, height: d.h, rx: 14, fill: d.color, opacity: 0 }, g);
+  var perim = 2 * (d.w + d.h);
+  var box = svgEl('rect', {
+    x: d.x, y: d.y, width: d.w, height: d.h, rx: 14,
+    fill: 'none', stroke: d.stroke, 'stroke-width': '3.4',
+    'stroke-dasharray': perim, 'stroke-dashoffset': perim, opacity: 0
+  }, g);
+  regionNodes[k] = { def: d, fill: fill, box: box, perim: perim };
+});
+
+function makeZoneLabel(txt, bg, stroke, textCol){
+  var g = svgEl('g', { opacity: 0 }, zoneLabelsLayer);
+  var w = Math.max(76, txt.length * 14 + 22);
+  svgEl('rect', { x: -w/2, y: -14, width: w, height: 27, rx: 13.5, fill: bg, stroke: stroke, 'stroke-width': '1.8' }, g);
+  var t = svgEl('text', { x: 0, y: 4.5, 'text-anchor': 'middle', 'font-size': '14', 'font-weight': '800', fill: textCol }, g);
+  t.textContent = txt;
+  return g;
+}
+var zoneLabels = {
+  leftGrp:  makeZoneLabel('從左第 1–4（包 M）', '#e3f7fc', '#0aa5c9', '#077792'),
+  rightGrp: makeZoneLabel('從右第 1–5（包 Y）', '#e4f7eb', '#2f9e57', '#1e713c')
+};
+function placeZoneLabel(el, cx, y, op){
+  el.setAttribute('opacity', String(op));
+  el.setAttribute('transform', 'translate(' + cx.toFixed(1) + ',' + y.toFixed(1) + ')');
+}
+
+function makeBadgeNode(text, color){
+  var g = svgEl('g', { opacity: 0 }, badgesLayer);
+  svgEl('circle', { cx: 0, cy: 0, r: 15.5, fill: color, stroke: '#ffffff', 'stroke-width': '2.4' }, g);
+  var t = svgEl('text', { x: 0, y: 5.5, 'text-anchor': 'middle', 'font-size': '15', 'font-weight': '900', fill: '#ffffff' }, g);
+  t.textContent = text;
+  return g;
+}
+var badgesLeft = [], badgesRight = [];
+for (var li = 0; li < 4; li++) badgesLeft.push(makeBadgeNode(String(li + 1), li === 3 ? CONFIG.colors.milk : CONFIG.colors.left));
+for (var ri = 0; ri < 5; ri++) badgesRight.push(makeBadgeNode(String(ri + 1), ri === 4 ? CONFIG.colors.yogurt : CONFIG.colors.right));
+var badgeLeftTotal = makeBadgeNode('4', CONFIG.colors.leftDark);
+var badgeRightTotal = makeBadgeNode('5', CONFIG.colors.rightDark);
+
+var confettiItems = [];
+var confCols = ['#f4711f','#0aa5c9','#8d5bd6','#f0a500','#e8467c','#2f9e57','#0066cc'];
+for (var ci = 0; ci < 26; ci++) {
+  var rect = svgEl('rect', { width: 9, height: 14, rx: 2, fill: confCols[ci % confCols.length], opacity: 0 }, confettiLayer);
+  confettiItems.push({
+    el: rect,
+    x0: 110 + ((ci * 73) % 640),
+    y0: 42 + ((ci * 31) % 60),
+    vx: ((ci % 2 === 0 ? 1 : -1) * (40 + (ci * 17) % 140)),
+    vy: -65 - ((ci * 29) % 120),
+    rot0: (ci * 47) % 360,
+    vr: (ci % 2 === 0 ? 1 : -1) * (180 + (ci * 23) % 240)
+  });
+}
+
+/* ============================================================
+   §4  軌道 B DOM 參考 ＋ 題目代號上標 ＋ 進度條 ＋ 算式條
+   ============================================================ */
+var legM = document.getElementById('legM');
+var legY = document.getElementById('legY');
+var supM1 = document.getElementById('supM1');
+var supM2 = document.getElementById('supM2');
+var supY1 = document.getElementById('supY1');
+var supY2 = document.getElementById('supY2');
+
+var scDir = document.getElementById('scDir');
+var scDirLine = document.getElementById('scDirLine');
+var scFragLeft = document.getElementById('scFragLeft');
+var scLeftHi = document.getElementById('scLeftHi');
+var scLeftArr = document.getElementById('scLeftArr');
+var scLeftNum = document.getElementById('scLeftNum');
+var scMilkChar = document.getElementById('scMilkChar');
+var scLeftArc = document.getElementById('scLeftArc');
+var scLeftSub = document.getElementById('scLeftSub');
+
+var scGap = document.getElementById('scGap');
+var scGapSlash = document.getElementById('scGapSlash');
+var scDivider = document.getElementById('scDivider');
+var scDivLine = document.getElementById('scDivLine');
+
+var scFragRight = document.getElementById('scFragRight');
+var scRightHi = document.getElementById('scRightHi');
+var scYogChar = document.getElementById('scYogChar');
+var scRightNum = document.getElementById('scRightNum');
+var scRightArr = document.getElementById('scRightArr');
+var scRightArc = document.getElementById('scRightArc');
+var scRightSub = document.getElementById('scRightSub');
+
+var scTip = document.getElementById('scTip');
+var scTipText = document.getElementById('scTipText');
+var scEqEls = [];
+for (var sei = 0; sei < 5; sei++) scEqEls.push(document.getElementById('se' + sei));
+var scAnsUL1 = document.getElementById('scAnsUL1');
+var scAnsUL2 = document.getElementById('scAnsUL2');
+
+var qSegEls = [];
+for (var qi = 0; qi < 6; qi++) qSegEls.push(document.getElementById('qseg-' + qi));
+
+var phasesEl = document.getElementById('phases');
+var phaseBtns = CONFIG.phases.map(function(ph){
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'ph-pill';
+  btn.textContent = ph.label;
+  btn.addEventListener('click', function(){
+    ensureAudioCtx();
+    exitPracticeMode();
+    hideStartOverlay();
+    jumpToStep(ph.firstStep, true);
+  });
+  phasesEl.appendChild(btn);
+  return btn;
+});
+
+var calcBar = document.getElementById('calcBar');
+var calcTokEls = CONFIG.calcTokens.map(function(tk){
+  var sp = document.createElement('span');
+  sp.className = 'ctok ' + tk.cls;
+  sp.textContent = tk.txt;
+  calcBar.appendChild(sp);
+  return sp;
+});
+
+/* ============================================================
+   §5  純函數視覺輔助
+   ============================================================ */
+function setBottleFlavor(b, juiceRatio){
+  if (!b.unknownG || !b.juiceG) return;
+  b.unknownG.setAttribute('opacity', String(clamp(1 - juiceRatio * 1.4, 0, 1).toFixed(3)));
+  b.juiceG.setAttribute('opacity', String(clamp(juiceRatio, 0, 1).toFixed(3)));
+}
+
+function setBottleAt(b, x, y, scale, op, bounceP, glow){
+  b.g.setAttribute('opacity', String(op));
+  b.g.setAttribute('transform', 'translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ') scale(' + scale.toFixed(3) + ')');
+  var k = bounceP > 0 ? (1 + 0.13 * Math.sin(clamp(bounceP,0,1) * Math.PI)) : 1;
+  var lift = bounceP > 0 ? (-8 * Math.sin(clamp(bounceP,0,1) * Math.PI)) : 0;
+  b.inner.setAttribute('transform', 'translate(0,' + lift.toFixed(1) + ') scale(' + k.toFixed(3) + ')');
+  b.inner.setAttribute('filter', glow ? 'url(#softGlow)' : '');
+}
+
+function setBottleLandAt(b, targetX, p, fromDx, fromDy){
+  if (p <= 0) { setBottleAt(b, targetX + fromDx, b.baseY + fromDy, 0.35, 0, 0, false); return; }
+  var q = easeOutCubic(p);
+  var x = targetX + fromDx * (1 - q);
+  var y = b.baseY + fromDy * (1 - q) - Math.sin(clamp(p,0,1) * Math.PI) * 28;
+  var sc = 0.38 + 0.62 * backOut(Math.min(1, p * 1.12));
+  setBottleAt(b, x, y, sc, clamp(p * 3.5, 0, 1), 0, false);
+}
+
+function setRegionState(key, mode, p){
+  var r = regionNodes[key];
+  if (mode === 'hidden') {
+    r.fill.setAttribute('opacity', '0');
+    r.box.setAttribute('opacity', '0');
+    r.box.setAttribute('stroke-dashoffset', String(r.perim));
+  } else if (mode === 'settled') {
+    r.fill.setAttribute('opacity', String(CONFIG.flash.settle));
+    r.box.setAttribute('opacity', '0.88');
+    r.box.setAttribute('stroke-dashoffset', '0');
+  } else if (mode === 'anim') {
+    var drawP = clamp(p / 0.34, 0, 1);
+    r.box.setAttribute('opacity', drawP > 0 ? '1' : '0');
+    r.box.setAttribute('stroke-dashoffset', String((r.perim * (1 - drawP)).toFixed(1)));
+    var flashP = clamp((p - 0.28) / 0.72, 0, 1);
+    r.fill.setAttribute('opacity', String(trilogyFillAlpha(flashP).toFixed(3)));
+  }
+}
+
+function setBadgeAt(el, x, y, p, fadeOutP){
+  if (p <= 0 || fadeOutP >= 1) {
+    el.setAttribute('opacity', '0');
+    el.setAttribute('transform', 'translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ') scale(0.01)');
+    return;
+  }
+  var sc = 0.25 + 0.75 * backOut(Math.min(1, p));
+  var op = clamp(p * 3, 0, 1) * (1 - clamp(fadeOutP || 0, 0, 1));
+  el.setAttribute('opacity', op.toFixed(3));
+  el.setAttribute('transform', 'translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ') scale(' + sc.toFixed(3) + ')');
+}
+
+function setActivePen(track, x, y){
+  if (track === 'A') {
+    penA.setAttribute('opacity', '1');
+    penA.setAttribute('transform', 'translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ')');
+    penB.setAttribute('opacity', '0');
+  } else if (track === 'B') {
+    penA.setAttribute('opacity', '0');
+    penB.setAttribute('opacity', '1');
+    penB.setAttribute('transform', 'translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ')');
+  } else {
+    penA.setAttribute('opacity', '0');
+    penB.setAttribute('opacity', '0');
+  }
+}
+
+function setHighlightSeg(activeSegIdx){
+  for (var i = 0; i < qSegEls.length; i++) {
+    qSegEls[i].className = 'q-seg';
+    if (i < activeSegIdx) qSegEls[i].classList.add('read-done');
+    else if (i === activeSegIdx) qSegEls[i].classList.add('active-' + i);
+  }
+}
+
+function setEqShown(count, pulseIndices){
+  for (var i = 0; i < calcTokEls.length; i++) {
+    var shown = i < count;
+    calcTokEls[i].classList.toggle('show', shown);
+    calcTokEls[i].classList.toggle('pulse', shown && pulseIndices && pulseIndices.indexOf(i) >= 0);
+    scEqEls[i].setAttribute('opacity', shown ? '1' : '0');
+  }
+}
+
+/* ============================================================
+   §6  步驟定義（13 步：原句一字不漏讀題 ＋ 讀題／解題清晰分界 ＋ 精簡快狠準思路）
+   ============================================================ */
+var STEPS = [
+  {
+    phase: 0, seg: 0, dur: 3.4, sfx: 'pop',
+    lead: '題目寫住：', quote: '販賣機裡有一排飲料，',
+    think: '即刻畫條左右箭咀定方向。'
+  },
+  {
+    phase: 1, seg: 1, dur: 4.2, sfx: 'pop',
+    lead: '題目話：', quote: '從左數，牛奶瓶排第 4，',
+    think: '左數 1、2、3、4，第 4 就係牛奶，包埋自己共 4 個！'
+  },
+  {
+    phase: 1, seg: 1, dur: 3.6, sfx: 'ding',
+    think: '草稿唔畫樽！牛奶寫 M，寫 4 畫條底弧包住 M，兩秒搞掂。'
+  },
+  {
+    phase: 2, seg: 2, dur: 4.4, sfx: 'pop',
+    lead: '題目話：', quote: '從右數，酸奶瓶排第 5，',
+    think: '未講點連埋，中間先留空位；右數 1 到 5，包埋酸奶共 5 個！'
+  },
+  {
+    phase: 2, seg: 2, dur: 3.6, sfx: 'ding',
+    think: '草稿中間寫問號，右邊酸奶寫 Y，寫 5 畫條底弧包住 Y。'
+  },
+  {
+    phase: 3, seg: 3, dur: 3.4, sfx: 'pop',
+    lead: '題目話：', quote: '其餘全是果汁瓶，',
+    think: '其餘變成果汁瓶，但數量冇變，草稿唔使改！'
+  },
+  {
+    phase: 3, seg: 4, dur: 4.4, sfx: 'whoosh',
+    lead: '題目指明：', quote: '牛奶瓶在酸奶瓶的左邊一個。',
+    think: '刪走問號！兩組即刻貼埋，中間完全冇重疊。'
+  },
+  {
+    phase: 4, seg: 5, dur: 3.0, sfx: 'pop', quizIdx: 0,
+    lead: '題目問：', quote: '請問販賣機裡一共有多少個瓶子？',
+    think: '停一停：兩組都包埋主角，使唔使再加 2 或減 1？'
+  },
+  {
+    phase: 4, seg: 5, dur: 3.2, sfx: 'ding',
+    think: '啱晒！青藍左組共 4 個（已包 M），算式先寫 4。'
+  },
+  {
+    phase: 4, seg: 5, dur: 3.2, sfx: 'ding',
+    think: '翠綠右組共 5 個（已包 Y），冇重疊，直接加 5！'
+  },
+  {
+    phase: 5, seg: 5, dur: 2.6, sfx: 'pop', quizIdx: 1,
+    think: '停一停，計一計：4 + 5 一共有幾多個瓶子？'
+  },
+  {
+    phase: 5, seg: 5, dur: 3.6, sfx: 'ding',
+    think: '啱晒！4 + 5 = 9！草稿劃雙底線，括號填 9！'
+  },
+  {
+    phase: 5, seg: 5, dur: 4.2, sfx: 'cheer',
+    think: '🎉 答案係 9！口訣：講第幾個就包埋主角，貼埋冇重疊直接加！'
+  }
+];
+
+function stepFullTTS(st){
+  if (st.tts) return st.tts;
+  if (st.quote) return (st.lead || '') + st.quote + ' ' + st.think;
+  return st.think;
+}
+
+function renderNarrBox(st){
+  var box = document.getElementById('narrBox');
+  box.innerHTML = '';
+  if (st.quote) {
+    if (st.lead) {
+      var spL = document.createElement('span');
+      spL.className = 'narr-lead';
+      spL.textContent = st.lead;
+      box.appendChild(spL);
+    }
+    var spQ = document.createElement('span');
+    spQ.className = 'narr-quote';
+    spQ.textContent = '「' + st.quote + '」';
+    box.appendChild(spQ);
+
+    var spSep = document.createElement('span');
+    spSep.className = 'narr-sep';
+    spSep.textContent = '→';
+    box.appendChild(spSep);
+  }
+  var spT = document.createElement('span');
+  spT.className = 'narr-think';
+  spT.textContent = st.think;
+  box.appendChild(spT);
+}
+
+/* ============================================================
+   §7  核心純函數雙軌渲染器：applyState(idx, p)
+   ============================================================ */
+function applyState(idx, p){
+  p = clamp(p, 0, 1);
+  setHighlightSeg(STEPS[idx].seg);
+
+  // 零迷失代號上標（開場忠實隱藏）
+  var showSupM = (idx >= 2);
+  var showSupY = (idx >= 4);
+  supM1.classList.toggle('show', showSupM);
+  supM2.classList.toggle('show', showSupM && idx >= 6);
+  supY1.classList.toggle('show', showSupY);
+  supY2.classList.toggle('show', showSupY && idx >= 6);
+  legM.setAttribute('opacity', showSupM ? '1' : '0');
+  legY.setAttribute('opacity', showSupY ? '1' : '0');
+
+  // 1. 徹底重設軌道 A
+  dirBar.setAttribute('opacity', idx === 12 ? String(Math.max(0, 1 - p * 3)) : '1');
+  celBanner.setAttribute('opacity', idx === 12 ? String(clamp(p * 2.8, 0, 1)) : '0');
+  gapBoxA.setAttribute('opacity', '0');
+  gapSlashA.setAttribute('stroke-dashoffset', '145');
+  adjacentLink.setAttribute('opacity', '0');
+  ansGlowRing.setAttribute('opacity', '0');
+  ansValue.setAttribute('opacity', '0');
+  vmLed.textContent = (idx >= 11 && (idx > 11 || p > 0.45)) ? '9 瓶' : '? 瓶';
+
+  placeZoneLabel(zoneLabels.leftGrp, 0, 314, 0);
+  placeZoneLabel(zoneLabels.rightGrp, 0, 314, 0);
+  setRegionState('leftGrp', 'hidden', 0);
+  setRegionState('rightGrp', 'hidden', 0);
+
+  for (var i = 0; i < 9; i++) {
+    setBottleAt(bottles[i], bottles[i].sepX, bottles[i].baseY, 0.35, 0, 0, false);
+    setBottleFlavor(bottles[i], idx > 5 ? 1 : 0);
+  }
+  for (var li = 0; li < 4; li++) setBadgeAt(badgesLeft[li], sepBottleX(li), 140, 0, 0);
+  for (var ri = 0; ri < 5; ri++) setBadgeAt(badgesRight[ri], sepBottleX(8 - ri), 140, 0, 0);
+  setBadgeAt(badgeLeftTotal, (snapBottleX(0)+snapBottleX(3))/2, 128, 0, 0);
+  setBadgeAt(badgeRightTotal, (snapBottleX(4)+snapBottleX(8))/2, 128, 0, 0);
+  confettiItems.forEach(function(c){ c.el.setAttribute('opacity', '0'); });
+
+  // 徹底重設軌道 B
+  scDir.setAttribute('opacity', '0');
+  scDirLine.setAttribute('stroke-dashoffset', '380');
+  scFragLeft.setAttribute('opacity', '0');
+  scFragLeft.setAttribute('transform', 'translate(0,0)');
+  scLeftHi.setAttribute('opacity', '0.15');
+  scLeftArr.setAttribute('opacity', '0');
+  scLeftNum.setAttribute('opacity', '0');
+  scMilkChar.setAttribute('opacity', '0');
+  scLeftArc.setAttribute('stroke-dashoffset', '160');
+  scLeftSub.setAttribute('opacity', '0');
+
+  scGap.setAttribute('opacity', '0');
+  scGapSlash.setAttribute('stroke-dashoffset', '80');
+  scDivider.setAttribute('opacity', '0');
+  scDivLine.setAttribute('stroke-dashoffset', '90');
+
+  scFragRight.setAttribute('opacity', '0');
+  scFragRight.setAttribute('transform', 'translate(0,0)');
+  scRightHi.setAttribute('opacity', '0.15');
+  scYogChar.setAttribute('opacity', '0');
+  scRightNum.setAttribute('opacity', '0');
+  scRightArr.setAttribute('opacity', '0');
+  scRightArc.setAttribute('stroke-dashoffset', '160');
+  scRightSub.setAttribute('opacity', '0');
+
+  scTip.setAttribute('opacity', '0');
+  scAnsUL1.setAttribute('stroke-dashoffset', '70');
+  scAnsUL2.setAttribute('stroke-dashoffset', '70');
+
+  var penTrack = 'none', penX = 0, penY = 0;
+  var eqCount = 0, pulseIdx = [];
+
+  var snapQ = 0;
+  if (idx === 6) snapQ = easeIO(clamp((p - 0.34) / 0.44, 0, 1));
+  else if (idx > 6) snapQ = 1;
+  function curBX(bIdx){ return lerp(bottles[bIdx].sepX, bottles[bIdx].snapX, snapQ); }
+
+  // ===== Step 0：畫左右方向線 =====
+  if (idx === 0) {
+    scDir.setAttribute('opacity', String(clamp(p * 3, 0, 1)));
+    var drawDir = clamp((p - 0.14) / 0.68, 0, 1);
+    scDirLine.setAttribute('stroke-dashoffset', String((380 * (1 - drawDir)).toFixed(1)));
+    penTrack = 'B'; penX = lerp(96, 464, drawDir); penY = 64;
+  } else {
+    scDir.setAttribute('opacity', '1');
+    scDirLine.setAttribute('stroke-dashoffset', '0');
+  }
+
+  // ===== Step 1：左數第 4（3 個未揭曉普通瓶＋第 4 個牛奶瓶 M，從左數 1..4） =====
+  if (idx === 1) {
+    var lTimes = [[0.0,0.22],[0.18,0.22],[0.36,0.22],[0.54,0.26]];
+    penTrack = 'A'; penX = sepBottleX(0); penY = 148;
+    for (var l0 = 0; l0 < 4; l0++) {
+      var pl = clamp((p - lTimes[l0][0]) / lTimes[l0][1], 0, 1);
+      setBottleLandAt(bottles[l0], bottles[l0].sepX, pl, -70, -80);
+      setBadgeAt(badgesLeft[l0], bottles[l0].sepX, 140, clamp((pl - 0.45)/0.55, 0, 1), 0);
+      if (pl > 0 && pl < 1) { penX = bottles[l0].sepX; penY = 148; }
+    }
+    if (p >= 0.80) {
+      setBottleAt(bottles[3], bottles[3].sepX, CONFIG.trackA.shelfY, 1, 1, (p - 0.80)/0.20, true);
+      penX = bottles[3].sepX; penY = 148;
+    }
+    placeZoneLabel(zoneLabels.leftGrp, (sepBottleX(0)+sepBottleX(3))/2, 314, clamp((p - 0.78)/0.22, 0, 1));
+  } else if (idx >= 2) {
+    for (var l1 = 0; l1 < 4; l1++) setBottleAt(bottles[l1], curBX(l1), CONFIG.trackA.shelfY, 1, 1, 0, false);
+    placeZoneLabel(zoneLabels.leftGrp, (curBX(0)+curBX(3))/2, 314, 1);
+  }
+
+  // ===== Step 2：草稿速記左段（M ＋ ← 4 ＋ 一筆大底弧包住 M） =====
+  if (idx === 2) {
+    scFragLeft.setAttribute('opacity', '1');
+    scTip.setAttribute('opacity', String(clamp((p - 0.16)*2.5, 0, 1)));
+    scTipText.textContent = '⚡ 牛奶寫 M，寫 4 畫條底弧包住 M，代表共 4 個！';
+    var fadeIndL = clamp(p / 0.25, 0, 1);
+    for (var flb = 0; flb < 4; flb++) setBadgeAt(badgesLeft[flb], sepBottleX(flb), 140, 1, fadeIndL);
+
+    var pM2 = clamp(p / 0.30, 0, 1);
+    var p4 = clamp((p - 0.28) / 0.24, 0, 1);
+    var pArcL = clamp((p - 0.52) / 0.42, 0, 1);
+    scMilkChar.setAttribute('opacity', String(clamp(pM2 * 1.6, 0, 1)));
+    scLeftArr.setAttribute('opacity', String(p4));
+    scLeftNum.setAttribute('opacity', String(p4));
+    scLeftArc.setAttribute('stroke-dashoffset', String((160 * (1 - pArcL)).toFixed(1)));
+    scLeftSub.setAttribute('opacity', String(clamp((p - 0.75)/0.25, 0, 1)));
+
+    if (p < 0.30) {
+      setBottleAt(bottles[3], curBX(3), CONFIG.trackA.shelfY, 1, 1, Math.sin(pM2 * Math.PI) * 0.7, true);
+      penTrack = 'B'; penX = 184; penY = 160;
+    } else if (p < 0.52) {
+      penTrack = 'B'; penX = 122; penY = 164;
+    } else {
+      var bL = Math.sin(pArcL * Math.PI);
+      for (var bl = 0; bl < 4; bl++) setBottleAt(bottles[bl], curBX(bl), CONFIG.trackA.shelfY, 1, 1, bL * 0.6, true);
+      penTrack = 'B'; penX = lerp(68, 212, pArcL); penY = 186 + Math.sin(pArcL * Math.PI) * 14;
+    }
+  } else if (idx >= 3) {
+    scFragLeft.setAttribute('opacity', '1');
+    scMilkChar.setAttribute('opacity', '1');
+    scLeftArr.setAttribute('opacity', '1');
+    scLeftNum.setAttribute('opacity', '1');
+    scLeftArc.setAttribute('stroke-dashoffset', '0');
+    scLeftSub.setAttribute('opacity', '1');
+    scFragLeft.setAttribute('transform', 'translate(' + (CONFIG.trackB.leftSnapDx * snapQ).toFixed(1) + ',0)');
+  }
+
+  // ===== Step 3：右數第 5（中間留 ? 空隙；由右向左先慢後快 1..5，第 5 個係酸奶瓶 Y） =====
+  if (idx === 3) {
+    gapBoxA.setAttribute('opacity', String(clamp(p * 4, 0, 1)));
+    // 由最右 idx 8 向左排至 idx 4 (Y)：頭兩個慢，後三個快（先教後快）
+    var rTimes = [[0.06,0.22],[0.26,0.22],[0.46,0.14],[0.58,0.14],[0.70,0.20]];
+    penTrack = 'A'; penX = sepBottleX(8); penY = 148;
+    for (var r0 = 0; r0 < 5; r0++) {
+      var bIdx = 8 - r0;
+      var pr = clamp((p - rTimes[r0][0]) / rTimes[r0][1], 0, 1);
+      setBottleLandAt(bottles[bIdx], bottles[bIdx].sepX, pr, 70, -80);
+      setBadgeAt(badgesRight[r0], bottles[bIdx].sepX, 140, clamp((pr - 0.45)/0.55, 0, 1), 0);
+      if (pr > 0 && pr < 1) { penX = bottles[bIdx].sepX; penY = 148; }
+    }
+    if (p >= 0.88) {
+      setBottleAt(bottles[4], bottles[4].sepX, CONFIG.trackA.shelfY, 1, 1, (p - 0.88)/0.12, true);
+      penX = bottles[4].sepX; penY = 148;
+    }
+    placeZoneLabel(zoneLabels.rightGrp, (sepBottleX(4)+sepBottleX(8))/2, 314, clamp((p - 0.84)/0.16, 0, 1));
+  } else if (idx >= 4) {
+    for (var r1 = 4; r1 < 9; r1++) setBottleAt(bottles[r1], curBX(r1), CONFIG.trackA.shelfY, 1, 1, 0, false);
+    placeZoneLabel(zoneLabels.rightGrp, (curBX(4)+curBX(8))/2, 314, 1);
+    if (idx === 4 || idx === 5) gapBoxA.setAttribute('opacity', '1');
+  }
+
+  // ===== Step 4：草稿寫「?」＋ 右段（Y ＋ 5 → ＋ 一筆大底弧包住 Y） =====
+  if (idx === 4) {
+    scGap.setAttribute('opacity', String(clamp(p * 3.5, 0, 1)));
+    scFragRight.setAttribute('opacity', '1');
+    scTip.setAttribute('opacity', '1');
+    scTipText.textContent = '⚡ 酸奶寫 Y，寫 5 畫條底弧包住 Y，代表右邊共 5 個！';
+    var fadeIndR = clamp(p / 0.25, 0, 1);
+    for (var frb = 0; frb < 5; frb++) setBadgeAt(badgesRight[frb], sepBottleX(8 - frb), 140, 1, fadeIndR);
+
+    var pY2 = clamp((p - 0.12) / 0.26, 0, 1);
+    var p5 = clamp((p - 0.36) / 0.20, 0, 1);
+    var pArcR = clamp((p - 0.56) / 0.40, 0, 1);
+    scYogChar.setAttribute('opacity', String(clamp(pY2 * 1.6, 0, 1)));
+    scRightNum.setAttribute('opacity', String(p5));
+    scRightArr.setAttribute('opacity', String(p5));
+    scRightArc.setAttribute('stroke-dashoffset', String((160 * (1 - pArcR)).toFixed(1)));
+    scRightSub.setAttribute('opacity', String(clamp((p - 0.78)/0.22, 0, 1)));
+
+    if (p < 0.38) {
+      setBottleAt(bottles[4], curBX(4), CONFIG.trackA.shelfY, 1, 1, Math.sin(pY2 * Math.PI) * 0.7, true);
+      penTrack = 'B'; penX = 376; penY = 160;
+    } else if (p < 0.56) {
+      penTrack = 'B'; penX = 438; penY = 164;
+    } else {
+      var bR = Math.sin(pArcR * Math.PI);
+      for (var br = 4; br < 9; br++) setBottleAt(bottles[br], curBX(br), CONFIG.trackA.shelfY, 1, 1, bR * 0.6, true);
+      penTrack = 'B'; penX = lerp(348, 492, pArcR); penY = 186 + Math.sin(pArcR * Math.PI) * 14;
+    }
+  } else if (idx >= 5) {
+    scFragRight.setAttribute('opacity', '1');
+    scYogChar.setAttribute('opacity', '1');
+    scRightNum.setAttribute('opacity', '1');
+    scRightArr.setAttribute('opacity', '1');
+    scRightArc.setAttribute('stroke-dashoffset', '0');
+    scRightSub.setAttribute('opacity', '1');
+    scFragRight.setAttribute('transform', 'translate(' + (CONFIG.trackB.rightSnapDx * snapQ).toFixed(1) + ',0)');
+    if (idx === 5) scGap.setAttribute('opacity', '1');
+  }
+
+  // ===== Step 5：讀句四「其餘全是果汁瓶，」→ 未揭曉瓶變身果汁瓶，草稿唔使加筆！ =====
+  if (idx === 5) {
+    scTip.setAttribute('opacity', '1');
+    scTipText.textContent = '⚡ 換成果汁瓶唔影響總數，考試草稿唔使浪費時間畫果汁！';
+    var jIndices = [0, 1, 2, 5, 6, 7, 8];
+    for (var ji = 0; ji < jIndices.length; ji++) {
+      var idxJ = jIndices[ji];
+      var pj = clamp((p - ji * 0.08) / 0.36, 0, 1);
+      setBottleFlavor(bottles[idxJ], pj);
+      if (pj > 0 && pj < 1) {
+        setBottleAt(bottles[idxJ], curBX(idxJ), CONFIG.trackA.shelfY, 1, 1, pj, true);
+        penTrack = 'A'; penX = curBX(idxJ); penY = 160;
+      }
+    }
+    if (p >= 0.85) { penTrack = 'A'; penX = curBX(8); penY = 160; }
+  }
+
+  // ===== Step 6：關鍵拼合（讀句五「牛奶瓶在酸奶瓶的左邊一個。」→ 斜線刪 ? → 雙軌拉近貼埋） =====
+  if (idx === 6) {
+    scTip.setAttribute('opacity', '1');
+    scTipText.textContent = '⚡ 刪走問號！左 4 同右 5 緊貼住，完全冇重疊亦冇空位！';
+    var slashP = clamp(p / 0.28, 0, 1);
+    var gapFade = clamp(1 - (p - 0.30) / 0.16, 0, 1);
+    gapBoxA.setAttribute('opacity', String(gapFade));
+    gapSlashA.setAttribute('stroke-dashoffset', String((145 * (1 - slashP)).toFixed(1)));
+    scGap.setAttribute('opacity', String(gapFade));
+    scGapSlash.setAttribute('stroke-dashoffset', String((80 * (1 - slashP)).toFixed(1)));
+
+    var divP = clamp((p - 0.74) / 0.24, 0, 1);
+    scDivider.setAttribute('opacity', String(clamp(divP * 2.5, 0, 1)));
+    scDivLine.setAttribute('stroke-dashoffset', String((90 * (1 - divP)).toFixed(1)));
+    adjacentLink.setAttribute('opacity', String(divP));
+
+    if (p < 0.32) {
+      penTrack = 'B'; penX = lerp(258, 302, slashP); penY = lerp(186, 136, slashP);
+    } else if (p < 0.74) {
+      penTrack = 'A'; penX = 387; penY = 132;
+    } else {
+      penTrack = 'B'; penX = 280; penY = lerp(122, 202, divP);
+    }
+  } else if (idx >= 7) {
+    scDivider.setAttribute('opacity', '1');
+    scDivLine.setAttribute('stroke-dashoffset', '0');
+    adjacentLink.setAttribute('opacity', idx <= 10 ? '1' : '0.45');
+    scTip.setAttribute('opacity', '1');
+    scTipText.textContent = '⚡ 草稿清晰晒：左 4（包 M）| 右 5（包 Y），直接相加！';
+  }
+
+  // ===== Step 7：停一停，避坑估一估 =====
+  if (idx === 7) {
+    var pb = Math.sin(p * Math.PI * 2) * 0.5 + 0.5;
+    setBottleAt(bottles[3], snapBottleX(3), CONFIG.trackA.shelfY, 1, 1, pb * 0.45, true);
+    setBottleAt(bottles[4], snapBottleX(4), CONFIG.trackA.shelfY, 1, 1, pb * 0.45, true);
+    scLeftHi.setAttribute('opacity', String((0.15 + pb * 0.28).toFixed(2)));
+    scRightHi.setAttribute('opacity', String((0.15 + pb * 0.28).toFixed(2)));
+    penTrack = 'B'; penX = 280; penY = 160;
+  }
+
+  // ===== Step 8：青藍左組高亮三部曲 → 寫 4 =====
+  if (idx === 8) {
+    setRegionState('leftGrp', 'anim', clamp(p / 0.70, 0, 1));
+    setBadgeAt(badgeLeftTotal, (snapBottleX(0)+snapBottleX(3))/2, 128, clamp((p - 0.58)/0.22, 0, 1), 0);
+    scLeftHi.setAttribute('opacity', String((0.15 + trilogyFillAlpha(clamp(p / 0.70, 0, 1)) * 0.45).toFixed(2)));
+    if (p > 0.70) {
+      eqCount = 1; pulseIdx = [0];
+      var b4p = (p - 0.70) / 0.30;
+      for (var k4 = 0; k4 < 4; k4++) setBottleAt(bottles[k4], snapBottleX(k4), CONFIG.trackA.shelfY, 1, 1, b4p, true);
+      penTrack = 'B'; penX = 148; penY = 374;
+    } else {
+      penTrack = 'A'; penX = regionDefs.leftGrp.x + regionDefs.leftGrp.w * clamp(p / 0.65, 0, 1); penY = regionDefs.leftGrp.y;
+    }
+  } else if (idx >= 9) {
+    setRegionState('leftGrp', 'settled', 1);
+    eqCount = 1;
+    if (idx === 9) setBadgeAt(badgeLeftTotal, (snapBottleX(0)+snapBottleX(3))/2, 128, 1, clamp(p / 0.3, 0, 1));
+  }
+
+  // ===== Step 9：翠綠右組高亮三部曲 → 寫 + 5 =====
+  if (idx === 9) {
+    setRegionState('rightGrp', 'anim', clamp(p / 0.70, 0, 1));
+    setBadgeAt(badgeRightTotal, (snapBottleX(4)+snapBottleX(8))/2, 128, clamp((p - 0.58)/0.22, 0, 1), 0);
+    scRightHi.setAttribute('opacity', String((0.15 + trilogyFillAlpha(clamp(p / 0.70, 0, 1)) * 0.45).toFixed(2)));
+    if (p > 0.70) {
+      eqCount = 3; pulseIdx = [1, 2];
+      var b5p = (p - 0.70) / 0.30;
+      for (var k5 = 4; k5 < 9; k5++) setBottleAt(bottles[k5], snapBottleX(k5), CONFIG.trackA.shelfY, 1, 1, b5p, true);
+      penTrack = 'B'; penX = 276; penY = 374;
+    } else {
+      penTrack = 'A'; penX = regionDefs.rightGrp.x + regionDefs.rightGrp.w * clamp(p / 0.65, 0, 1); penY = regionDefs.rightGrp.y;
+    }
+  } else if (idx >= 10) {
+    setRegionState('rightGrp', 'settled', 1);
+    eqCount = 3;
+    if (idx === 10) setBadgeAt(badgeRightTotal, (snapBottleX(4)+snapBottleX(8))/2, 128, 1, clamp(p / 0.3, 0, 1));
+  }
+
+  // ===== Step 10：停一停，計一計（4 + 5 = ?） =====
+  if (idx === 10) {
+    penTrack = 'A';
+    penX = lerp(snapBottleX(0), snapBottleX(8), easeIO(p));
+    penY = 138;
+    for (var w = 0; w < 9; w++) {
+      var wp = clamp(1 - Math.abs((w / 8) - p) * 4, 0, 1);
+      setBottleAt(bottles[w], snapBottleX(w), CONFIG.trackA.shelfY, 1, 1, wp * 0.6, wp > 0.25);
+    }
+  }
+
+  // ===== Step 11：寫 = 9 ＋ 草稿雙底線 ＋ 原題括號填入 9 =====
+  if (idx === 11) {
+    eqCount = 5; pulseIdx = [3, 4];
+    var ulP = clamp(p / 0.36, 0, 1);
+    scAnsUL1.setAttribute('stroke-dashoffset', String((70 * (1 - clamp(ulP * 1.4, 0, 1))).toFixed(1)));
+    scAnsUL2.setAttribute('stroke-dashoffset', String((70 * (1 - clamp((ulP - 0.3) * 1.4, 0, 1))).toFixed(1)));
+
+    var writeP = clamp((p - 0.40) / 0.60, 0, 1);
+    if (p < 0.40) {
+      penTrack = 'B'; penX = lerp(384, 436, ulP); penY = 390;
+    } else {
+      penTrack = 'A';
+      penX = 508 + Math.sin(writeP * 24) * 5;
+      penY = 395 + Math.cos(writeP * 18) * 3;
+      ansValue.setAttribute('opacity', String(clamp(writeP * 1.8, 0, 1)));
+      ansGlowRing.setAttribute('opacity', String(trilogyFillAlpha(writeP).toFixed(3)));
+    }
+  } else if (idx >= 12) {
+    eqCount = 5;
+    scAnsUL1.setAttribute('stroke-dashoffset', '0');
+    scAnsUL2.setAttribute('stroke-dashoffset', '0');
+    ansValue.setAttribute('opacity', '1');
+    ansGlowRing.setAttribute('opacity', '0.58');
+    confettiItems.forEach(function(c){
+      var cp = clamp(p * 1.05, 0, 1);
+      var cx = c.x0 + c.vx * cp;
+      var cy = c.y0 + c.vy * cp + 340 * cp * cp;
+      var rot = c.rot0 + c.vr * cp;
+      var op = cp < 0.75 ? 1 : clamp(1 - (cp - 0.75) / 0.25, 0, 1);
+      c.el.setAttribute('opacity', op.toFixed(3));
+      c.el.setAttribute('transform', 'translate(' + cx.toFixed(1) + ',' + cy.toFixed(1) + ') rotate(' + rot.toFixed(1) + ')');
+    });
+    for (var wc = 0; wc < 9; wc++) {
+      setBottleAt(bottles[wc], snapBottleX(wc), CONFIG.trackA.shelfY, 1, 1, Math.sin(p * Math.PI * 2 + wc * 0.42) * 0.35 + 0.35, false);
+    }
+    penTrack = 'A'; penX = 508 + Math.sin(p * 8) * 26; penY = 374 + Math.cos(p * 6) * 7;
+  }
+
+  setActivePen(penTrack, penX, penY);
+  setEqShown(eqCount, pulseIdx);
+
+  var curPhase = STEPS[idx].phase;
+  phaseBtns.forEach(function(btn, pi){
+    btn.classList.toggle('done', pi < curPhase || (idx === STEPS.length - 1 && p > 0.85));
+    btn.classList.toggle('active', pi === curPhase && !(idx === STEPS.length - 1 && p > 0.85));
+  });
+
+  var celBar = document.getElementById('celebrateBar');
+  if (idx === STEPS.length - 1 && p > 0.35 && !inPracticeMode) celBar.classList.add('show');
+  else if (idx < STEPS.length - 1) celBar.classList.remove('show');
+}
+
+/* ============================================================
+   §8  純 rAF 狀態機播放引擎 ＋ 語音同步 ＋ 停一停互動
+   ============================================================ */
+var curStep = 0;
+var stepT = 0;
+var playing = false;
+var waitingQuiz = false;
+var quizAdvanceTimer = 0;
+var answeredQuizzes = {};
+var sfxFiredStep = -1;
+var btnPlay = document.getElementById('btnPlay');
+var startOverlay = document.getElementById('startOverlay');
+var quizBox = document.getElementById('quizBox');
+var quizQuestion = document.getElementById('quizQuestion');
+var quizOptions = document.getElementById('quizOptions');
+var quizFeedback = document.getElementById('quizFeedback');
+var stageWrap = document.getElementById('stageWrap');
+
+function hideStartOverlay(){ startOverlay.classList.add('hidden'); }
+function updatePlayButton(){
+  btnPlay.textContent = playing ? '⏸' : '▶';
+  btnPlay.title = playing ? '暫停' : '播放';
+}
+
+function showQuiz(quizIdx){
+  var q = CONFIG.quizzes[quizIdx];
+  waitingQuiz = true;
+  playing = false;
+  updatePlayButton();
+  quizQuestion.textContent = q.question;
+  quizFeedback.textContent = '';
+  quizFeedback.style.color = '#1f2d3d';
+  quizOptions.innerHTML = '';
+
+  q.options.forEach(function(opt){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'quiz-btn';
+    b.textContent = opt.label;
+    b.addEventListener('click', function(){
+      ensureAudioCtx();
+      if (opt.correct) {
+        b.classList.add('correct');
+        quizFeedback.style.color = '#1b6e39';
+        quizFeedback.textContent = opt.fb;
+        playSfx('ding');
+        answeredQuizzes[quizIdx] = true;
+        if (muted || !('speechSynthesis' in window)) {
+          quizAdvanceTimer = 1.1;
+        } else {
+          speakCantonese(opt.fb, function(){
+            if (waitingQuiz) { hideQuiz(); advanceToNextStep(); }
+          });
+        }
+      } else {
+        b.classList.remove('wrong');
+        void b.offsetWidth;
+        b.classList.add('wrong');
+        quizFeedback.style.color = '#b3261e';
+        quizFeedback.textContent = opt.fb;
+        playSfx('wrong');
+        speakCantonese(opt.fb);
+      }
+    });
+    quizOptions.appendChild(b);
+  });
+
+  quizBox.classList.add('show');
+  try { quizBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e){}
+}
+
+function hideQuiz(){
+  waitingQuiz = false;
+  quizAdvanceTimer = 0;
+  quizBox.classList.remove('show');
+}
+
+document.getElementById('quizSkipBtn').addEventListener('click', function(){
+  ensureAudioCtx();
+  var qIdx = STEPS[curStep].quizIdx;
+  if (qIdx != null) answeredQuizzes[qIdx] = true;
+  stopSpeech();
+  hideQuiz();
+  advanceToNextStep();
+});
+
+function enterStep(idx, autoPlayVoice){
+  curStep = clamp(idx, 0, STEPS.length - 1);
+  stepT = 0;
+  sfxFiredStep = -1;
+  hideQuiz();
+  renderNarrBox(STEPS[curStep]);
+  applyState(curStep, 0);
+
+  if (autoPlayVoice) {
+    if (STEPS[curStep].sfx) { playSfx(STEPS[curStep].sfx); sfxFiredStep = curStep; }
+    speakCantonese(stepFullTTS(STEPS[curStep]));
+  }
+}
+
+function jumpToStep(idx, startPlaying){
+  stopSpeech();
+  hideQuiz();
+  playing = !!startPlaying;
+  updatePlayButton();
+  enterStep(idx, playing);
+}
+
+function advanceToNextStep(){
+  if (curStep < STEPS.length - 1) {
+    playing = true;
+    updatePlayButton();
+    enterStep(curStep + 1, true);
+  } else {
+    playing = false;
+    updatePlayButton();
+  }
+}
+
+var lastTime = performance.now();
+function tick(now){
+  requestAnimationFrame(tick);
+  var dt = Math.min(0.12, (now - lastTime) / 1000);
+  lastTime = now;
+
+  if (waitingQuiz && quizAdvanceTimer > 0) {
+    quizAdvanceTimer -= dt;
+    if (quizAdvanceTimer <= 0) { hideQuiz(); advanceToNextStep(); }
+    return;
+  }
+  if (!playing || waitingQuiz || inPracticeMode) return;
+
+  var st = STEPS[curStep];
+  var effDur = st.dur / speedRate;
+  stepT += dt;
+  var p = clamp(stepT / effDur, 0, 1);
+  applyState(curStep, p);
+
+  var estMaxSpeech = Math.max(effDur, (cleanForTTS(stepFullTTS(st)).length * 0.25) / speedRate + 2.6);
+  var voiceReady = speechDone || muted || (stepT >= estMaxSpeech);
+
+  if (p >= 1 && voiceReady) {
+    if (st.quizIdx != null && !answeredQuizzes[st.quizIdx]) {
+      showQuiz(st.quizIdx);
+    } else if (curStep < STEPS.length - 1) {
+      enterStep(curStep + 1, true);
+    } else {
+      playing = false;
+      updatePlayButton();
+    }
+  }
+}
+requestAnimationFrame(tick);
+
+/* ============================================================
+   §9  控制按鈕與鍵盤快捷鍵
+   ============================================================ */
+function togglePlay(){
+  ensureAudioCtx();
+  hideStartOverlay();
+  if (waitingQuiz) return;
+  if (curStep === STEPS.length - 1 && stepT >= (STEPS[curStep].dur / speedRate)) {
+    answeredQuizzes = {};
+    jumpToStep(0, true);
+    return;
+  }
+  playing = !playing;
+  updatePlayButton();
+  if (playing) {
+    if (stepT < 0.05) {
+      if (sfxFiredStep !== curStep && STEPS[curStep].sfx) { playSfx(STEPS[curStep].sfx); sfxFiredStep = curStep; }
+      speakCantonese(stepFullTTS(STEPS[curStep]));
+    } else if ('speechSynthesis' in window && speechSynthesis.paused) {
+      try { speechSynthesis.resume(); } catch(e){}
+    }
+  } else {
+    if ('speechSynthesis' in window && speechSynthesis.speaking) {
+      try { speechSynthesis.pause(); } catch(e){}
+    }
+  }
+}
+
+document.getElementById('startBigBtn').addEventListener('click', function(){
+  ensureAudioCtx();
+  hideStartOverlay();
+  jumpToStep(0, true);
+});
+btnPlay.addEventListener('click', togglePlay);
+
+document.getElementById('btnPrev').addEventListener('click', function(){
+  ensureAudioCtx();
+  hideStartOverlay();
+  exitPracticeMode();
+  var target = (stepT > 0.6) ? curStep : Math.max(0, curStep - 1);
+  jumpToStep(target, false);
+  speakCantonese(stepFullTTS(STEPS[curStep]));
+});
+
+document.getElementById('btnNext').addEventListener('click', function(){
+  ensureAudioCtx();
+  hideStartOverlay();
+  exitPracticeMode();
+  if (waitingQuiz) {
+    var qIdx = STEPS[curStep].quizIdx;
+    if (qIdx != null) answeredQuizzes[qIdx] = true;
+    hideQuiz();
+  }
+  if (curStep < STEPS.length - 1) {
+    jumpToStep(curStep + 1, playing);
+    if (!playing) { applyState(curStep, 1); speakCantonese(stepFullTTS(STEPS[curStep])); }
+  } else {
+    applyState(curStep, 1);
+  }
+});
+
+document.getElementById('btnReplay').addEventListener('click', function(){
+  ensureAudioCtx();
+  hideStartOverlay();
+  exitPracticeMode();
+  answeredQuizzes = {};
+  jumpToStep(0, true);
+  stageWrap.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+var btnMute = document.getElementById('btnMute');
+btnMute.addEventListener('click', function(){
+  muted = !muted;
+  btnMute.textContent = muted ? '🔇' : '🔊';
+  if (muted) stopSpeech();
+});
+
+var btnSpeed = document.getElementById('btnSpeed');
+btnSpeed.addEventListener('click', function(){
+  speedRate = (speedRate === 1.0) ? 0.75 : 1.0;
+  btnSpeed.textContent = (speedRate === 0.75) ? '🐢 慢速' : '🚶 正常';
+});
+
+document.addEventListener('keydown', function(e){
+  if (inPracticeMode) return;
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  else if (e.code === 'ArrowRight') { e.preventDefault(); document.getElementById('btnNext').click(); }
+  else if (e.code === 'ArrowLeft') { e.preventDefault(); document.getElementById('btnPrev').click(); }
+  else if (e.code === 'KeyR' || e.code === 'Escape') { e.preventDefault(); document.getElementById('btnReplay').click(); }
+});
+
+/* ============================================================
+   §10  片尾「🎯 挑戰類似題」（預設純文字＋按掣睇極簡草稿）
+   ============================================================ */
+var inPracticeMode = false;
+var practiceView = document.getElementById('practiceView');
+var questionCard = document.getElementById('questionCard');
+var dualStage = document.getElementById('dualStage');
+var celebrateBar = document.getElementById('celebrateBar');
+var prQuestion = document.getElementById('prQuestion');
+var prHintWrap = document.getElementById('prHintWrap');
+var prScratchSvg = document.getElementById('prScratchSvg');
+var prVerifyWrap = document.getElementById('prVerifyWrap');
+var prVerifySvg = document.getElementById('prVerifySvg');
+var prOpts = document.getElementById('prOpts');
+var prFeedback = document.getElementById('prFeedback');
+var prHintBtn = document.getElementById('prHintBtn');
+
+function renderPracticeScratch(L, R){
+  prScratchSvg.innerHTML = '';
+  svgEl('rect', { x: 0, y: 0, width: 640, height: 124, fill: '#fffdf5' }, prScratchSvg);
+
+  // 左組：← L M + 底弧
+  svgEl('rect', { x: 108, y: 20, width: 184, height: 58, rx: 12, fill: '#0aa5c9', opacity: '0.14' }, prScratchSvg);
+  var la = svgEl('text', { x: 132, y: 58, 'text-anchor': 'middle', 'font-size': '22', 'font-weight': '900', fill: '#077792' }, prScratchSvg);
+  la.textContent = '←';
+  var ln = svgEl('text', { x: 176, y: 62, 'text-anchor': 'middle', 'font-size': '34', 'font-weight': '900', fill: '#077792' }, prScratchSvg);
+  ln.textContent = String(L);
+  svgEl('circle', { cx: 252, cy: 50, r: 22, fill: '#f4711f', opacity: '0.18' }, prScratchSvg);
+  var tm = svgEl('text', { x: 252, y: 60, 'text-anchor': 'middle', 'font-size': '30', 'font-weight': '900', fill: '#c84b00' }, prScratchSvg);
+  tm.textContent = 'M';
+  svgEl('path', { d: 'M 118 76 Q 200 100 282 76', fill: 'none', stroke: '#077792', 'stroke-width': '3.4', 'stroke-linecap': 'round' }, prScratchSvg);
+
+  // 中間緊貼 |
+  svgEl('line', { x1: 320, y1: 16, x2: 320, y2: 92, stroke: '#d9531e', 'stroke-width': '3.6', 'stroke-linecap': 'round' }, prScratchSvg);
+
+  // 右組：Y R → + 底弧
+  svgEl('rect', { x: 348, y: 20, width: 184, height: 58, rx: 12, fill: '#2f9e57', opacity: '0.14' }, prScratchSvg);
+  svgEl('circle', { cx: 388, cy: 50, r: 22, fill: '#8d5bd6', opacity: '0.18' }, prScratchSvg);
+  var ty = svgEl('text', { x: 388, y: 60, 'text-anchor': 'middle', 'font-size': '30', 'font-weight': '900', fill: '#5d2fa8' }, prScratchSvg);
+  ty.textContent = 'Y';
+  var rn = svgEl('text', { x: 464, y: 62, 'text-anchor': 'middle', 'font-size': '34', 'font-weight': '900', fill: '#1e713c' }, prScratchSvg);
+  rn.textContent = String(R);
+  var ra = svgEl('text', { x: 508, y: 58, 'text-anchor': 'middle', 'font-size': '22', 'font-weight': '900', fill: '#1e713c' }, prScratchSvg);
+  ra.textContent = '→';
+  svgEl('path', { d: 'M 358 76 Q 440 100 522 76', fill: 'none', stroke: '#1e713c', 'stroke-width': '3.4', 'stroke-linecap': 'round' }, prScratchSvg);
+
+  var note = svgEl('text', { x: 320, y: 114, 'text-anchor': 'middle', 'font-size': '14', 'font-weight': '800', fill: '#7a5b21' }, prScratchSvg);
+  note.textContent = '左組 ' + L + ' 個（已包 M）　|　右組 ' + R + ' 個（已包 Y）';
+}
+
+function renderPracticeVerify(L, R){
+  prVerifySvg.innerHTML = '';
+  var total = L + R;
+  var span = 780;
+  var step = Math.min(72, span / Math.max(1, total - 1));
+  var startX = 480 - (step * (total - 1)) / 2;
+
+  svgEl('rect', { x: 34, y: 150, width: 892, height: 14, rx: 4, fill: '#b8c8d8', stroke: '#7c91a8', 'stroke-width': '1.5' }, prVerifySvg);
+  var leftW = (L - 1) * step + 54;
+  var rightW = (R - 1) * step + 54;
+  svgEl('rect', { x: startX - 27, y: 50, width: leftW, height: 104, rx: 12, fill: CONFIG.colors.left, opacity: '0.16', stroke: CONFIG.colors.leftDark, 'stroke-width': '2' }, prVerifySvg);
+  svgEl('rect', { x: startX + L * step - 27, y: 50, width: rightW, height: 104, rx: 12, fill: CONFIG.colors.right, opacity: '0.16', stroke: CONFIG.colors.rightDark, 'stroke-width': '2' }, prVerifySvg);
+
+  for (var i = 0; i < total; i++) {
+    var k = (i === L - 1) ? 'milk' : (i === L ? 'yogurt' : 'juice');
+    var bn = buildBottleNode(i, k, prVerifySvg);
+    setBottleFlavor(bn, 1);
+    var cx = startX + i * step;
+    bn.g.setAttribute('opacity', '1');
+    bn.g.setAttribute('transform', 'translate(' + cx.toFixed(1) + ',150) scale(0.76)');
+  }
+  svgEl('rect', { x: 240, y: 8, width: 480, height: 34, rx: 17, fill: '#e4f7eb', stroke: '#2f9e57', 'stroke-width': '2' }, prVerifySvg);
+  var ts = svgEl('text', { x: 480, y: 31, 'text-anchor': 'middle', 'font-size': '19', 'font-weight': '900', fill: '#1b6e39' }, prVerifySvg);
+  ts.textContent = '✓ 驗證：左組 ' + L + ' + 右組 ' + R + ' = ' + total + ' 個瓶子！';
+}
+
+function generatePractice(){
+  var L = 3 + Math.floor(Math.random() * 4);
+  var R = 3 + Math.floor(Math.random() * 4);
+  if (L === 4 && R === 5) L = 6;
+  var total = L + R;
+
+  prHintWrap.classList.remove('show');
+  prVerifyWrap.classList.remove('show');
+  prHintBtn.textContent = '✏️ 睇草稿提示';
+
+  prQuestion.innerHTML = '販賣機裡有一排飲料，<span style="color:#0aa5c9">從左數，<span style="color:#f4711f">牛奶瓶</span>排第 ' + L +
+    '</span>，<span style="color:#2f9e57">從右數，<span style="color:#8d5bd6">酸奶瓶</span>排第 ' + R +
+    '</span>，其餘全是果汁瓶，<span style="color:#f4711f">牛奶瓶</span>在<span style="color:#8d5bd6">酸奶瓶</span>的左邊一個。請問販賣機裡一共有多少個瓶子？';
+
+  renderPracticeScratch(L, R);
+
+  var choices = [total - 1, total, total + 2];
+  choices.sort(function(){ return Math.random() - 0.5; });
+  prOpts.innerHTML = '';
+  prFeedback.textContent = '💡 試吓自己用 M、Y 畫草稿計！需要幫忙可撳「✏️ 睇草稿提示」。';
+  prFeedback.style.color = '#5a6b7d';
+
+  choices.forEach(function(val){
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pr-opt';
+    btn.textContent = val + ' 個';
+    btn.addEventListener('click', function(){
+      ensureAudioCtx();
+      if (val === total) {
+        btn.classList.add('correct');
+        prHintWrap.classList.add('show');
+        renderPracticeVerify(L, R);
+        prVerifyWrap.classList.add('show');
+        var msg = '🎉 啱晒！左組 ' + L + ' 個加右組 ' + R + ' 個等於 ' + total + ' 個瓶子！';
+        prFeedback.style.color = '#1b6e39';
+        prFeedback.textContent = msg;
+        playSfx('cheer');
+        speakCantonese(msg);
+      } else {
+        btn.classList.remove('wrong');
+        void btn.offsetWidth;
+        btn.classList.add('wrong');
+        prHintWrap.classList.add('show');
+        prHintBtn.textContent = '✏️ 收起草稿提示';
+        var hint = (val === total + 2)
+          ? '💡 重覆加咗 M 同 Y 一次喎！睇底弧：' + L + ' 已包 M、' + R + ' 已包 Y，再揀！'
+          : '💡 唔使減 1！兩組緊貼冇重疊，直接 ' + L + ' + ' + R + '！';
+        prFeedback.style.color = '#b3261e';
+        prFeedback.textContent = hint;
+        playSfx('wrong');
+        speakCantonese(hint);
+      }
+    });
+    prOpts.appendChild(btn);
+  });
+
+  speakCantonese('題目話：販賣機裡有一排飲料，從左數，牛奶瓶排第 ' + L + '，從右數，酸奶瓶排第 ' + R + '，其餘全是果汁瓶，牛奶瓶在酸奶瓶的左邊一個。題目問：請問販賣機裡一共有多少個瓶子？');
+}
+
+prHintBtn.addEventListener('click', function(){
+  ensureAudioCtx();
+  var showing = prHintWrap.classList.toggle('show');
+  prHintBtn.textContent = showing ? '✏️ 收起草稿提示' : '✏️ 睇草稿提示';
+  if (showing) playSfx('pop');
+});
+
+function enterPracticeMode(){
+  stopSpeech();
+  playing = false;
+  updatePlayButton();
+  inPracticeMode = true;
+  questionCard.style.display = 'none';
+  dualStage.style.display = 'none';
+  quizBox.classList.remove('show');
+  celebrateBar.classList.remove('show');
+  practiceView.classList.add('show');
+  generatePractice();
+}
+
+function exitPracticeMode(){
+  if (!inPracticeMode) return;
+  stopSpeech();
+  inPracticeMode = false;
+  practiceView.classList.remove('show');
+  questionCard.style.display = '';
+  dualStage.style.display = '';
+}
+
+document.getElementById('btnChallenge').addEventListener('click', enterPracticeMode);
+document.getElementById('prNewBtn').addEventListener('click', generatePractice);
+document.getElementById('prBackBtn').addEventListener('click', function(){
+  exitPracticeMode();
+  applyState(curStep, 1);
+});
+
+// 開場忠實初始化：第 0 步 t=0（空販賣機＋空白草稿紙）
+applyState(0, 0);
+updatePlayButton();
+})();
+</script>
+</body>
+</html>

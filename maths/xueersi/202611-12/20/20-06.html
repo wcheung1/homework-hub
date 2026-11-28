@@ -1,0 +1,2545 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>拓展練習 6｜排隊「二人之間」視覺化實戰教練</title>
+<style>
+  :root {
+    --bg: #f4f7fb;
+    --card: #ffffff;
+    --ink: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --orange: #f4711f;
+    --orange-soft: rgba(244, 113, 31, 0.14);
+    --blue: #0aa5c9;
+    --blue-soft: rgba(10, 165, 201, 0.14);
+    --purple: #8d5bd6;
+    --purple-soft: rgba(141, 91, 214, 0.14);
+    --green: #33b26a;
+    --green-soft: rgba(51, 178, 106, 0.15);
+    --amber: #f0a500;
+    --pink: #e8467c;
+    --pen: #1d4ed8;
+    --paper: #fffdf4;
+    --paper-grid: #efe7cf;
+    --shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "PingFang TC", "PingFang HK", "Microsoft JhengHei", "Noto Sans TC", -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 168px; /* Reserve clean space for docked bottom controls */
+  }
+
+  /* ===== Top Phase Bar ===== */
+  .top-bar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: rgba(244, 247, 251, 0.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+  }
+
+  .top-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .phase-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .phase-pill {
+    border: 1.5px solid var(--border);
+    background: #fff;
+    color: var(--muted);
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .phase-pill:hover {
+    border-color: var(--pen);
+    color: var(--pen);
+  }
+
+  .phase-pill.active {
+    background: var(--pen);
+    border-color: var(--pen);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(29, 78, 216, 0.25);
+  }
+
+  .phase-pill.done {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: var(--pen);
+  }
+
+  .top-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mini-btn {
+    border: 1.5px solid var(--border);
+    background: #fff;
+    color: var(--ink);
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 6px 11px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .mini-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+  .mini-btn.active { background: #eff6ff; border-color: var(--pen); color: var(--pen); }
+
+  .kbd-hint {
+    font-size: 12px;
+    color: var(--muted);
+    background: #fff;
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 8px;
+  }
+
+  @media (pointer: coarse), (max-width: 820px) {
+    .kbd-hint { display: none; }
+  }
+
+  /* ===== Main Content Wrapper ===== */
+  .main-wrap {
+    max-width: 1180px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 12px 14px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ===== Question Card ===== */
+  .question-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px 14px;
+    box-shadow: var(--shadow);
+  }
+
+  .q-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+
+  .q-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 4px 12px 4px 8px;
+    border-radius: 8px;
+  }
+
+  .step-counter {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  .q-zh {
+    font-size: clamp(20px, 2.5vw, 24px);
+    line-height: 1.85;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: 0.02em;
+  }
+
+  .q-en {
+    margin-top: 6px;
+    font-size: clamp(13.5px, 1.5vw, 15.5px);
+    line-height: 1.5;
+    color: #475569;
+    font-weight: 500;
+  }
+
+  .q-seg {
+    padding: 2px 3px;
+    border-radius: 7px;
+    transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+    position: relative;
+  }
+
+  .q-seg.active {
+    background: #fef08a;
+    color: #0f172a;
+    box-shadow: 0 3px 0 0 #f59e0b;
+  }
+
+  .q-seg.read {
+    background: #f8fafc;
+  }
+
+  .orig-ul {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    position: relative;
+    display: inline-block;
+  }
+
+  /* Superscript code tag on nouns */
+  .code-sup {
+    position: absolute;
+    top: -17px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 999px;
+    color: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.22s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  }
+
+  .code-sup.j-tag { background: var(--orange); }
+  .code-sup.t-tag { background: var(--blue); }
+  .code-sup.show {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  /* ===== Dual Track Stage ===== */
+  .stage-grid {
+    display: grid;
+    grid-template-columns: 1.42fr 1fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  @media (max-width: 880px) {
+    .stage-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .track-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .track-card.paper-card {
+    background: var(--paper);
+    border-color: #e6dbb8;
+  }
+
+  .track-head {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 800;
+    background: #f8fafc;
+    color: #334155;
+  }
+
+  .paper-card .track-head {
+    background: #fbf5e1;
+    border-bottom-color: #eadfb9;
+    color: #785a1c;
+  }
+
+  .track-tag {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .paper-card .track-tag {
+    border-color: #e5d5a3;
+    color: #8c6a22;
+  }
+
+  .svg-wrap {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    position: relative;
+  }
+
+  .svg-wrap svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    user-select: none;
+  }
+
+  /* ===== Pause Quiz Panel (Inline below stage, zero blocking!) ===== */
+  .quiz-box {
+    display: none;
+    background: linear-gradient(135deg, #fffbeb 0%, #fff7ed 100%);
+    border: 2px solid #f59e0b;
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.16);
+    animation: popIn 0.28s ease;
+  }
+
+  .quiz-box.show { display: block; }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .quiz-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .quiz-title {
+    font-size: 17px;
+    font-weight: 900;
+    color: #b45309;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .quiz-q {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .quiz-opts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+  }
+
+  .quiz-opt {
+    border: 2px solid #fcd34d;
+    background: #fff;
+    color: #1e293b;
+    font-size: 16.5px;
+    font-weight: 800;
+    padding: 13px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.16s ease;
+    line-height: 1.4;
+  }
+
+  .quiz-opt:hover { border-color: #f59e0b; background: #fffbeb; transform: translateY(-1px); }
+  .quiz-opt.correct { background: #dcfce7; border-color: #16a34a; color: #14532d; }
+  .quiz-opt.wrong { background: #fee2e2; border-color: #dc2626; color: #7f1d1d; }
+
+  .quiz-fb {
+    margin-top: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.55;
+    padding: 10px 14px;
+    border-radius: 10px;
+    display: none;
+  }
+
+  .quiz-fb.show { display: block; }
+  .quiz-fb.ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+  .quiz-fb.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+  .quiz-continue {
+    margin-top: 10px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    font-size: 16px;
+    font-weight: 800;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: none;
+  }
+
+  .quiz-continue.show { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* ===== Celebration Banner ===== */
+  .celebrate-box {
+    display: none;
+    background: linear-gradient(135deg, #ecfdf5 0%, #eff6ff 100%);
+    border: 2px solid var(--green);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    box-shadow: 0 8px 24px rgba(51, 178, 106, 0.16);
+    animation: popIn 0.3s ease;
+  }
+
+  .celebrate-box.show { display: block; }
+
+  .mantra-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .mantra-text {
+    font-size: 18px;
+    font-weight: 900;
+    color: #065f46;
+    line-height: 1.5;
+  }
+
+  .mantra-sub {
+    font-size: 14px;
+    font-weight: 700;
+    color: #047857;
+    margin-top: 2px;
+  }
+
+  .bonus-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .bonus-btn {
+    border: none;
+    font-size: 15.5px;
+    font-weight: 800;
+    padding: 11px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .bonus-btn:hover { transform: translateY(-1px); }
+
+  .btn-practice {
+    background: var(--orange);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(244, 113, 31, 0.3);
+  }
+
+  .btn-master {
+    background: var(--purple);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(141, 91, 214, 0.3);
+  }
+
+  /* ===== Bottom Docked Control Bar ===== */
+  .dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(10px);
+    border-top: 1.5px solid var(--border);
+    box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.08);
+    padding: 10px 14px 12px;
+  }
+
+  .dock-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .subtitle-bar {
+    font-size: clamp(17px, 2vw, 19.5px);
+    line-height: 1.5;
+    font-weight: 700;
+    color: #0f172a;
+    min-height: 30px;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .q-prefix {
+    color: #b45309;
+    font-weight: 900;
+  }
+
+  .q-quote {
+    background: #fef3c7;
+    color: #78350f;
+    padding: 1px 7px;
+    border-radius: 6px;
+    border-bottom: 2px solid #f59e0b;
+    font-weight: 800;
+  }
+
+  .q-think {
+    color: #0f172a;
+  }
+
+  .dock-row2 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .eq-strip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: clamp(18px, 2.2vw, 24px);
+    font-weight: 900;
+    min-height: 36px;
+  }
+
+  .eq-chip {
+    padding: 2px 10px;
+    border-radius: 9px;
+    line-height: 1.3;
+  }
+
+  .eq-purple { background: var(--purple-soft); color: var(--purple); }
+  .eq-orange { background: var(--orange-soft); color: var(--orange); }
+  .eq-blue { background: var(--blue-soft); color: var(--blue); }
+  .eq-green { background: var(--green-soft); color: var(--green); }
+  .eq-op { color: #475569; font-weight: 900; padding: 0 2px; }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+  }
+
+  .ctrl-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: #fff;
+    color: #1e293b;
+    font-size: 20px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+  }
+
+  .ctrl-btn:hover { border-color: var(--pen); color: var(--pen); transform: scale(1.04); }
+  .ctrl-btn:active { transform: scale(0.96); }
+  .ctrl-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .ctrl-play {
+    width: 56px;
+    height: 56px;
+    background: var(--pen);
+    border-color: var(--pen);
+    color: #fff;
+    font-size: 22px;
+    box-shadow: 0 4px 14px rgba(29, 78, 216, 0.35);
+  }
+
+  .ctrl-play:hover { background: #1e40af; color: #fff; }
+
+  /* ===== Modal Overlay for Practice & Master Insight ===== */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 60;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .modal-backdrop.show { display: flex; }
+
+  .modal-card {
+    background: #fff;
+    border-radius: 20px;
+    max-width: 660px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 20px 22px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.28);
+    animation: popIn 0.25s ease;
+  }
+
+  .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1.5px solid var(--border);
+  }
+
+  .modal-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: #0f172a;
+  }
+
+  .modal-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: #f8fafc;
+    font-size: 18px;
+    font-weight: 900;
+    cursor: pointer;
+    color: #475569;
+  }
+
+  .practice-q {
+    font-size: 19px;
+    font-weight: 800;
+    line-height: 1.65;
+    background: #f8fafc;
+    border: 1.5px solid var(--border);
+    padding: 14px 16px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+  }
+
+  .practice-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .practice-input {
+    width: 110px;
+    font-size: 22px;
+    font-weight: 900;
+    text-align: center;
+    padding: 8px 12px;
+    border: 2px solid #cbd5e1;
+    border-radius: 10px;
+    outline: none;
+  }
+
+  .practice-input:focus { border-color: var(--pen); }
+
+  .hint-box {
+    display: none;
+    background: var(--paper);
+    border: 1.5px dashed #d6c38d;
+    border-radius: 12px;
+    padding: 10px;
+    margin: 10px 0;
+  }
+
+  .hint-box.show { display: block; }
+
+  .verify-box {
+    display: none;
+    background: #f0fdf4;
+    border: 1.5px solid #86efac;
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 12px;
+  }
+
+  .verify-box.show { display: block; }
+
+  .master-card-block {
+    background: #faf5ff;
+    border: 1.5px solid #d8b4fe;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    line-height: 1.65;
+    font-size: 16px;
+    font-weight: 600;
+    color: #3b0764;
+  }
+
+  .master-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 12px 0;
+  }
+
+  @media (max-width: 600px) {
+    .master-grid { grid-template-columns: 1fr; }
+  }
+
+  .master-case {
+    background: #fff;
+    border: 1.5px solid #e9d5ff;
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .master-case h4 {
+    margin: 0 0 6px;
+    font-size: 15.5px;
+    color: #6b21a8;
+  }
+
+  .confetti-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 55;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+
+<!-- Top Phase Navigation -->
+<header class="top-bar">
+  <div class="top-inner">
+    <nav class="phase-pills" id="phasePills" aria-label="解題階段"></nav>
+    <div class="top-tools">
+      <button class="mini-btn" id="speedBtn" title="切換語速">🚶 正常 1.0x</button>
+      <button class="mini-btn" id="muteBtn" title="靜音切換">🔊 有聲</button>
+      <span class="kbd-hint">Space 播放｜← → 切換</span>
+    </div>
+  </div>
+</header>
+
+<!-- Main Stage -->
+<main class="main-wrap">
+  <!-- Question Card -->
+  <section class="question-card" aria-label="題目區">
+    <div class="q-header">
+      <div class="q-badge">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+          <polygon points="3,21 21,21 21,3" fill="#64748b"/>
+          <polygon points="10,18 18,18 18,10" fill="#f1f5f9"/>
+        </svg>
+        <span>拓展練習 6</span>
+      </div>
+      <span class="step-counter" id="stepCounter">第 0 / 8 步</span>
+    </div>
+    <div class="q-zh" id="qZh">
+      <span class="q-seg" data-seg="0"><span class="orig-ul">小奧<span class="code-sup j-tag" data-sup="J">J</span></span>和<span class="orig-ul">小林<span class="code-sup t-tag" data-sup="T">T</span></span>同在一條有 25 人的隊伍排隊，</span><span class="q-seg" data-seg="1">由左數起的第 6 名是<span class="orig-ul">小奧<span class="code-sup j-tag" data-sup="J">J</span></span>，</span><span class="q-seg" data-seg="2">由右數起的第 12 名是<span class="orig-ul">小林<span class="code-sup t-tag" data-sup="T">T</span></span>，</span><span class="q-seg" data-seg="3">問二人之間站了多少人？</span>
+    </div>
+    <div class="q-en">
+      Jack and Tony are standing in a queue of 25 people. Counting from the left, Jack is the 6th person, and counting from the right, Tony is the 12th person. How many people are there between them?
+    </div>
+  </section>
+
+  <!-- Dual Track Visuals -->
+  <section class="stage-grid">
+    <!-- Track A: Concrete Stage -->
+    <div class="track-card">
+      <div class="track-head">
+        <span>🎬 具象理解舞台（25 人排隊實況）</span>
+        <span class="track-tag">一眼睇明原理</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="stageSvg" viewBox="0 0 640 290" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glowOrange" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#f4711f" flood-opacity="0.55"/>
+            </filter>
+            <filter id="glowBlue" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#0aa5c9" flood-opacity="0.55"/>
+            </filter>
+            <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#33b26a" flood-opacity="0.55"/>
+            </filter>
+            <filter id="penGlow" x="-40%" y="-40%" width="180%" height="180%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#1d4ed8" flood-opacity="0.55"/>
+            </filter>
+          </defs>
+
+          <!-- Subtle ground track -->
+          <rect x="16" y="168" width="608" height="6" rx="3" fill="#e2e8f0"/>
+
+          <!-- Left / Right direction signs -->
+          <g id="dirSigns">
+            <rect x="16" y="14" width="66" height="24" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
+            <text x="49" y="30" text-anchor="middle" font-size="13" font-weight="800" fill="#475569">◀ 左邊</text>
+            <rect x="558" y="14" width="66" height="24" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
+            <text x="591" y="30" text-anchor="middle" font-size="13" font-weight="800" fill="#475569">右邊 ▶</text>
+          </g>
+
+          <!-- Total 25 Bracket (Purple) -->
+          <g id="totalBracket" opacity="0">
+            <path id="totalBracketPath" d="M 24 62 L 24 48 L 616 48 L 616 62" fill="none" stroke="#8d5bd6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <g id="totalPill">
+              <rect x="258" y="31" width="124" height="28" rx="14" fill="#8d5bd6"/>
+              <text x="320" y="50" text-anchor="middle" font-size="15" font-weight="900" fill="#ffffff">整條隊 25 人</text>
+            </g>
+          </g>
+
+          <!-- Region Boxes (Behind people) -->
+          <g id="regionLeft" opacity="0">
+            <rect id="regionLeftFill" x="18" y="96" width="148" height="90" rx="14" fill="rgba(244,113,31,0.14)"/>
+            <rect id="regionLeftStroke" x="18" y="96" width="148" height="90" rx="14" fill="none" stroke="#f4711f" stroke-width="3"/>
+          </g>
+
+          <g id="regionRight" opacity="0">
+            <rect id="regionRightFill" x="330" y="96" width="292" height="90" rx="14" fill="rgba(10,165,201,0.14)"/>
+            <rect id="regionRightStroke" x="330" y="96" width="292" height="90" rx="14" fill="none" stroke="#0aa5c9" stroke-width="3"/>
+          </g>
+
+          <g id="regionMid" opacity="0">
+            <rect id="regionMidFill" x="170" y="96" width="156" height="90" rx="14" fill="rgba(51,178,106,0.16)"/>
+            <rect id="regionMidStroke" x="170" y="96" width="156" height="90" rx="14" fill="none" stroke="#33b26a" stroke-width="3" stroke-dasharray="7 5"/>
+          </g>
+
+          <!-- 25 People Layer (populated via JS) -->
+          <g id="peopleLayer"></g>
+
+          <!-- Dynamic Counting Badges Layer (single-layer circles with plain Arabic digits) -->
+          <g id="countBadgesLayer"></g>
+
+          <!-- Region Bottom Labels & Callouts -->
+          <g id="leftLabel" opacity="0">
+            <path d="M 24 194 Q 92 214 160 194" fill="none" stroke="#f4711f" stroke-width="2.6" stroke-linecap="round"/>
+            <rect x="24" y="212" width="136" height="30" rx="15" fill="#f4711f"/>
+            <text x="92" y="232" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">左 6 人（包小奧）</text>
+          </g>
+
+          <g id="rightLabel" opacity="0">
+            <path d="M 336 194 Q 476 214 616 194" fill="none" stroke="#0aa5c9" stroke-width="2.6" stroke-linecap="round"/>
+            <rect x="404" y="212" width="144" height="30" rx="15" fill="#0aa5c9"/>
+            <text x="476" y="232" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">右 12 人（包小林）</text>
+          </g>
+
+          <g id="midLabel" opacity="0">
+            <path d="M 176 194 Q 248 214 320 194" fill="none" stroke="#33b26a" stroke-width="2.8" stroke-linecap="round"/>
+            <rect id="midLabelBg" x="180" y="212" width="136" height="30" rx="15" fill="#33b26a"/>
+            <text id="midLabelTxt" x="248" y="232" text-anchor="middle" font-size="14.5" font-weight="900" fill="#fff">二人之間 = ? 人</text>
+          </g>
+
+          <!-- Overlap check banner on Stage A -->
+          <g id="overlapCheckBanner" opacity="0">
+            <rect x="176" y="252" width="288" height="28" rx="14" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.6"/>
+            <text x="320" y="271" text-anchor="middle" font-size="14" font-weight="900" fill="#92400e">左 6 + 右 12 = 18 人 ＜ 總數 25 人</text>
+          </g>
+
+          <!-- Single Blue Pen Dot (Track A instance) -->
+          <g id="penDotA" opacity="0" filter="url(#penGlow)">
+            <circle cx="0" cy="0" r="8" fill="#1d4ed8" stroke="#ffffff" stroke-width="2.5"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Track B: Pencil Scratchpad -->
+    <div class="track-card paper-card">
+      <div class="track-head">
+        <span>✏️ 實戰鉛筆算草紙</span>
+        <span class="track-tag">最短筆劃・3 秒畫完</span>
+      </div>
+      <div class="svg-wrap">
+        <svg id="paperSvg" viewBox="0 0 420 290" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="gridPat" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#efe7cf" stroke-width="1"/>
+            </pattern>
+            <filter id="penGlowB" x="-40%" y="-40%" width="180%" height="180%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#1d4ed8" flood-opacity="0.55"/>
+            </filter>
+            <clipPath id="eqClip">
+              <rect id="eqClipRect" x="28" y="172" width="0" height="44"/>
+            </clipPath>
+          </defs>
+
+          <!-- Graph paper bg -->
+          <rect x="0" y="0" width="420" height="290" fill="#fffdf4"/>
+          <rect x="0" y="0" width="420" height="290" fill="url(#gridPat)"/>
+
+          <!-- Top-right minimal code legend -->
+          <g id="legendJ" opacity="0">
+            <rect x="236" y="10" width="80" height="24" rx="8" fill="rgba(244,113,31,0.14)" stroke="#f4711f" stroke-width="1.3"/>
+            <text x="276" y="27" text-anchor="middle" font-size="13.5" font-weight="900" fill="#c2410c">J = 小奧</text>
+          </g>
+          <g id="legendT" opacity="0">
+            <rect x="324" y="10" width="84" height="24" rx="8" fill="rgba(10,165,201,0.14)" stroke="#0aa5c9" stroke-width="1.3"/>
+            <text x="366" y="27" text-anchor="middle" font-size="13.5" font-weight="900" fill="#0369a1">T = 小林</text>
+          </g>
+
+          <!-- Main Queue Line (drawn in Step 1) -->
+          <g id="skQueueGroup">
+            <!-- End ticks -->
+            <path id="skTickL" d="M 26 92 L 26 112" fill="none" stroke="#334155" stroke-width="3" stroke-linecap="round"/>
+            <path id="skLine" d="M 26 102 L 394 102" fill="none" stroke="#334155" stroke-width="3.2" stroke-linecap="round"/>
+            <path id="skTickR" d="M 394 92 L 394 112" fill="none" stroke="#334155" stroke-width="3" stroke-linecap="round"/>
+            <!-- Top Total 25 Arc -->
+            <path id="skArc25" d="M 28 86 Q 210 42 392 86" fill="none" stroke="#8d5bd6" stroke-width="2.8" stroke-linecap="round"/>
+            <g id="skNum25" opacity="0">
+              <rect x="184" y="42" width="52" height="28" rx="10" fill="rgba(141,91,214,0.14)"/>
+              <text x="210" y="63" text-anchor="middle" font-size="22" font-weight="900" fill="#7c3aed">25</text>
+            </g>
+          </g>
+
+          <!-- Left 6 + J (drawn in Step 2) -->
+          <g id="skLeftGroup">
+            <!-- Highlight tint bar -->
+            <rect id="skLeftBar" x="26" y="95" width="94" height="14" rx="6" fill="rgba(244,113,31,0.22)" opacity="0"/>
+            <!-- J marker dot & letter -->
+            <circle id="skDotJ" cx="120" cy="102" r="5.5" fill="#f4711f" opacity="0"/>
+            <text id="skCharJ" x="120" y="88" text-anchor="middle" font-size="22" font-weight="900" fill="#ea580c" opacity="0">J</text>
+            <!-- Quick under-arc for 6 -->
+            <path id="skArc6" d="M 28 114 Q 74 142 120 114" fill="none" stroke="#f4711f" stroke-width="2.8" stroke-linecap="round"/>
+            <text id="skNum6" x="74" y="154" text-anchor="middle" font-size="23" font-weight="900" fill="#ea580c" opacity="0">6</text>
+          </g>
+
+          <!-- Right 12 + T (drawn in Step 3) -->
+          <g id="skRightGroup">
+            <rect id="skRightBar" x="228" y="95" width="166" height="14" rx="6" fill="rgba(10,165,201,0.22)" opacity="0"/>
+            <circle id="skDotT" cx="228" cy="102" r="5.5" fill="#0aa5c9" opacity="0"/>
+            <text id="skCharT" x="228" y="88" text-anchor="middle" font-size="22" font-weight="900" fill="#0284c7" opacity="0">T</text>
+            <path id="skArc12" d="M 228 114 Q 311 142 392 114" fill="none" stroke="#0aa5c9" stroke-width="2.8" stroke-linecap="round"/>
+            <text id="skNum12" x="311" y="154" text-anchor="middle" font-size="23" font-weight="900" fill="#0284c7" opacity="0">12</text>
+          </g>
+
+          <!-- Middle Gap ? / 7 (Steps 4-6) -->
+          <g id="skMidGroup">
+            <rect id="skMidBar" x="126" y="95" width="96" height="14" rx="6" fill="rgba(51,178,106,0.25)" opacity="0"/>
+            <path id="skArcMid" d="M 128 114 Q 174 138 220 114" fill="none" stroke="#33b26a" stroke-width="2.8" stroke-dasharray="6 4" stroke-linecap="round"/>
+            <text id="skMidQ" x="174" y="154" text-anchor="middle" font-size="24" font-weight="900" fill="#16a34a" opacity="0">?</text>
+            <text id="skMidAns" x="174" y="154" text-anchor="middle" font-size="26" font-weight="900" fill="#15803d" opacity="0">7</text>
+          </g>
+
+          <!-- Quick check note (Step 4) -->
+          <g id="skCheckNote" opacity="0">
+            <text x="20" y="28" font-size="14" font-weight="800" fill="#92400e">6 + 12 = 18 &lt; 25（未撞埋）</text>
+          </g>
+
+          <!-- Calculation lines (Step 6) -->
+          <g id="skCalcGroup" opacity="0">
+            <line x1="22" y1="170" x2="398" y2="170" stroke="#e2d6b5" stroke-width="1.5" stroke-dasharray="5 5"/>
+            <text id="skEq1" x="34" y="206" font-size="28" font-weight="900" fill="#1e293b" clip-path="url(#eqClip)">
+              <tspan fill="#7c3aed">25</tspan>
+              <tspan fill="#475569"> − </tspan>
+              <tspan fill="#ea580c">6</tspan>
+              <tspan fill="#475569"> − </tspan>
+              <tspan fill="#0284c7">12</tspan>
+              <tspan fill="#475569"> = </tspan>
+              <tspan fill="#15803d">7</tspan>
+            </text>
+            <text id="skEqSub" x="34" y="230" font-size="14" font-weight="700" fill="#64748b">（或先計 6 + 12 = 18，再計 25 − 18 = 7）</text>
+            <!-- Verification checkmark (Step 7) -->
+            <path id="skVerifyCheck" d="M 294 196 L 304 207 L 324 184" fill="none" stroke="#16a34a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+
+          <!-- Exam Format Answer Line (Step 8) -->
+          <g id="skAnswerBox" opacity="0">
+            <rect x="20" y="242" width="380" height="38" rx="10" fill="#ffffff" stroke="#33b26a" stroke-width="2"/>
+            <text x="36" y="267" font-size="18.5" font-weight="800" fill="#0f172a">答：二人之間站了</text>
+            <line x1="192" y1="272" x2="256" y2="272" stroke="#0f172a" stroke-width="2.4" stroke-linecap="round"/>
+            <text x="266" y="267" font-size="18.5" font-weight="800" fill="#0f172a">人。</text>
+            <!-- Handwritten "7" stroke -->
+            <path id="skHand7" d="M 212 251 L 234 251 L 220 270" fill="none" stroke="#1d4ed8" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+
+          <!-- Single Blue Pen Dot (Track B instance) -->
+          <g id="penDotB" opacity="0" filter="url(#penGlowB)">
+            <circle cx="0" cy="0" r="7.5" fill="#1d4ed8" stroke="#ffffff" stroke-width="2.4"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- Active Thinking Pause Box -->
+  <section class="quiz-box" id="quizBox" aria-live="polite">
+    <div class="quiz-head">
+      <div class="quiz-title">🤔 停一停，估一估！</div>
+      <button class="mini-btn" id="quizSkipBtn">跳過 ⏭</button>
+    </div>
+    <div class="quiz-q" id="quizQ"></div>
+    <div class="quiz-opts" id="quizOpts"></div>
+    <div class="quiz-fb" id="quizFb"></div>
+    <button class="quiz-continue" id="quizContBtn">答啱晒！繼續下一步 ▶</button>
+  </section>
+
+  <!-- Final Celebration & Bonus Actions -->
+  <section class="celebrate-box" id="celebrateBox">
+    <div class="mantra-row">
+      <div>
+        <div class="mantra-text">🏆 考場實戰口訣：先加左右睇有冇撞，未撞就總數減晒兩邊！</div>
+        <div class="mantra-sub">💡 貼士：「第幾名」已經包埋自己，直接減就唔會搞錯加減 1！</div>
+      </div>
+      <div class="bonus-btns">
+        <button class="bonus-btn btn-practice" id="openPracticeBtn">🎯 挑戰類似題</button>
+        <button class="bonus-btn btn-master" id="openMasterBtn">✨ 高手秒殺思維</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Bottom Fixed Dock -->
+<footer class="dock">
+  <div class="dock-inner">
+    <div class="subtitle-bar" id="subtitleBar">準備好就按 ▶ 開始！</div>
+    <div class="dock-row2">
+      <div class="eq-strip" id="eqStrip"></div>
+      <div class="controls">
+        <button class="ctrl-btn" id="prevBtn" title="上一步">⏮</button>
+        <button class="ctrl-btn ctrl-play" id="playBtn" title="播放 / 暫停">▶</button>
+        <button class="ctrl-btn" id="nextBtn" title="下一步">⏭</button>
+        <button class="ctrl-btn" id="replayBtn" title="重播今步">🔄</button>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Practice Modal -->
+<div class="modal-backdrop" id="practiceModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title">🎯 考場實戰・挑戰類似題</div>
+      <button class="modal-close" data-close="practiceModal">✕</button>
+    </div>
+    <div class="practice-q" id="pracQuestion"></div>
+    <div class="practice-input-row">
+      <label for="pracInput" style="font-size:17px;font-weight:800;">二人之間站了：</label>
+      <input type="number" id="pracInput" class="practice-input" inputmode="numeric" placeholder="?">
+      <span style="font-size:17px;font-weight:800;">人</span>
+      <button class="bonus-btn btn-practice" id="pracCheckBtn" style="padding:9px 16px;">提交答案</button>
+      <button class="mini-btn" id="pracHintBtn">✏️ 睇草稿提示</button>
+    </div>
+    <div class="hint-box" id="pracHintBox">
+      <div style="font-size:13.5px;font-weight:800;color:#8c6a22;margin-bottom:4px;">✏️ 算草紙提示（用極簡代號 A、B）：</div>
+      <svg id="pracHintSvg" viewBox="0 0 400 110" width="100%"></svg>
+    </div>
+    <div class="quiz-fb" id="pracFb"></div>
+    <div class="verify-box" id="pracVerifyBox">
+      <div style="font-size:14.5px;font-weight:900;color:#166534;margin-bottom:6px;">🎉 實物圖解驗證：</div>
+      <svg id="pracVerifySvg" viewBox="0 0 560 95" width="100%"></svg>
+      <div style="margin-top:10px;text-align:right;">
+        <button class="bonus-btn btn-practice" id="pracNextBtn" style="padding:8px 16px;">換下一題 🎲</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Master Insight Modal -->
+<div class="modal-backdrop" id="masterModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title">✨ 高手秒殺思維：總和判重疊法</div>
+      <button class="modal-close" data-close="masterModal">✕</button>
+    </div>
+    <div class="master-card-block">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <strong style="font-size:17.5px;color:#581c87;">🧠 一眼睇穿所有排隊題，永遠唔使死背 ±1！</strong>
+        <button class="mini-btn active" id="readMasterBtn">🔊 廣東話朗讀</button>
+      </div>
+      普通做法會成日煩：「要唔要減 1？要唔要減 2？」<br>
+      高手見到排隊「二人之間」題，第一步永遠係<strong>「先將左數同右數加埋，同總人數比大小」</strong>，一秒睇穿兩種世界：
+    </div>
+    <div class="master-grid">
+      <div class="master-case">
+        <h4>🟢 情況一：未撞埋（左 + 右 ＜ 總）</h4>
+        <svg viewBox="0 0 260 66" width="100%">
+          <line x1="12" y1="30" x2="248" y2="30" stroke="#334155" stroke-width="2.5" stroke-linecap="round"/>
+          <rect x="12" y="24" width="66" height="12" rx="4" fill="rgba(244,113,31,0.35)"/>
+          <rect x="148" y="24" width="100" height="12" rx="4" fill="rgba(10,165,201,0.35)"/>
+          <rect x="82" y="24" width="62" height="12" rx="4" fill="rgba(51,178,106,0.45)"/>
+          <circle cx="78" cy="30" r="4.5" fill="#f4711f"/><text x="78" y="17" text-anchor="middle" font-size="13" font-weight="900" fill="#ea580c">J</text>
+          <circle cx="148" cy="30" r="4.5" fill="#0aa5c9"/><text x="148" y="17" text-anchor="middle" font-size="13" font-weight="900" fill="#0284c7">T</text>
+          <text x="113" y="56" text-anchor="middle" font-size="13" font-weight="900" fill="#15803d">中間 = 總 − (左+右)</text>
+        </svg>
+        <div style="font-size:13.5px;color:#334155;line-height:1.5;">
+          就好似今題：<strong>6 + 12 = 18 ＜ 25</strong>。<br>
+          左右已經各自包埋自己，直接 <strong>25 − 18 = 7</strong>！
+        </div>
+      </div>
+      <div class="master-case">
+        <h4>🟣 情況二：交叉撞埋（左 + 右 ＞ 總）</h4>
+        <svg viewBox="0 0 260 66" width="100%">
+          <line x1="12" y1="30" x2="248" y2="30" stroke="#334155" stroke-width="2.5" stroke-linecap="round"/>
+          <rect x="12" y="20" width="150" height="9" rx="4" fill="rgba(244,113,31,0.45)"/>
+          <rect x="98" y="31" width="150" height="9" rx="4" fill="rgba(10,165,201,0.45)"/>
+          <circle cx="162" cy="24" r="4.5" fill="#f4711f"/><text x="162" y="14" text-anchor="middle" font-size="13" font-weight="900" fill="#ea580c">J</text>
+          <circle cx="98" cy="36" r="4.5" fill="#0aa5c9"/><text x="98" y="14" text-anchor="middle" font-size="13" font-weight="900" fill="#0284c7">T</text>
+          <text x="130" y="58" text-anchor="middle" font-size="12.5" font-weight="900" fill="#7c3aed">中間 = (左+右) − 總 − 2</text>
+        </svg>
+        <div style="font-size:13.5px;color:#334155;line-height:1.5;">
+          如果加埋大過總數，即係數重疊咗！<br>
+          重疊部分扣走二人自己，就係中間人數！
+        </div>
+      </div>
+    </div>
+    <div style="font-size:14px;font-weight:700;color:#475569;text-align:center;">
+      ⚡ 呢招叫「整體打包觀」：唔逐個計第幾位，直接將成段打包加減，又快又零出錯！
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+ * 集中 CONFIG（題目數據、異讀映射、色板、步驟與互動全部集中於此）
+ * ============================================================================ */
+const CONFIG = {
+  total: 25,
+  jackPos: 6,          // 1-indexed from left
+  tonyFromRight: 12,   // 1-indexed from right -> 14th from left
+  tonyPos: 14,         // 25 - 12 + 1 = 14
+  answer: 7,           // positions 7..13
+
+  colors: {
+    orange: '#f4711f',
+    blue: '#0aa5c9',
+    purple: '#8d5bd6',
+    amber: '#f0a500',
+    pink: '#e8467c',
+    green: '#33b26a'
+  },
+
+  // 廣東話異讀字（多音字）情境映射表：畫面保持標準中文，TTS 語音必讀準
+  HETERO_MAP: [
+    ['由左數起', '由左嫂起'],
+    ['由右數起', '由右嫂起'],
+    ['由最左數', '由最左嫂'],
+    ['由最右數', '由最右嫂'],
+    ['數下中間', '嫂下中間'],
+    ['數一數', '嫂一嫂'],
+    ['數重疊', '嫂重疊'],
+    ['畫一條', '劃一條'],
+    ['邊讀邊畫', '邊讀邊劃'],
+    ['畫條線', '劃條線'],
+    ['畫弧線', '劃弧線'],
+    ['畫個', '劃個'],
+    ['畫出', '劃出'],
+    ['畫低', '劃低'],
+    ['−', '減'],
+    ['-', '減'],
+    ['+', '加'],
+    ['×', '乘'],
+    ['÷', '除'],
+    ['=', '等於'],
+    ['＜', '細過'],
+    ['<', '細過'],
+    ['＞', '大過'],
+    ['>', '大過']
+  ],
+
+  phases: [
+    { id: 0, label: '① 審題定總數', startStep: 0 },
+    { id: 1, label: '② 左右定位', startStep: 2 },
+    { id: 2, label: '③ 減法驗算', startStep: 5 },
+    { id: 3, label: '④ 親手填答', startStep: 8 }
+  ],
+
+  steps: [
+    {
+      phase: 0,
+      seg: -1,
+      duration: 1200,
+      prefix: '',
+      quote: '',
+      think: '先睇清題目同空白算草紙。準備好就開始逐句讀、邊讀邊畫！',
+      eq: []
+    },
+    {
+      phase: 0,
+      seg: 0,
+      duration: 2100,
+      prefix: '題目寫住：',
+      quote: '小奧和小林同在一條有 25 人的隊伍排隊，',
+      think: '整條隊有 25 人。草稿即畫一條橫線，上面標 25。',
+      eq: [{ text: '總數 25', cls: 'eq-purple' }]
+    },
+    {
+      phase: 1,
+      seg: 1,
+      duration: 3000,
+      prefix: '題目話：',
+      quote: '由左數起的第 6 名是小奧，',
+      think: '小奧用 J 代表。由最左數 6 個，包埋小奧共 6 人，左邊標 J 同 6。',
+      eq: [
+        { text: '總數 25', cls: 'eq-purple' },
+        { text: '左 6', cls: 'eq-orange' }
+      ]
+    },
+    {
+      phase: 1,
+      seg: 2,
+      duration: 3400,
+      prefix: '題目再話：',
+      quote: '由右數起的第 12 名是小林，',
+      think: '小林用 T 代表。由最右數 12 個，包埋小林共 12 人，右邊標 T 同 12。',
+      eq: [
+        { text: '總數 25', cls: 'eq-purple' },
+        { text: '左 6', cls: 'eq-orange' },
+        { text: '右 12', cls: 'eq-blue' }
+      ]
+    },
+    {
+      phase: 1,
+      seg: -1,
+      duration: 2000,
+      prefix: '',
+      quote: '',
+      think: '左 6 人，右 12 人，加埋係 18 人。比 25 人少，小奧同小林之間會點？停一停，估下！',
+      eq: [
+        { text: '總數 25', cls: 'eq-purple' },
+        { text: '左 6', cls: 'eq-orange' },
+        { text: '右 12', cls: 'eq-blue' }
+      ],
+      pauseQuiz: {
+        id: 'p1',
+        question: '左邊 6 人加右邊 12 人係 18 人，比總數 25 人細。即係小奧同小林之間係點樣？',
+        options: [
+          { text: 'A. 未撞埋，中間有空位', correct: true, fb: '好眼力！6 加 12 等於 18，仲細過 25，即係左右未撞埋，中間一定仲企咗人！' },
+          { text: 'B. 兩組重疊撞埋一齊', correct: false, fb: '諗多步：只有加埋大過 25 先會撞埋，而家 18 仲細過 25，未排滿㗎！再揀過！' },
+          { text: 'C. 剛好貼住，中間 0 人', correct: false, fb: '18 距離 25 仲爭幾個人未數到，唔會係 0 人㗎！試多一次！' }
+        ]
+      }
+    },
+    {
+      phase: 2,
+      seg: 3,
+      duration: 2200,
+      prefix: '題目問：',
+      quote: '問二人之間站了多少人？',
+      think: '「二人之間」即係小奧同小林中間，唔包佢哋兩個。停一停，估下點列式！',
+      eq: [
+        { text: '25', cls: 'eq-purple' },
+        { text: '−', cls: 'eq-op' },
+        { text: '6', cls: 'eq-orange' },
+        { text: '−', cls: 'eq-op' },
+        { text: '12', cls: 'eq-blue' },
+        { text: '= ?', cls: 'eq-green' }
+      ],
+      pauseQuiz: {
+        id: 'p2',
+        question: '用 25 減左邊 6 人，再減右邊 12 人之後，仲使唔使再額外減 2（減走小奧同小林）？',
+        options: [
+          { text: 'A. 唔使！6 同 12 已經包埋佢哋兩個', correct: true, fb: '完全正確！第 6 名嘅 6 人已經包埋小奧，第 12 名嘅 12 人已經包埋小林，直接減就啱晒！' },
+          { text: 'B. 要再減 2，因為唔包佢哋兩個', correct: false, fb: '小心考場頭號陷阱！由左數 6 人已經包埋小奧，右 12 人亦包埋小林，再減 2 就扣多咗兩個人啦！' },
+          { text: 'C. 要再加 2', correct: false, fb: '唔使加 2 呀！減走左右兩組後，剩低嘅全部都係企喺二人之間嘅人。' }
+        ]
+      }
+    },
+    {
+      phase: 2,
+      seg: 3,
+      duration: 2400,
+      prefix: '',
+      quote: '',
+      think: '左 6 已包小奧，右 12 已包小林，唔使再減 2！25 減 6 減 12，等於 7 人！',
+      eq: [
+        { text: '25', cls: 'eq-purple' },
+        { text: '−', cls: 'eq-op' },
+        { text: '6', cls: 'eq-orange' },
+        { text: '−', cls: 'eq-op' },
+        { text: '12', cls: 'eq-blue' },
+        { text: '=', cls: 'eq-op' },
+        { text: '7 人', cls: 'eq-green' }
+      ]
+    },
+    {
+      phase: 2,
+      seg: 3,
+      duration: 2600,
+      prefix: '',
+      quote: '',
+      think: '數下中間驗證：1、2、3、4、5、6、7，啱啱好 7 個人，百分百肯定！',
+      eq: [
+        { text: '25', cls: 'eq-purple' },
+        { text: '−', cls: 'eq-op' },
+        { text: '6', cls: 'eq-orange' },
+        { text: '−', cls: 'eq-op' },
+        { text: '12', cls: 'eq-blue' },
+        { text: '=', cls: 'eq-op' },
+        { text: '7 人 ✓', cls: 'eq-green' }
+      ]
+    },
+    {
+      phase: 3,
+      seg: 3,
+      duration: 2200,
+      prefix: '',
+      quote: '',
+      think: '喺答題橫線寫上 7，答案係 7 人！記住：先加左右睇有冇撞，未撞就總數減晒兩邊！',
+      eq: [
+        { text: '25', cls: 'eq-purple' },
+        { text: '−', cls: 'eq-op' },
+        { text: '6', cls: 'eq-orange' },
+        { text: '−', cls: 'eq-op' },
+        { text: '12', cls: 'eq-blue' },
+        { text: '=', cls: 'eq-op' },
+        { text: '7 人 🎉', cls: 'eq-green' }
+      ]
+    }
+  ],
+
+  practices: [
+    { total: 30, left: 8, right: 10, nameA: '小明', nameB: '小晴', ans: 12 },
+    { total: 20, left: 5, right: 9,  nameA: '樂樂', nameB: '心心', ans: 6  },
+    { total: 28, left: 7, right: 11, nameA: '子軒', nameB: '凱琳', ans: 10 },
+    { total: 24, left: 6, right: 9,  nameA: '阿文', nameB: '阿美', ans: 9  }
+  ],
+
+  masterTTS: '高手見到排隊二人之間題，唔使死背加減一！第一步先將左數同右數加埋，同總人數比大小。如果細過總數，即係未撞埋，就好似今題六加十二等於十八，細過二十五，直接用總數減去左右兩邊就係答案！如果大過總數，即係交叉重疊咗，就用左右總和減去總人數，再扣返兩個主角。用呢招整體打包觀，三秒秒殺零出錯！'
+};
+
+/* ============================================================================
+ * Web Audio 輕音效引擎（零外部資源）
+ * ============================================================================ */
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+}
+
+function playSfx(type) {
+  if (state.muted) return;
+  try {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const playTone = (freq, dur, vol, wave = 'sine', delay = 0, slideTo = null) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = wave;
+      osc.frequency.setValueAtTime(freq, now + delay);
+      if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, now + delay + dur);
+      gain.gain.setValueAtTime(0.001, now + delay);
+      gain.gain.linearRampToValueAtTime(vol, now + delay + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + dur + 0.02);
+    };
+
+    if (type === 'pop') playTone(560, 0.09, 0.12, 'triangle', 0, 740);
+    else if (type === 'whoosh') playTone(260, 0.16, 0.08, 'sine', 0, 520);
+    else if (type === 'ding') {
+      playTone(660, 0.16, 0.14, 'sine', 0);
+      playTone(880, 0.24, 0.14, 'sine', 0.09);
+    } else if (type === 'wrong') {
+      playTone(260, 0.16, 0.12, 'sawtooth', 0, 200);
+    } else if (type === 'celebrate') {
+      playTone(523.25, 0.22, 0.14, 'triangle', 0);
+      playTone(659.25, 0.22, 0.14, 'triangle', 0.1);
+      playTone(783.99, 0.24, 0.14, 'triangle', 0.2);
+      playTone(1046.5, 0.45, 0.16, 'triangle', 0.3);
+    }
+  } catch (e) {}
+}
+
+/* ============================================================================
+ * 廣東話 TTS 引擎（分軌異讀校準 + 防卡死安全計時）
+ * ============================================================================ */
+let hkVoice = null;
+function pickVoice() {
+  if (!('speechSynthesis' in window)) return null;
+  const voices = window.speechSynthesis.getVoices() || [];
+  hkVoice =
+    voices.find(v => /zh[-_]?HK/i.test(v.lang)) ||
+    voices.find(v => /yue/i.test(v.lang)) ||
+    voices.find(v => /cantonese|hong\s*kong/i.test(v.name)) ||
+    voices.find(v => /zh[-_]?TW/i.test(v.lang)) ||
+    voices.find(v => /^zh/i.test(v.lang)) ||
+    null;
+  return hkVoice;
+}
+if ('speechSynthesis' in window) {
+  pickVoice();
+  window.speechSynthesis.onvoiceschanged = pickVoice;
+}
+
+function cleanForTTS(raw) {
+  let s = String(raw || '');
+  // Strip emojis & non-spoken decorative symbols
+  s = s.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}✓✔✕✖◀▶]/gu, '');
+  s = s.replace(/[「」『』【】（）()\[\]|]/g, '，');
+  for (const [from, to] of CONFIG.HETERO_MAP) {
+    s = s.split(from).join(to);
+  }
+  s = s.replace(/，+/g, '，').replace(/^，|，$/g, '').trim();
+  return s;
+}
+
+let ttsToken = 0;
+let ttsSafetyTimer = null;
+
+function stopTTS() {
+  ttsToken++;
+  if (ttsSafetyTimer) { clearTimeout(ttsSafetyTimer); ttsSafetyTimer = null; }
+  if ('speechSynthesis' in window) {
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
+}
+
+function speakText(text, onDone) {
+  stopTTS();
+  const myToken = ttsToken;
+  const cleaned = cleanForTTS(text);
+  const doneOnce = () => {
+    if (myToken !== ttsToken) return;
+    if (ttsSafetyTimer) { clearTimeout(ttsSafetyTimer); ttsSafetyTimer = null; }
+    if (onDone) onDone();
+  };
+
+  if (state.muted || !('speechSynthesis' in window) || !cleaned) {
+    const waitMs = Math.max(900, Math.min(4800, cleaned.length * (state.slow ? 175 : 125)));
+    ttsSafetyTimer = setTimeout(doneOnce, waitMs);
+    return;
+  }
+
+  try {
+    const utter = new SpeechSynthesisUtterance(cleaned);
+    const v = pickVoice();
+    if (v) utter.voice = v;
+    utter.lang = (v && v.lang) ? v.lang : 'zh-HK';
+    utter.rate = state.slow ? 0.78 : 1.02;
+    utter.pitch = 1.04;
+    utter.onend = doneOnce;
+    utter.onerror = doneOnce;
+    // Safety timeout in case browser speechSynthesis stalls without firing onend
+    const maxWait = Math.max(3800, cleaned.length * (state.slow ? 340 : 250) + 2500);
+    ttsSafetyTimer = setTimeout(doneOnce, maxWait);
+    window.speechSynthesis.speak(utter);
+  } catch (e) {
+    ttsSafetyTimer = setTimeout(doneOnce, 1800);
+  }
+}
+
+/* ============================================================================
+ * 預建 SVG 具象小人與筆觸路徑長度快取
+ * ============================================================================ */
+const peopleLayer = document.getElementById('peopleLayer');
+const countBadgesLayer = document.getElementById('countBadgesLayer');
+
+function personX(idx1) {
+  // idx1: 1..25 -> 32 .. 608 (spacing 24)
+  return 32 + (idx1 - 1) * 24;
+}
+
+const personEls = [];
+const badgeEls = [];
+
+function buildStagePeople() {
+  const ns = 'http://www.w3.org/2000/svg';
+  peopleLayer.innerHTML = '';
+  countBadgesLayer.innerHTML = '';
+
+  for (let i = 1; i <= CONFIG.total; i++) {
+    const x = personX(i);
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('transform', `translate(${x}, 148)`);
+    g.setAttribute('opacity', '0');
+
+    const isJack = (i === CONFIG.jackPos);
+    const isTony = (i === CONFIG.tonyPos);
+
+    // Legs
+    const legs = document.createElementNS(ns, 'path');
+    legs.setAttribute('d', 'M -3.5 11 L -4.5 21 M 3.5 11 L 4.5 21');
+    legs.setAttribute('stroke', '#475569');
+    legs.setAttribute('stroke-width', '2.4');
+    legs.setAttribute('stroke-linecap', 'round');
+    g.appendChild(legs);
+
+    // Body
+    const body = document.createElementNS(ns, 'rect');
+    body.setAttribute('x', '-6');
+    body.setAttribute('y', '-4');
+    body.setAttribute('width', '12');
+    body.setAttribute('height', '16');
+    body.setAttribute('rx', '5');
+    body.setAttribute('fill', '#94a3b8');
+    body.setAttribute('class', 'p-body');
+    g.appendChild(body);
+
+    // Head
+    const head = document.createElementNS(ns, 'circle');
+    head.setAttribute('cx', '0');
+    head.setAttribute('cy', '-12');
+    head.setAttribute('r', '6.2');
+    head.setAttribute('fill', '#fde68a');
+    head.setAttribute('stroke', '#64748b');
+    head.setAttribute('stroke-width', '1.2');
+    head.setAttribute('class', 'p-head');
+    g.appendChild(head);
+
+    // Special Cap & Name Tag for Jack / Tony (hidden until revealed!)
+    if (isJack || isTony) {
+      const capColor = isJack ? CONFIG.colors.orange : CONFIG.colors.blue;
+      const codeChar = isJack ? 'J' : 'T';
+      const nameTxt = isJack ? '小奧' : '小林';
+
+      const special = document.createElementNS(ns, 'g');
+      special.setAttribute('class', 'p-special');
+      special.setAttribute('opacity', '0');
+
+      // Cap
+      const cap = document.createElementNS(ns, 'path');
+      cap.setAttribute('d', 'M -7 -14 Q 0 -23 7 -14 Z');
+      cap.setAttribute('fill', capColor);
+      special.appendChild(cap);
+
+      // Floating tag above head
+      const tagBg = document.createElementNS(ns, 'rect');
+      tagBg.setAttribute('x', '-21');
+      tagBg.setAttribute('y', '-48');
+      tagBg.setAttribute('width', '42');
+      tagBg.setAttribute('height', '22');
+      tagBg.setAttribute('rx', '11');
+      tagBg.setAttribute('fill', capColor);
+      special.appendChild(tagBg);
+
+      const tagT = document.createElementNS(ns, 'text');
+      tagT.setAttribute('x', '0');
+      tagT.setAttribute('y', '-33');
+      tagT.setAttribute('text-anchor', 'middle');
+      tagT.setAttribute('font-size', '11.5');
+      tagT.setAttribute('font-weight', '900');
+      tagT.setAttribute('fill', '#ffffff');
+      tagT.textContent = `${nameTxt}${codeChar}`;
+      special.appendChild(tagT);
+
+      g.appendChild(special);
+    }
+
+    peopleLayer.appendChild(g);
+    personEls.push({ idx: i, x, g, body, head, special: g.querySelector('.p-special') });
+
+    // Single-layer counting badge (plain Arabic digit inside a single circle)
+    const bg = document.createElementNS(ns, 'g');
+    bg.setAttribute('transform', `translate(${x}, 82)`);
+    bg.setAttribute('opacity', '0');
+
+    const c = document.createElementNS(ns, 'circle');
+    c.setAttribute('cx', '0');
+    c.setAttribute('cy', '0');
+    c.setAttribute('r', '10');
+    c.setAttribute('fill', '#33b26a');
+    bg.appendChild(c);
+
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', '0');
+    t.setAttribute('y', '4');
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('font-size', '12');
+    t.setAttribute('font-weight', '900');
+    t.setAttribute('fill', '#ffffff');
+    t.textContent = '';
+    bg.appendChild(t);
+
+    countBadgesLayer.appendChild(bg);
+    badgeEls.push({ idx: i, x, g: bg, circle: c, text: t });
+  }
+}
+
+buildStagePeople();
+
+// Cache SVG path lengths for pure stroke-dashoffset rendering
+const strokeIds = [
+  'totalBracketPath', 'skTickL', 'skLine', 'skTickR', 'skArc25',
+  'skArc6', 'skArc12', 'skArcMid', 'skVerifyCheck', 'skHand7'
+];
+const pathLens = {};
+strokeIds.forEach(id => {
+  const el = document.getElementById(id);
+  if (el && el.getTotalLength) {
+    pathLens[id] = el.getTotalLength();
+  }
+});
+
+function setStrokeProgress(id, prog) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const len = pathLens[id] || 200;
+  const clamped = Math.max(0, Math.min(1, prog));
+  el.style.strokeDasharray = `${len}`;
+  el.style.strokeDashoffset = `${len * (1 - clamped)}`;
+  el.style.opacity = clamped <= 0.001 ? '0' : '1';
+}
+
+function getPointOnPath(id, prog) {
+  const el = document.getElementById(id);
+  if (!el || !el.getTotalLength) return { x: 0, y: 0 };
+  const len = pathLens[id] || el.getTotalLength();
+  const clamped = Math.max(0, Math.min(1, prog));
+  const pt = el.getPointAtLength(len * clamped);
+  return { x: pt.x, y: pt.y };
+}
+
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+function mapRange(p, a, b) { return clamp01((p - a) / (b - a)); }
+function easeOutBack(t) {
+  const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
+// Pure 3-flash pulse helper (flashes 3 times during local t in 0..1, then settles to steady 1)
+function threeFlashOpacity(t, baseAlpha = 0.14, peakAlpha = 0.42) {
+  if (t <= 0) return 0;
+  if (t >= 1) return baseAlpha;
+  const wave = Math.abs(Math.sin(t * Math.PI * 3));
+  return baseAlpha + (peakAlpha - baseAlpha) * wave;
+}
+
+/* ============================================================================
+ * 純函數步驟狀態機：renderState(stepIdx, p)
+ * 嚴格保證任意跳轉、退回、暫停 100% 乾淨無殘影
+ * ============================================================================ */
+function renderState(stepIdx, p) {
+  const s = CONFIG.steps[stepIdx];
+  const P = clamp01(p);
+
+  // 1. Highlight Question Sentences & Superscripts (strictly hidden at Step 0)
+  document.querySelectorAll('.q-seg').forEach(el => {
+    const idx = Number(el.dataset.seg);
+    el.classList.toggle('active', idx === s.seg);
+    el.classList.toggle('read', idx < s.seg && s.seg >= 0);
+  });
+  document.querySelectorAll('[data-sup="J"]').forEach(el => {
+    el.classList.toggle('show', stepIdx >= 2 && (stepIdx > 2 || P >= 0.12));
+  });
+  document.querySelectorAll('[data-sup="T"]').forEach(el => {
+    el.classList.toggle('show', stepIdx >= 3 && (stepIdx > 3 || P >= 0.12));
+  });
+
+  // 2. Subtitle Bar (Clear separation between original quote and thinking)
+  const subEl = document.getElementById('subtitleBar');
+  if (s.quote) {
+    subEl.innerHTML = `<span class="q-prefix">${s.prefix}</span><span class="q-quote">「${s.quote}」</span><span class="q-think">${s.think}</span>`;
+  } else {
+    subEl.innerHTML = `<span class="q-think">${s.think}</span>`;
+  }
+
+  // 3. Equation Strip
+  const eqEl = document.getElementById('eqStrip');
+  eqEl.innerHTML = s.eq.map(item => `<span class="eq-chip ${item.cls}">${item.text}</span>`).join('');
+
+  // 4. Phase Pills & Step Counter
+  document.getElementById('stepCounter').textContent = `第 ${stepIdx} / ${CONFIG.steps.length - 1} 步`;
+  document.querySelectorAll('.phase-pill').forEach((pill, i) => {
+    pill.classList.toggle('active', i === s.phase);
+    pill.classList.toggle('done', i < s.phase);
+  });
+
+  // 5. Reset Pen Dots (mutually exclusive between Track A and Track B)
+  const penDotA = document.getElementById('penDotA');
+  const penDotB = document.getElementById('penDotB');
+  let activePen = null; // { track: 'A'|'B', x, y }
+
+  // 6. Track A — 25 People & Colors
+  for (let i = 0; i < personEls.length; i++) {
+    const pe = personEls[i];
+    const num = pe.idx;
+    let op = 0;
+    let dy = 0;
+    let scale = 1;
+    let bodyColor = '#94a3b8';
+    let showSpecial = false;
+
+    if (stepIdx === 0) {
+      // Opening faithful: no derived people yet
+      op = 0;
+    } else if (stepIdx === 1) {
+      // Smooth wave appearance from left to right
+      const local = mapRange(P, 0.04 + (i / 25) * 0.42, 0.16 + (i / 25) * 0.42);
+      op = local;
+      dy = (1 - easeOutBack(local)) * -18;
+    } else {
+      op = 1;
+    }
+
+    // Color & special highlight states
+    if (stepIdx >= 2 && num <= CONFIG.jackPos) {
+      const revealJ = stepIdx > 2 ? 1 : mapRange(P, 0.56, 0.68);
+      if (revealJ > 0) bodyColor = CONFIG.colors.orange;
+      if (num === CONFIG.jackPos && (stepIdx > 2 || P >= 0.52)) {
+        showSpecial = true;
+        scale = 1.18;
+      }
+    }
+    if (stepIdx >= 3 && num >= CONFIG.tonyPos) {
+      const revealT = stepIdx > 3 ? 1 : mapRange(P, 0.62, 0.72);
+      if (revealT > 0) bodyColor = CONFIG.colors.blue;
+      if (num === CONFIG.tonyPos && (stepIdx > 3 || P >= 0.58)) {
+        showSpecial = true;
+        scale = 1.18;
+      }
+    }
+    if (stepIdx >= 5 && num > CONFIG.jackPos && num < CONFIG.tonyPos) {
+      bodyColor = CONFIG.colors.green;
+    }
+
+    // Step 2: Counting left 1..6 bounce (slow 1-3, faster 4-6)
+    if (stepIdx === 2 && num <= CONFIG.jackPos) {
+      const thresholds = [0.08, 0.19, 0.30, 0.38, 0.45, 0.52];
+      const t0 = thresholds[num - 1];
+      const local = mapRange(P, t0, t0 + 0.08);
+      if (local > 0 && local < 1) dy = -Math.sin(local * Math.PI) * 10;
+      if (P >= t0) bodyColor = CONFIG.colors.orange;
+    }
+
+    // Step 3: Counting right 1..12 bounce (pos 25 down to 14; slow 1-3, fast 4-12)
+    if (stepIdx === 3 && num >= CONFIG.tonyPos) {
+      const rightIdx = CONFIG.total - num; // 0 for pos 25, 11 for pos 14
+      const thresholds = [0.06, 0.16, 0.26, 0.31, 0.35, 0.39, 0.43, 0.46, 0.49, 0.52, 0.55, 0.58];
+      const t0 = thresholds[rightIdx];
+      const local = mapRange(P, t0, t0 + 0.05);
+      if (local > 0 && local < 1) dy = -Math.sin(local * Math.PI) * 10;
+      if (P >= t0) bodyColor = CONFIG.colors.blue;
+    }
+
+    // Step 6: Slight dim on outer groups to visually "subtract" them
+    if (stepIdx === 6 && (num <= CONFIG.jackPos || num >= CONFIG.tonyPos)) {
+      op = 1 - 0.45 * mapRange(P, 0.1, 0.4);
+    }
+
+    // Step 7: Middle 7 hop one-by-one as counted 1..7
+    if (stepIdx === 7 && num > CONFIG.jackPos && num < CONFIG.tonyPos) {
+      const mIdx = num - CONFIG.jackPos - 1; // 0..6
+      const t0 = 0.08 + mIdx * 0.11;
+      const local = mapRange(P, t0, t0 + 0.11);
+      if (local > 0 && local < 1) dy = -Math.sin(local * Math.PI) * 14;
+      if (P >= t0) scale = 1.12;
+    }
+
+    pe.g.setAttribute('opacity', op.toFixed(3));
+    pe.g.setAttribute('transform', `translate(${pe.x}, ${(148 + dy).toFixed(1)}) scale(${scale})`);
+    pe.body.setAttribute('fill', bodyColor);
+    if (pe.special) {
+      pe.special.setAttribute('opacity', showSpecial ? '1' : '0');
+    }
+  }
+
+  // 7. Track A — Counting Badges (single-layer circles, group fade-out when finished!)
+  badgeEls.forEach(be => {
+    be.g.setAttribute('opacity', '0');
+  });
+
+  if (stepIdx === 2) {
+    const thresholds = [0.08, 0.19, 0.30, 0.38, 0.45, 0.52];
+    const groupFade = 1 - mapRange(P, 0.62, 0.72); // entire group fades out together cleanly
+    for (let k = 1; k <= CONFIG.jackPos; k++) {
+      const be = badgeEls[k - 1];
+      const pop = mapRange(P, thresholds[k - 1], thresholds[k - 1] + 0.06);
+      const op = pop * groupFade;
+      if (op > 0.01) {
+        be.circle.setAttribute('fill', CONFIG.colors.orange);
+        be.text.textContent = String(k);
+        be.g.setAttribute('opacity', op.toFixed(3));
+        be.g.setAttribute('transform', `translate(${be.x}, 82) scale(${0.6 + 0.4 * pop})`);
+      }
+      if (P >= thresholds[k - 1] && P < 0.60) {
+        activePen = { track: 'A', x: be.x, y: 108 };
+      }
+    }
+  } else if (stepIdx === 3) {
+    const thresholds = [0.06, 0.16, 0.26, 0.31, 0.35, 0.39, 0.43, 0.46, 0.49, 0.52, 0.55, 0.58];
+    const groupFade = 1 - mapRange(P, 0.66, 0.75);
+    for (let r = 0; r < CONFIG.tonyFromRight; r++) {
+      const pos = CONFIG.total - r; // 25..14
+      const be = badgeEls[pos - 1];
+      const pop = mapRange(P, thresholds[r], thresholds[r] + 0.045);
+      const op = pop * groupFade;
+      if (op > 0.01) {
+        be.circle.setAttribute('fill', CONFIG.colors.blue);
+        be.text.textContent = String(r + 1);
+        be.g.setAttribute('opacity', op.toFixed(3));
+        be.g.setAttribute('transform', `translate(${be.x}, 82) scale(${0.6 + 0.4 * pop})`);
+      }
+      if (P >= thresholds[r] && P < 0.64) {
+        activePen = { track: 'A', x: be.x, y: 108 };
+      }
+    }
+  } else if (stepIdx === 7) {
+    // Verification badges 1..7 above positions 7..13
+    for (let m = 0; m < CONFIG.answer; m++) {
+      const pos = CONFIG.jackPos + 1 + m; // 7..13
+      const be = badgeEls[pos - 1];
+      const t0 = 0.08 + m * 0.11;
+      const pop = mapRange(P, t0, t0 + 0.08);
+      if (pop > 0.01) {
+        be.circle.setAttribute('fill', CONFIG.colors.green);
+        be.text.textContent = String(m + 1);
+        be.g.setAttribute('opacity', pop.toFixed(3));
+        be.g.setAttribute('transform', `translate(${be.x}, 82) scale(${0.65 + 0.35 * pop})`);
+        if (P >= t0 && P < t0 + 0.11) {
+          activePen = { track: 'A', x: be.x, y: 82 };
+        }
+      }
+    }
+  }
+
+  // 8. Track A — Total Bracket & Region Highlight Trilogy (色 × 框 × 閃三下)
+  const totalBracket = document.getElementById('totalBracket');
+  if (stepIdx === 0) {
+    totalBracket.setAttribute('opacity', '0');
+  } else if (stepIdx === 1) {
+    const bp = mapRange(P, 0.35, 0.62);
+    totalBracket.setAttribute('opacity', bp > 0 ? '1' : '0');
+    setStrokeProgress('totalBracketPath', bp);
+    document.getElementById('totalPill').setAttribute('opacity', mapRange(P, 0.56, 0.7).toFixed(3));
+  } else {
+    totalBracket.setAttribute('opacity', '1');
+    setStrokeProgress('totalBracketPath', 1);
+    document.getElementById('totalPill').setAttribute('opacity', '1');
+  }
+
+  // Left Region Box (Orange)
+  const regionLeft = document.getElementById('regionLeft');
+  const regionLeftFill = document.getElementById('regionLeftFill');
+  const leftLabel = document.getElementById('leftLabel');
+  if (stepIdx < 2) {
+    regionLeft.setAttribute('opacity', '0');
+    leftLabel.setAttribute('opacity', '0');
+  } else if (stepIdx === 2) {
+    const flashT = mapRange(P, 0.58, 0.88);
+    regionLeft.setAttribute('opacity', flashT > 0 ? '1' : '0');
+    regionLeftFill.setAttribute('fill', `rgba(244,113,31,${threeFlashOpacity(flashT, 0.14, 0.40).toFixed(3)})`);
+    leftLabel.setAttribute('opacity', mapRange(P, 0.82, 0.94).toFixed(3));
+    regionLeft.setAttribute('filter', P >= 0.72 ? 'url(#glowOrange)' : '');
+  } else {
+    const dim = (stepIdx === 6) ? (1 - 0.45 * mapRange(P, 0.1, 0.4)) : 1;
+    regionLeft.setAttribute('opacity', dim.toFixed(3));
+    regionLeftFill.setAttribute('fill', 'rgba(244,113,31,0.14)');
+    regionLeft.setAttribute('filter', (stepIdx === 4 && Math.sin(P * Math.PI * 4) > 0) ? 'url(#glowOrange)' : '');
+    leftLabel.setAttribute('opacity', dim.toFixed(3));
+  }
+
+  // Right Region Box (Blue)
+  const regionRight = document.getElementById('regionRight');
+  const regionRightFill = document.getElementById('regionRightFill');
+  const rightLabel = document.getElementById('rightLabel');
+  if (stepIdx < 3) {
+    regionRight.setAttribute('opacity', '0');
+    rightLabel.setAttribute('opacity', '0');
+  } else if (stepIdx === 3) {
+    const flashT = mapRange(P, 0.62, 0.88);
+    regionRight.setAttribute('opacity', flashT > 0 ? '1' : '0');
+    regionRightFill.setAttribute('fill', `rgba(10,165,201,${threeFlashOpacity(flashT, 0.14, 0.40).toFixed(3)})`);
+    rightLabel.setAttribute('opacity', mapRange(P, 0.82, 0.94).toFixed(3));
+    regionRight.setAttribute('filter', P >= 0.74 ? 'url(#glowBlue)' : '');
+  } else {
+    const dim = (stepIdx === 6) ? (1 - 0.45 * mapRange(P, 0.1, 0.4)) : 1;
+    regionRight.setAttribute('opacity', dim.toFixed(3));
+    regionRightFill.setAttribute('fill', 'rgba(10,165,201,0.14)');
+    regionRight.setAttribute('filter', (stepIdx === 4 && Math.sin(P * Math.PI * 4) > 0) ? 'url(#glowBlue)' : '');
+    rightLabel.setAttribute('opacity', dim.toFixed(3));
+  }
+
+  // Middle Region Box (Green)
+  const regionMid = document.getElementById('regionMid');
+  const regionMidFill = document.getElementById('regionMidFill');
+  const regionMidStroke = document.getElementById('regionMidStroke');
+  const midLabel = document.getElementById('midLabel');
+  const midLabelTxt = document.getElementById('midLabelTxt');
+
+  if (stepIdx < 4) {
+    regionMid.setAttribute('opacity', '0');
+    midLabel.setAttribute('opacity', '0');
+  } else if (stepIdx === 4) {
+    const t = mapRange(P, 0.35, 0.85);
+    regionMid.setAttribute('opacity', (t * 0.85).toFixed(3));
+    regionMidStroke.setAttribute('stroke-dasharray', '7 5');
+    regionMidFill.setAttribute('fill', `rgba(51,178,106,${(0.08 + 0.12 * Math.abs(Math.sin(P * Math.PI * 3))).toFixed(3)})`);
+    midLabel.setAttribute('opacity', t.toFixed(3));
+    midLabelTxt.textContent = '中間有冇空位？';
+  } else if (stepIdx === 5) {
+    const flashT = mapRange(P, 0.15, 0.78);
+    regionMid.setAttribute('opacity', '1');
+    regionMidStroke.setAttribute('stroke-dasharray', '7 5');
+    regionMidFill.setAttribute('fill', `rgba(51,178,106,${threeFlashOpacity(flashT, 0.16, 0.44).toFixed(3)})`);
+    regionMid.setAttribute('filter', 'url(#glowGreen)');
+    midLabel.setAttribute('opacity', '1');
+    midLabelTxt.textContent = '二人之間 = ? 人';
+  } else {
+    const flashT = (stepIdx === 6) ? mapRange(P, 0.35, 0.85) : 1;
+    regionMid.setAttribute('opacity', '1');
+    regionMidStroke.setAttribute('stroke-dasharray', 'none'); // turns solid once solved!
+    regionMidFill.setAttribute('fill', `rgba(51,178,106,${threeFlashOpacity(flashT, 0.18, 0.45).toFixed(3)})`);
+    regionMid.setAttribute('filter', 'url(#glowGreen)');
+    midLabel.setAttribute('opacity', '1');
+    midLabelTxt.textContent = (stepIdx === 6 && P < 0.62) ? '二人之間 = ? 人' : '二人之間 = 7 人';
+  }
+
+  // Overlap check banner on Track A (Step 4)
+  const overlapBanner = document.getElementById('overlapCheckBanner');
+  overlapBanner.setAttribute('opacity', (stepIdx === 4) ? mapRange(P, 0.15, 0.45).toFixed(3) : '0');
+
+  // 9. Track B — Pencil Scratchpad (Pure stroke-dashoffset)
+  document.getElementById('legendJ').setAttribute('opacity', stepIdx >= 2 ? (stepIdx > 2 ? '1' : mapRange(P, 0.1, 0.25).toFixed(3)) : '0');
+  document.getElementById('legendT').setAttribute('opacity', stepIdx >= 3 ? (stepIdx > 3 ? '1' : mapRange(P, 0.1, 0.25).toFixed(3)) : '0');
+
+  // Step 1 sketch: main line + ticks + arc25 + 25
+  if (stepIdx === 0) {
+    setStrokeProgress('skTickL', 0);
+    setStrokeProgress('skLine', 0);
+    setStrokeProgress('skTickR', 0);
+    setStrokeProgress('skArc25', 0);
+    document.getElementById('skNum25').setAttribute('opacity', '0');
+  } else if (stepIdx === 1) {
+    const pTickL = mapRange(P, 0.45, 0.52);
+    const pLine  = mapRange(P, 0.52, 0.72);
+    const pTickR = mapRange(P, 0.72, 0.77);
+    const pArc25 = mapRange(P, 0.77, 0.93);
+    const pNum25 = mapRange(P, 0.88, 0.98);
+    setStrokeProgress('skTickL', pTickL);
+    setStrokeProgress('skLine', pLine);
+    setStrokeProgress('skTickR', pTickR);
+    setStrokeProgress('skArc25', pArc25);
+    document.getElementById('skNum25').setAttribute('opacity', pNum25.toFixed(3));
+    if (P >= 0.45 && P < 0.72) activePen = { track: 'B', ...getPointOnPath('skLine', pLine) };
+    else if (P >= 0.77 && P <= 0.96) activePen = { track: 'B', ...getPointOnPath('skArc25', pArc25) };
+  } else {
+    setStrokeProgress('skTickL', 1);
+    setStrokeProgress('skLine', 1);
+    setStrokeProgress('skTickR', 1);
+    setStrokeProgress('skArc25', 1);
+    document.getElementById('skNum25').setAttribute('opacity', '1');
+  }
+
+  // Step 2 sketch: J + orange bar + arc6 + 6
+  if (stepIdx < 2) {
+    document.getElementById('skLeftBar').setAttribute('opacity', '0');
+    document.getElementById('skDotJ').setAttribute('opacity', '0');
+    document.getElementById('skCharJ').setAttribute('opacity', '0');
+    setStrokeProgress('skArc6', 0);
+    document.getElementById('skNum6').setAttribute('opacity', '0');
+  } else if (stepIdx === 2) {
+    const pJ = mapRange(P, 0.66, 0.76);
+    const pArc = mapRange(P, 0.76, 0.92);
+    const pN = mapRange(P, 0.88, 0.98);
+    document.getElementById('skLeftBar').setAttribute('opacity', pJ.toFixed(3));
+    document.getElementById('skDotJ').setAttribute('opacity', pJ.toFixed(3));
+    document.getElementById('skCharJ').setAttribute('opacity', pJ.toFixed(3));
+    setStrokeProgress('skArc6', pArc);
+    document.getElementById('skNum6').setAttribute('opacity', pN.toFixed(3));
+    if (P >= 0.66 && P < 0.76) activePen = { track: 'B', x: 120, y: 92 };
+    else if (P >= 0.76 && P <= 0.97) activePen = { track: 'B', ...getPointOnPath('skArc6', pArc) };
+  } else {
+    document.getElementById('skLeftBar').setAttribute('opacity', '1');
+    document.getElementById('skDotJ').setAttribute('opacity', '1');
+    document.getElementById('skCharJ').setAttribute('opacity', '1');
+    setStrokeProgress('skArc6', 1);
+    document.getElementById('skNum6').setAttribute('opacity', '1');
+  }
+
+  // Step 3 sketch: T + blue bar + arc12 + 12
+  if (stepIdx < 3) {
+    document.getElementById('skRightBar').setAttribute('opacity', '0');
+    document.getElementById('skDotT').setAttribute('opacity', '0');
+    document.getElementById('skCharT').setAttribute('opacity', '0');
+    setStrokeProgress('skArc12', 0);
+    document.getElementById('skNum12').setAttribute('opacity', '0');
+  } else if (stepIdx === 3) {
+    const pT = mapRange(P, 0.68, 0.78);
+    const pArc = mapRange(P, 0.78, 0.93);
+    const pN = mapRange(P, 0.89, 0.98);
+    document.getElementById('skRightBar').setAttribute('opacity', pT.toFixed(3));
+    document.getElementById('skDotT').setAttribute('opacity', pT.toFixed(3));
+    document.getElementById('skCharT').setAttribute('opacity', pT.toFixed(3));
+    setStrokeProgress('skArc12', pArc);
+    document.getElementById('skNum12').setAttribute('opacity', pN.toFixed(3));
+    if (P >= 0.68 && P < 0.78) activePen = { track: 'B', x: 228, y: 92 };
+    else if (P >= 0.78 && P <= 0.97) activePen = { track: 'B', ...getPointOnPath('skArc12', pArc) };
+  } else {
+    document.getElementById('skRightBar').setAttribute('opacity', '1');
+    document.getElementById('skDotT').setAttribute('opacity', '1');
+    document.getElementById('skCharT').setAttribute('opacity', '1');
+    setStrokeProgress('skArc12', 1);
+    document.getElementById('skNum12').setAttribute('opacity', '1');
+  }
+
+  // Step 4 check note
+  document.getElementById('skCheckNote').setAttribute('opacity', stepIdx >= 4 ? (stepIdx > 4 ? '1' : mapRange(P, 0.2, 0.5).toFixed(3)) : '0');
+
+  // Step 5 middle gap ? / Step 6 turns to 7
+  const skMidBar = document.getElementById('skMidBar');
+  const skMidQ = document.getElementById('skMidQ');
+  const skMidAns = document.getElementById('skMidAns');
+  if (stepIdx < 5) {
+    skMidBar.setAttribute('opacity', '0');
+    setStrokeProgress('skArcMid', 0);
+    skMidQ.setAttribute('opacity', '0');
+    skMidAns.setAttribute('opacity', '0');
+  } else if (stepIdx === 5) {
+    const pA = mapRange(P, 0.3, 0.72);
+    const pQ = mapRange(P, 0.65, 0.9);
+    skMidBar.setAttribute('opacity', pA.toFixed(3));
+    setStrokeProgress('skArcMid', pA);
+    skMidQ.setAttribute('opacity', pQ.toFixed(3));
+    skMidAns.setAttribute('opacity', '0');
+    if (P >= 0.3 && P <= 0.85) activePen = { track: 'B', ...getPointOnPath('skArcMid', pA) };
+  } else if (stepIdx === 6) {
+    skMidBar.setAttribute('opacity', '1');
+    setStrokeProgress('skArcMid', 1);
+    const swap = mapRange(P, 0.65, 0.82);
+    skMidQ.setAttribute('opacity', (1 - swap).toFixed(3));
+    skMidAns.setAttribute('opacity', swap.toFixed(3));
+  } else {
+    skMidBar.setAttribute('opacity', '1');
+    setStrokeProgress('skArcMid', 1);
+    skMidQ.setAttribute('opacity', '0');
+    skMidAns.setAttribute('opacity', '1');
+  }
+
+  // Step 6 calculation block (smooth pen-tracked left-to-right reveal)
+  const skCalcGroup = document.getElementById('skCalcGroup');
+  const eqClipRect = document.getElementById('eqClipRect');
+  if (stepIdx < 6) {
+    skCalcGroup.setAttribute('opacity', '0');
+    eqClipRect.setAttribute('width', '0');
+    setStrokeProgress('skVerifyCheck', 0);
+  } else if (stepIdx === 6) {
+    const writeP = mapRange(P, 0.12, 0.72);
+    skCalcGroup.setAttribute('opacity', mapRange(P, 0.06, 0.18).toFixed(3));
+    eqClipRect.setAttribute('width', (260 * writeP).toFixed(1));
+    document.getElementById('skEqSub').setAttribute('opacity', mapRange(P, 0.68, 0.92).toFixed(3));
+    setStrokeProgress('skVerifyCheck', 0);
+    if (P >= 0.12 && P <= 0.74) {
+      activePen = { track: 'B', x: 34 + 245 * writeP, y: 202 };
+    }
+  } else {
+    skCalcGroup.setAttribute('opacity', '1');
+    eqClipRect.setAttribute('width', '260');
+    document.getElementById('skEqSub').setAttribute('opacity', '1');
+    const chkP = (stepIdx === 7) ? mapRange(P, 0.78, 0.98) : 1;
+    setStrokeProgress('skVerifyCheck', chkP);
+    if (stepIdx === 7 && P >= 0.78 && P <= 0.98) {
+      activePen = { track: 'B', ...getPointOnPath('skVerifyCheck', chkP) };
+    }
+  }
+
+  // Step 8 exam answer box + handwritten 7
+  const skAnswerBox = document.getElementById('skAnswerBox');
+  if (stepIdx < 8) {
+    skAnswerBox.setAttribute('opacity', '0');
+    setStrokeProgress('skHand7', 0);
+  } else {
+    const boxP = mapRange(P, 0.05, 0.25);
+    const draw7 = mapRange(P, 0.28, 0.72);
+    skAnswerBox.setAttribute('opacity', boxP.toFixed(3));
+    setStrokeProgress('skHand7', draw7);
+    if (P >= 0.28 && P <= 0.76) {
+      activePen = { track: 'B', ...getPointOnPath('skHand7', draw7) };
+    }
+  }
+
+  // Apply single mutually exclusive Blue Pen Dot
+  if (activePen && activePen.track === 'A') {
+    penDotA.setAttribute('opacity', '1');
+    penDotA.setAttribute('transform', `translate(${activePen.x.toFixed(1)}, ${activePen.y.toFixed(1)})`);
+    penDotB.setAttribute('opacity', '0');
+  } else if (activePen && activePen.track === 'B') {
+    penDotB.setAttribute('opacity', '1');
+    penDotB.setAttribute('transform', `translate(${activePen.x.toFixed(1)}, ${activePen.y.toFixed(1)})`);
+    penDotA.setAttribute('opacity', '0');
+  } else {
+    penDotA.setAttribute('opacity', '0');
+    penDotB.setAttribute('opacity', '0');
+  }
+
+  // Show celebration banner at end of Step 8
+  const celBox = document.getElementById('celebrateBox');
+  const isDone = (stepIdx === CONFIG.steps.length - 1 && P >= 0.75);
+  celBox.classList.toggle('show', isDone);
+  if (isDone && !state.celebrated) {
+    state.celebrated = true;
+    playSfx('celebrate');
+    launchConfetti();
+  }
+  if (stepIdx < CONFIG.steps.length - 1) {
+    state.celebrated = false;
+  }
+}
+
+/* ============================================================================
+ * 播放控制器與互動停頓管理
+ * ============================================================================ */
+const state = {
+  stepIdx: 0,
+  p: 1,
+  playing: false,
+  slow: false,
+  muted: false,
+  rafId: null,
+  startTime: 0,
+  animDone: true,
+  ttsDone: true,
+  waitingQuiz: false,
+  answeredQuizzes: new Set(),
+  celebrated: false
+};
+
+function updateButtons() {
+  document.getElementById('playBtn').textContent = state.playing ? '⏸' : '▶';
+  document.getElementById('prevBtn').disabled = (state.stepIdx <= 0);
+  document.getElementById('nextBtn').disabled = (state.stepIdx >= CONFIG.steps.length - 1);
+  document.getElementById('speedBtn').textContent = state.slow ? '🐢 慢速 0.75x' : '🚶 正常 1.0x';
+  document.getElementById('speedBtn').classList.toggle('active', state.slow);
+  document.getElementById('muteBtn').textContent = state.muted ? '🔇 靜音' : '🔊 有聲';
+  document.getElementById('muteBtn').classList.toggle('active', state.muted);
+}
+
+function hideQuizBox() {
+  document.getElementById('quizBox').classList.remove('show');
+  state.waitingQuiz = false;
+}
+
+function showPauseQuiz(quizCfg) {
+  state.playing = false;
+  state.waitingQuiz = true;
+  updateButtons();
+
+  const box = document.getElementById('quizBox');
+  const qEl = document.getElementById('quizQ');
+  const optsEl = document.getElementById('quizOpts');
+  const fbEl = document.getElementById('quizFb');
+  const contBtn = document.getElementById('quizContBtn');
+
+  qEl.textContent = quizCfg.question;
+  fbEl.className = 'quiz-fb';
+  fbEl.textContent = '';
+  contBtn.classList.remove('show');
+  optsEl.innerHTML = '';
+
+  quizCfg.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-opt';
+    btn.textContent = opt.text;
+    btn.onclick = () => {
+      optsEl.querySelectorAll('.quiz-opt').forEach(b => b.classList.remove('wrong'));
+      if (opt.correct) {
+        btn.classList.add('correct');
+        optsEl.querySelectorAll('.quiz-opt').forEach(b => b.disabled = true);
+        fbEl.className = 'quiz-fb show ok';
+        fbEl.textContent = '🎉 ' + opt.fb;
+        contBtn.classList.add('show');
+        state.answeredQuizzes.add(quizCfg.id);
+        playSfx('ding');
+        speakText(opt.fb);
+      } else {
+        btn.classList.add('wrong');
+        fbEl.className = 'quiz-fb show err';
+        fbEl.textContent = '💡 ' + opt.fb;
+        playSfx('wrong');
+        speakText(opt.fb);
+      }
+    };
+    optsEl.appendChild(btn);
+  });
+
+  box.classList.add('show');
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function checkAutoAdvance() {
+  if (!state.playing || !state.animDone || !state.ttsDone) return;
+  const cur = CONFIG.steps[state.stepIdx];
+  if (cur.pauseQuiz && !state.answeredQuizzes.has(cur.pauseQuiz.id)) {
+    showPauseQuiz(cur.pauseQuiz);
+    return;
+  }
+  if (state.stepIdx < CONFIG.steps.length - 1) {
+    goToStep(state.stepIdx + 1, true);
+  } else {
+    state.playing = false;
+    updateButtons();
+  }
+}
+
+function cancelAnim() {
+  if (state.rafId) {
+    cancelAnimationFrame(state.rafId);
+    state.rafId = null;
+  }
+}
+
+function goToStep(idx, autoPlay = false) {
+  cancelAnim();
+  stopTTS();
+  hideQuizBox();
+
+  state.stepIdx = Math.max(0, Math.min(CONFIG.steps.length - 1, idx));
+  state.playing = autoPlay;
+  state.p = 0;
+  state.animDone = false;
+  state.ttsDone = false;
+  updateButtons();
+
+  const cur = CONFIG.steps[state.stepIdx];
+  const fullNarration = (cur.prefix || '') + (cur.quote || '') + (cur.think || '');
+  const dur = cur.duration * (state.slow ? 1.3 : 1.0);
+
+  playSfx(state.stepIdx === 0 ? 'pop' : 'whoosh');
+  renderState(state.stepIdx, 0);
+
+  // Start Speech
+  speakText(fullNarration, () => {
+    state.ttsDone = true;
+    checkAutoAdvance();
+  });
+
+  // Start Pure RAF Animation
+  state.startTime = performance.now();
+  const tick = (now) => {
+    const elapsed = now - state.startTime;
+    state.p = clamp01(elapsed / dur);
+    renderState(state.stepIdx, state.p);
+    if (state.p < 1) {
+      state.rafId = requestAnimationFrame(tick);
+    } else {
+      state.rafId = null;
+      state.animDone = true;
+      checkAutoAdvance();
+    }
+  };
+  state.rafId = requestAnimationFrame(tick);
+}
+
+/* ============================================================================
+ * 建立階段導航膠囊與按鈕綁定
+ * ============================================================================ */
+function initPhasePills() {
+  const wrap = document.getElementById('phasePills');
+  wrap.innerHTML = '';
+  CONFIG.phases.forEach(ph => {
+    const btn = document.createElement('button');
+    btn.className = 'phase-pill';
+    btn.textContent = ph.label;
+    btn.onclick = () => goToStep(ph.startStep, true);
+    wrap.appendChild(btn);
+  });
+}
+
+initPhasePills();
+
+document.getElementById('playBtn').onclick = () => {
+  ensureAudio();
+  if (state.playing) {
+    state.playing = false;
+    stopTTS();
+    updateButtons();
+  } else {
+    if (state.waitingQuiz) {
+      hideQuizBox();
+      goToStep(Math.min(CONFIG.steps.length - 1, state.stepIdx + 1), true);
+    } else if (state.stepIdx === 0 && state.p >= 0.99) {
+      goToStep(1, true);
+    } else if (state.stepIdx === CONFIG.steps.length - 1 && state.p >= 0.99) {
+      state.answeredQuizzes.clear();
+      goToStep(0, true);
+    } else {
+      goToStep(state.stepIdx, true);
+    }
+  }
+};
+
+document.getElementById('prevBtn').onclick = () => {
+  if (state.stepIdx > 0) goToStep(state.stepIdx - 1, false);
+};
+
+document.getElementById('nextBtn').onclick = () => {
+  if (state.stepIdx < CONFIG.steps.length - 1) goToStep(state.stepIdx + 1, false);
+};
+
+document.getElementById('replayBtn').onclick = () => {
+  goToStep(state.stepIdx, state.playing);
+};
+
+document.getElementById('speedBtn').onclick = () => {
+  state.slow = !state.slow;
+  updateButtons();
+};
+
+document.getElementById('muteBtn').onclick = () => {
+  state.muted = !state.muted;
+  if (state.muted) stopTTS();
+  updateButtons();
+};
+
+document.getElementById('quizSkipBtn').onclick = () => {
+  const cur = CONFIG.steps[state.stepIdx];
+  if (cur.pauseQuiz) state.answeredQuizzes.add(cur.pauseQuiz.id);
+  hideQuizBox();
+  goToStep(state.stepIdx + 1, true);
+};
+
+document.getElementById('quizContBtn').onclick = () => {
+  hideQuizBox();
+  goToStep(state.stepIdx + 1, true);
+};
+
+// Keyboard shortcuts (desktop)
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); document.getElementById('playBtn').click(); }
+  else if (e.code === 'ArrowRight') { e.preventDefault(); document.getElementById('nextBtn').click(); }
+  else if (e.code === 'ArrowLeft') { e.preventDefault(); document.getElementById('prevBtn').click(); }
+});
+
+/* ============================================================================
+ * 🎯 挑戰類似題（預設無公仔，附極簡鉛筆草稿提示，答對先展開實物驗證）
+ * ============================================================================ */
+let pracIdx = 0;
+
+function loadPractice(index) {
+  pracIdx = index % CONFIG.practices.length;
+  const pr = CONFIG.practices[pracIdx];
+  document.getElementById('pracQuestion').innerHTML =
+    `<u>${pr.nameA}</u>和<u>${pr.nameB}</u>同在一條有 <strong>${pr.total}</strong> 人的隊伍排隊，由左數起的第 <strong>${pr.left}</strong> 名是<u>${pr.nameA}</u>，由右數起的第 <strong>${pr.right}</strong> 名是<u>${pr.nameB}</u>，問二人之間站了多少人？`;
+  document.getElementById('pracInput').value = '';
+  document.getElementById('pracHintBox').classList.remove('show');
+  document.getElementById('pracFb').className = 'quiz-fb';
+  document.getElementById('pracVerifyBox').classList.remove('show');
+
+  // Render minimal pencil sketch hint (A / B + arcs only, NO cartoon people!)
+  document.getElementById('pracHintSvg').innerHTML = `
+    <line x1="20" y1="54" x2="380" y2="54" stroke="#334155" stroke-width="2.8" stroke-linecap="round"/>
+    <line x1="20" y1="46" x2="20" y2="62" stroke="#334155" stroke-width="2.6"/>
+    <line x1="380" y1="46" x2="380" y2="62" stroke="#334155" stroke-width="2.6"/>
+    <path d="M 22 42 Q 200 10 378 42" fill="none" stroke="#8d5bd6" stroke-width="2.2"/>
+    <text x="200" y="24" text-anchor="middle" font-size="16" font-weight="900" fill="#7c3aed">${pr.total}</text>
+    <circle cx="115" cy="54" r="4.5" fill="#f4711f"/>
+    <text x="115" y="42" text-anchor="middle" font-size="16" font-weight="900" fill="#ea580c">A</text>
+    <path d="M 22 64 Q 68 86 115 64" fill="none" stroke="#f4711f" stroke-width="2.4"/>
+    <text x="68" y="96" text-anchor="middle" font-size="17" font-weight="900" fill="#ea580c">${pr.left}</text>
+    <circle cx="255" cy="54" r="4.5" fill="#0aa5c9"/>
+    <text x="255" y="42" text-anchor="middle" font-size="16" font-weight="900" fill="#0284c7">B</text>
+    <path d="M 255 64 Q 317 86 378 64" fill="none" stroke="#0aa5c9" stroke-width="2.4"/>
+    <text x="317" y="96" text-anchor="middle" font-size="17" font-weight="900" fill="#0284c7">${pr.right}</text>
+    <path d="M 122 64 Q 185 84 248 64" fill="none" stroke="#33b26a" stroke-width="2.4" stroke-dasharray="5 4"/>
+    <text x="185" y="96" text-anchor="middle" font-size="18" font-weight="900" fill="#15803d">?</text>
+  `;
+}
+
+function renderPracticeVerify(pr) {
+  const step = 520 / pr.total;
+  let dots = '';
+  for (let i = 1; i <= pr.total; i++) {
+    const cx = 20 + (i - 0.5) * step;
+    const isLeft = i <= pr.left;
+    const isRight = i > pr.total - pr.right;
+    const col = isLeft ? '#f4711f' : (isRight ? '#0aa5c9' : '#33b26a');
+    const isChar = (i === pr.left || i === pr.total - pr.right + 1);
+    dots += `<circle cx="${cx.toFixed(1)}" cy="42" r="${isChar ? 7 : 5.2}" fill="${col}"/>`;
+    if (i === pr.left) dots += `<text x="${cx.toFixed(1)}" y="24" text-anchor="middle" font-size="12" font-weight="900" fill="#ea580c">A</text>`;
+    if (i === pr.total - pr.right + 1) dots += `<text x="${cx.toFixed(1)}" y="24" text-anchor="middle" font-size="12" font-weight="900" fill="#0284c7">B</text>`;
+  }
+  document.getElementById('pracVerifySvg').innerHTML = `
+    ${dots}
+    <text x="280" y="78" text-anchor="middle" font-size="16" font-weight="900" fill="#166534">
+      ${pr.total} − ${pr.left} − ${pr.right} = ${pr.ans}（人） ✓
+    </text>
+  `;
+}
+
+document.getElementById('openPracticeBtn').onclick = () => {
+  loadPractice(pracIdx);
+  document.getElementById('practiceModal').classList.add('show');
+};
+
+document.getElementById('pracHintBtn').onclick = () => {
+  document.getElementById('pracHintBox').classList.toggle('show');
+  playSfx('pop');
+};
+
+document.getElementById('pracCheckBtn').onclick = () => {
+  const pr = CONFIG.practices[pracIdx];
+  const val = parseInt(document.getElementById('pracInput').value, 10);
+  const fb = document.getElementById('pracFb');
+  if (isNaN(val)) {
+    fb.className = 'quiz-fb show err';
+    fb.textContent = '請先輸入一個數字再提交！';
+    return;
+  }
+  if (val === pr.ans) {
+    fb.className = 'quiz-fb show ok';
+    fb.textContent = `🎉 好勁呀！${pr.left} + ${pr.right} = ${pr.left + pr.right} < ${pr.total} 未撞埋，直接 ${pr.total} − ${pr.left} − ${pr.right} = ${pr.ans} 人！`;
+    renderPracticeVerify(pr);
+    document.getElementById('pracVerifyBox').classList.add('show');
+    playSfx('celebrate');
+    launchConfetti();
+  } else {
+    fb.className = 'quiz-fb show err';
+    fb.textContent = `💡 爭少少呀！先睇 ${pr.left} + ${pr.right} = ${pr.left + pr.right}（仲細過 ${pr.total}），直接用總數減晒左右兩邊就得！試多一次！`;
+    playSfx('wrong');
+  }
+};
+
+document.getElementById('pracNextBtn').onclick = () => {
+  loadPractice(pracIdx + 1);
+  playSfx('pop');
+};
+
+/* ============================================================================
+ * ✨ 高手秒殺思維 Modal
+ * ============================================================================ */
+document.getElementById('openMasterBtn').onclick = () => {
+  document.getElementById('masterModal').classList.add('show');
+  playSfx('pop');
+};
+
+document.getElementById('readMasterBtn').onclick = () => {
+  speakText(CONFIG.masterTTS);
+};
+
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.onclick = () => {
+    stopTTS();
+    document.getElementById(btn.dataset.close).classList.remove('show');
+  };
+});
+
+document.querySelectorAll('.modal-backdrop').forEach(bg => {
+  bg.addEventListener('click', (e) => {
+    if (e.target === bg) {
+      stopTTS();
+      bg.classList.remove('show');
+    }
+  });
+});
+
+/* ============================================================================
+ * 彩紙慶祝動畫（輕量獨立 Canvas）
+ * ============================================================================ */
+function launchConfetti() {
+  const canvas = document.getElementById('confettiCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const cols = ['#f4711f', '#0aa5c9', '#8d5bd6', '#33b26a', '#f0a500', '#e8467c'];
+  const pieces = Array.from({ length: 75 }, () => ({
+    x: Math.random() * canvas.width,
+    y: -20 - Math.random() * 140,
+    w: 7 + Math.random() * 6,
+    h: 5 + Math.random() * 5,
+    vx: (Math.random() - 0.5) * 4,
+    vy: 2.5 + Math.random() * 4,
+    rot: Math.random() * 360,
+    vrot: (Math.random() - 0.5) * 10,
+    color: cols[Math.floor(Math.random() * cols.length)]
+  }));
+
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(pt => {
+      pt.x += pt.vx;
+      pt.y += pt.vy;
+      pt.rot += pt.vrot;
+      ctx.save();
+      ctx.translate(pt.x, pt.y);
+      ctx.rotate((pt.rot * Math.PI) / 180);
+      ctx.fillStyle = pt.color;
+      ctx.fillRect(-pt.w / 2, -pt.h / 2, pt.w, pt.h);
+      ctx.restore();
+    });
+    frame++;
+    if (frame < 130) requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  requestAnimationFrame(draw);
+}
+
+/* ============================================================================
+ * 初始開場（第 0 步：忠實顯示原題與空白算草紙）
+ * ============================================================================ */
+renderState(0, 1);
+updateButtons();
+</script>
+</body>
+</html>
